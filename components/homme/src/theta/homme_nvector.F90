@@ -15,6 +15,7 @@ module HommeNVector
   use hybrid_mod,     only: hybrid_t
   use derivative_mod, only: derivative_t
   use element_state,  only: timelevels
+  use parallel_mod,   only: parallel_t
   use, intrinsic :: iso_c_binding
   public
 
@@ -27,6 +28,7 @@ module HommeNVector
      integer                     :: nete
      integer                     :: qn0
      integer                     :: tl_idx
+     type(parallel_t),   pointer :: par
   end type NVec_t
 
   save
@@ -52,7 +54,7 @@ contains
     return
   end function ReserveHommeNVectorRegistryIdx
 
-  subroutine MakeHommeNVector(elem, hvcoord, hybrid, deriv, nets, nete, qn0, tl_idx, vec, ier)
+  subroutine MakeHommeNVector(elem, hvcoord, hybrid, deriv, nets, nete, qn0, tl_idx, par, vec, ier)
     ! Function to create an NVec_t wrapper (vec) to the Homme solution
     !   structure, and reserve its index in the vector registry.
     ! The return value is 0 if succssful, 1 if failure (if the registry
@@ -61,10 +63,12 @@ contains
     use hybvcoord_mod,  only: hvcoord_t
     use hybrid_mod,     only: hybrid_t
     use derivative_mod, only: derivative_t
+    use parallel_mod,   only: parallel_t
     type (element_t),    target    :: elem(:)
     type (hvcoord_t),    target    :: hvcoord
     type (hybrid_t),     target    :: hybrid
     type (derivative_t), target    :: deriv
+    type (parallel_t),   target    :: par
     integer, intent(in)            :: nets
     integer, intent(in)            :: nete
     integer, intent(in)            :: qn0
@@ -84,6 +88,7 @@ contains
     vec%hvcoord => hvcoord
     vec%hybrid => hybrid
     vec%deriv => deriv
+    vec%par => par
     vec%nets = nets
     vec%nete = nete
     vec%qn0 = qn0
@@ -121,27 +126,25 @@ subroutine FNVExtPrint(x_C)
   call c_f_pointer(x_C, x)
 
   ! print vector data
-  write(6,*) 'u velocity'
   do inlev=1,nlev
-    write(6,*) 'level: ', inlev
-
     do ie=x%nets,x%nete
-      write(6,*) ' element number: ', ie
-
       do inpx=1,np
         do inpy=1,np
-          write(6,*) '  (npx,npy): ', inpx, inpy
-          write(6,*) '   u: ', x%elem(ie)%state%v(inpx,inpy,1,inlev,x%tl_idx)
-          write(6,*) '   v: ', x%elem(ie)%state%v(inpx,inpy,2,inlev,x%tl_idx)
-          write(6,*) '   w: ', x%elem(ie)%state%w(inpx,inpy,inlev,x%tl_idx)
-          write(6,*) '   phi: ', x%elem(ie)%state%phi(inpx,inpy,inlev,x%tl_idx)
-          write(6,*) '   theta_dp_cp: ', x%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,x%tl_idx)
-          write(6,*) '   dp3d: ', x%elem(ie)%state%dp3d(inpx,inpy,inlev,x%tl_idx)
+          write(6,*) '  proc ',x%par%rank,', elem ',ie,', u(', inpx,',', inpy,',',inlev,') = ', &
+               x%elem(ie)%state%v(inpx,inpy,1,inlev,x%tl_idx)
+          write(6,*) '  proc ',x%par%rank,', elem ',ie,', v(', inpx,',', inpy,',',inlev,') = ', &
+               x%elem(ie)%state%v(inpx,inpy,2,inlev,x%tl_idx)
+          write(6,*) '  proc ',x%par%rank,', elem ',ie,', w(', inpx,',', inpy,',',inlev,') = ', &
+               x%elem(ie)%state%w(inpx,inpy,inlev,x%tl_idx)
+          write(6,*) '  proc ',x%par%rank,', elem ',ie,', phi(', inpx,',', inpy,',',inlev,') = ', &
+               x%elem(ie)%state%phi(inpx,inpy,inlev,x%tl_idx)
+          write(6,*) '  proc ',x%par%rank,', elem ',ie,', theta_dp_cp(', inpx,',', inpy,',',inlev,') = ', &
+               x%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,x%tl_idx)
+          write(6,*) '  proc ',x%par%rank,', elem ',ie,', dp3d(', inpx,',', inpy,',',inlev,') = ', &
+               x%elem(ie)%state%dp3d(inpx,inpy,inlev,x%tl_idx)
         end do
       end do
-
     end do
-
   end do
 
   return
@@ -185,6 +188,7 @@ subroutine FNVExtClone(x_C, y_C)
   y%hvcoord => x%hvcoord
   y%hybrid => x%hybrid
   y%deriv => x%deriv
+  y%par => x%par
   y%nets = x%nets
   y%nete = x%nete
   y%qn0 = x%qn0
@@ -223,6 +227,7 @@ subroutine FNVExtDestroy(x_C)
   if (associated(x%hvcoord))  nullify(x%hvcoord)
   if (associated(x%hybrid))   nullify(x%hybrid)
   if (associated(x%deriv))    nullify(x%deriv)
+  if (associated(x%par))      nullify(x%par)
   deallocate(x)
   x_C = C_NULL_PTR
 
@@ -613,6 +618,7 @@ subroutine FNVExtDotProd(x_C, y_C, cval)
   type(NVec_t), pointer :: y => NULL()
 
   integer :: ie
+  double precision :: cval_loc, cval_tot
 
   !=======Internals ============
 
@@ -622,9 +628,9 @@ subroutine FNVExtDotProd(x_C, y_C, cval)
 
   ! TODO: check that the loop isn't including 'inactive' data
   ! perform vector operation
-  cval = 0.d0
+  cval_loc = 0.d0
   do ie=x%nets,x%nete
-     cval = cval + &
+     cval_loc = cval_loc + &
           sum(x%elem(ie)%state%v(:,:,:,:,x%tl_idx)* &
               y%elem(ie)%state%v(:,:,:,:,y%tl_idx)) + &
           sum(x%elem(ie)%state%w(:,:,:,x%tl_idx)* &
@@ -639,6 +645,12 @@ subroutine FNVExtDotProd(x_C, y_C, cval)
           !    y%elem(ie)%state%psv(:,:,:,y%tl_idx))
   end do
 
+  ! accumulate in a local "double precision" variable 
+  ! just to be safe, and then copy to cval
+  call MPI_Allreduce(cval_loc, cval_tot, 1, MPI_DOUBLE_PRECISION, &
+       MPI_SUM, x%par%comm, ie)
+  cval = cval_tot
+  
   return
 end subroutine FNVExtDotProd
 !=======================================================================
@@ -658,16 +670,18 @@ subroutine FNVExtMaxNorm(x_C, cval)
   type(NVec_t), pointer :: x => NULL()
 
   integer :: ie
+  double precision :: cval_loc, cval_max
 
   !=======Internals ============
 
   ! dereference x_C pointer for NVec_t object
   call c_f_pointer(x_C, x)
 
+  ! TODO: check that the loop isn't including 'inactive' data
   ! perform vector operation
-  cval = 0.d0
+  cval_loc = 0.d0
   do ie=x%nets,x%nete
-    cval = max(cval, &
+    cval_loc = max(cval_loc, &
           maxval(abs(x%elem(ie)%state%v(:,:,:,:,x%tl_idx))), &
           maxval(abs(x%elem(ie)%state%w(:,:,:,x%tl_idx))), &
           maxval(abs(x%elem(ie)%state%phi(:,:,:,x%tl_idx))), &
@@ -676,6 +690,12 @@ subroutine FNVExtMaxNorm(x_C, cval)
           maxval(abs(x%elem(ie)%state%dp3d(:,:,:,x%tl_idx))))
           !maxval(abs(x%elem(ie)%state%psv(:,:,x%tl_idx))))
   end do
+
+  ! accumulate in a local "double precision" variable 
+  ! just to be safe, and then copy to cval
+  call MPI_Allreduce(cval_loc, cval_max, 1, MPI_DOUBLE_PRECISION, &
+       MPI_MAX, x%par%comm, ie)
+  cval = cval_max
 
   return
 end subroutine FNVExtMaxNorm
@@ -698,7 +718,8 @@ subroutine FNVExtWrmsNorm(x_C, w_C, cval)
   type(NVec_t), pointer :: x => NULL()
   type(NVec_t), pointer :: w => NULL()
 
-  integer :: ie, ntotal
+  integer :: ie
+  double precision :: cval_loc(2), cval_sum(2)
 
   !=======Internals ============
 
@@ -706,28 +727,91 @@ subroutine FNVExtWrmsNorm(x_C, w_C, cval)
   call c_f_pointer(x_C, x)
   call c_f_pointer(w_C, w)
 
+  ! TODO: check that the loop isn't including 'inactive' data
   ! perform vector operation
-  ntotal = (x%nete-x%nets+1)*np*np*nlev*6 ! needs to be updated if psv included
-  cval = 0.d0
+  cval_loc(2) = (x%nete-x%nets+1)*np*np*nlev*6 ! needs to be updated if psv included
+  cval_loc(1) = 0.d0
   do ie=x%nets,x%nete
-    cval = sum( (x%elem(ie)%state%v(:,:,:,:,x%tl_idx)* &
-                 w%elem(ie)%state%v(:,:,:,:,w%tl_idx))**2 ) + &
-           sum( (x%elem(ie)%state%w(:,:,:,x%tl_idx)* &
-                 w%elem(ie)%state%w(:,:,:,w%tl_idx))**2 ) + &
-           sum( (x%elem(ie)%state%phi(:,:,:,x%tl_idx)* &
-                 w%elem(ie)%state%phi(:,:,:,w%tl_idx))**2 ) + &
-           sum( (x%elem(ie)%state%theta_dp_cp(:,:,:,x%tl_idx)* &
-                 w%elem(ie)%state%theta_dp_cp(:,:,:,w%tl_idx))**2 ) + &
-           sum( (x%elem(ie)%state%dp3d(:,:,:,x%tl_idx)* &
-                 w%elem(ie)%state%dp3d(:,:,:,w%tl_idx))**2 ) !+ &
-           !sum( (x%elem(ie)%state%psv(:,:,:,:,x%tl_idx)* &
-           !      w%elem(ie)%state%psv(:,:,:,:,w%tl_idx))**2 )
+    cval_loc(1) = sum( (x%elem(ie)%state%v(:,:,:,:,x%tl_idx)* &
+                        w%elem(ie)%state%v(:,:,:,:,w%tl_idx))**2 ) + &
+                  sum( (x%elem(ie)%state%w(:,:,:,x%tl_idx)* &
+                        w%elem(ie)%state%w(:,:,:,w%tl_idx))**2 ) + &
+                  sum( (x%elem(ie)%state%phi(:,:,:,x%tl_idx)* &
+                        w%elem(ie)%state%phi(:,:,:,w%tl_idx))**2 ) + &
+                  sum( (x%elem(ie)%state%theta_dp_cp(:,:,:,x%tl_idx)* &
+                        w%elem(ie)%state%theta_dp_cp(:,:,:,w%tl_idx))**2 ) + &
+                  sum( (x%elem(ie)%state%dp3d(:,:,:,x%tl_idx)* &
+                        w%elem(ie)%state%dp3d(:,:,:,w%tl_idx))**2 ) !+ &
+                  !sum( (x%elem(ie)%state%psv(:,:,:,:,x%tl_idx)* &
+                  !      w%elem(ie)%state%psv(:,:,:,:,w%tl_idx))**2 )
   end do
-  cval = sqrt(cval/ntotal)
+  
+  ! accumulate totals; although the denominator should technically be a long 
+  ! integer, using a double should result in similar roundoff-level accuracy 
+  ! since all contributions are positive and generally equally sized, with one 
+  ! fewer reduction operation
+  call MPI_Allreduce(cval_loc, cval_sum, 2, MPI_DOUBLE_PRECISION, &
+       MPI_SUM, x%par%comm, ie)
+  cval = sqrt(cval_sum(1)/cval_sum(2))
 
   return
 end subroutine FNVExtWrmsNorm
 !=======================================================================
+
+
+
+subroutine FNVExtMin(x_C, cval)
+  !-----------------------------------------------------------------------
+  ! cval = min(|xvec|)
+  !-----------------------------------------------------------------------
+  use HommeNVector, only: NVec_t
+  use, intrinsic :: iso_c_binding
+  implicit none
+  type(c_ptr),    intent(in)  :: x_C
+  real(c_double), intent(out) :: cval
+
+  type(NVec_t), pointer :: x => NULL()
+
+  integer :: ie
+  double precision :: cval_loc, cval_min
+
+  !=======Internals ============
+
+  ! dereference x_C pointer for NVec_t object
+  call c_f_pointer(x_C, x)
+
+  ! perform vector operation
+  cval_loc = abs(x%elem(x%nets)%state%v(1,1,1,1,x%tl_idx))
+  do ie=x%nets,x%nete
+    cval_loc = min( minval(abs(x%elem(ie)%state%v(:,:,:,:,x%tl_idx))), &
+                    minval(abs(x%elem(ie)%state%w(:,:,:,x%tl_idx))), &
+                    minval(abs(x%elem(ie)%state%phi(:,:,:,x%tl_idx))), &
+                    minval(abs(x%elem(ie)%state%theta_dp_cp(:,:,:,x%tl_idx))), &
+                    minval(abs(x%elem(ie)%state%dp3d(:,:,:,x%tl_idx))) )
+                    !minval(x%elem(ie)%state%psv(:,:,:,:,x%tl_idx)))
+  end do
+
+  ! accumulate in a local "double precision" variable 
+  ! just to be safe, and then copy to cval
+  call MPI_Allreduce(cval_loc, cval_min, 1, MPI_DOUBLE_PRECISION, &
+       MPI_MIN, x%par%comm, ie)
+  cval = cval_min
+
+  return
+end subroutine FNVExtMin
+!=======================================================================
+
+
+
+
+
+!-----------------------------------------------------------------------
+! NOTE: the remaining subroutines are not required when interfacing 
+! with ARKode, and are hence not currently implemented.  If this will 
+! utilize alternate SUNDIALS solvers in the future, some additional 
+! subset of these may need to be implemented as well.
+!-----------------------------------------------------------------------
+
 
 
 
@@ -751,7 +835,6 @@ subroutine FNVExtWrmsNormMask(x_C, w_C, l_C, cval)
   type(NVec_t), pointer :: x => NULL()
   type(NVec_t), pointer :: w => NULL()
   type(NVec_t), pointer :: l => NULL()
-  integer :: ntotal
 
   !=======Internals ============
 
@@ -765,41 +848,6 @@ subroutine FNVExtWrmsNormMask(x_C, w_C, l_C, cval)
 
   return
 end subroutine FNVExtWrmsNormMask
-!=======================================================================
-
-
-
-subroutine FNVExtMin(x_C, cval)
-  !-----------------------------------------------------------------------
-  ! cval = min(|xvec|)
-  !-----------------------------------------------------------------------
-  use HommeNVector, only: NVec_t
-  use, intrinsic :: iso_c_binding
-  implicit none
-  type(c_ptr),    intent(in)  :: x_C
-  real(c_double), intent(out) :: cval
-
-  type(NVec_t), pointer :: x => NULL()
-
-  integer :: ie
-  !=======Internals ============
-
-  ! dereference x_C pointer for NVec_t object
-  call c_f_pointer(x_C, x)
-
-  ! perform vector operation
-  cval = abs(x%elem(x%nets)%state%v(1,1,1,1,x%tl_idx))
-  do ie=x%nets,x%nete
-    cval = min( minval(abs(x%elem(ie)%state%v(:,:,:,:,x%tl_idx))), &
-                minval(abs(x%elem(ie)%state%w(:,:,:,x%tl_idx))), &
-                minval(abs(x%elem(ie)%state%phi(:,:,:,x%tl_idx))), &
-                minval(abs(x%elem(ie)%state%theta_dp_cp(:,:,:,x%tl_idx))), &
-                minval(abs(x%elem(ie)%state%dp3d(:,:,:,x%tl_idx))) )
-                !minval(x%elem(ie)%state%psv(:,:,:,:,x%tl_idx)))
-  end do
-
-  return
-end subroutine FNVExtMin
 !=======================================================================
 
 
