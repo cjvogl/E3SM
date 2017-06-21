@@ -608,6 +608,7 @@ subroutine FNVExtDotProd(x_C, y_C, cval)
   ! c = <x,y>  (only include 'active' data; no ghost cells, etc.)
   !-----------------------------------------------------------------------
   use HommeNVector, only: NVec_t
+  use parallel_mod, only: MPIreal_t, MPI_sum
   use, intrinsic :: iso_c_binding
   implicit none
   type(c_ptr),    intent(in)  :: x_C
@@ -645,12 +646,12 @@ subroutine FNVExtDotProd(x_C, y_C, cval)
           !    y%elem(ie)%state%psv(:,:,:,y%tl_idx))
   end do
 
-  ! accumulate in a local "double precision" variable 
+  ! accumulate in a local "double precision" variable
   ! just to be safe, and then copy to cval
-  call MPI_Allreduce(cval_loc, cval_tot, 1, MPI_DOUBLE_PRECISION, &
-       MPI_SUM, x%par%comm, ie)
+  call MPI_Allreduce(cval_loc, cval_tot, 1, MPIreal_t, &
+       MPI_sum, x%par%comm, ie)
   cval = cval_tot
-  
+
   return
 end subroutine FNVExtDotProd
 !=======================================================================
@@ -662,6 +663,7 @@ subroutine FNVExtMaxNorm(x_C, cval)
   ! c = max(|x|)
   !-----------------------------------------------------------------------
   use HommeNVector, only: NVec_t
+  use parallel_mod, only: MPIreal_t, MPI_max
   use, intrinsic :: iso_c_binding
   implicit none
   type(c_ptr),    intent(in)  :: x_C
@@ -691,10 +693,10 @@ subroutine FNVExtMaxNorm(x_C, cval)
           !maxval(abs(x%elem(ie)%state%psv(:,:,x%tl_idx))))
   end do
 
-  ! accumulate in a local "double precision" variable 
+  ! accumulate in a local "double precision" variable
   ! just to be safe, and then copy to cval
-  call MPI_Allreduce(cval_loc, cval_max, 1, MPI_DOUBLE_PRECISION, &
-       MPI_MAX, x%par%comm, ie)
+  call MPI_Allreduce(cval_loc, cval_max, 1, MPIreal_t, &
+       MPI_max, x%par%comm, ie)
   cval = cval_max
 
   return
@@ -709,6 +711,7 @@ subroutine FNVExtWrmsNorm(x_C, w_C, cval)
   !-----------------------------------------------------------------------
   use HommeNVector,   only: NVec_t
   use dimensions_mod, only: np, nlev
+  use parallel_mod,   only: MPIreal_t, MPI_sum
   use, intrinsic :: iso_c_binding
   implicit none
   type(c_ptr),    intent(in)  :: x_C
@@ -745,13 +748,13 @@ subroutine FNVExtWrmsNorm(x_C, w_C, cval)
                   !sum( (x%elem(ie)%state%psv(:,:,:,:,x%tl_idx)* &
                   !      w%elem(ie)%state%psv(:,:,:,:,w%tl_idx))**2 )
   end do
-  
-  ! accumulate totals; although the denominator should technically be a long 
-  ! integer, using a double should result in similar roundoff-level accuracy 
-  ! since all contributions are positive and generally equally sized, with one 
+
+  ! accumulate totals; although the denominator should technically be a long
+  ! integer, using a double should result in similar roundoff-level accuracy
+  ! since all contributions are positive and generally equally sized, with one
   ! fewer reduction operation
-  call MPI_Allreduce(cval_loc, cval_sum, 2, MPI_DOUBLE_PRECISION, &
-       MPI_SUM, x%par%comm, ie)
+  call MPI_Allreduce(cval_loc, cval_sum, 2, MPIreal_t, &
+       MPI_sum, x%par%comm, ie)
   cval = sqrt(cval_sum(1)/cval_sum(2))
 
   return
@@ -765,6 +768,7 @@ subroutine FNVExtMin(x_C, cval)
   ! cval = min(|xvec|)
   !-----------------------------------------------------------------------
   use HommeNVector, only: NVec_t
+  use parallel_mod, only: MPIreal_t, MPI_min
   use, intrinsic :: iso_c_binding
   implicit none
   type(c_ptr),    intent(in)  :: x_C
@@ -791,10 +795,10 @@ subroutine FNVExtMin(x_C, cval)
                     !minval(x%elem(ie)%state%psv(:,:,:,:,x%tl_idx)))
   end do
 
-  ! accumulate in a local "double precision" variable 
+  ! accumulate in a local "double precision" variable
   ! just to be safe, and then copy to cval
-  call MPI_Allreduce(cval_loc, cval_min, 1, MPI_DOUBLE_PRECISION, &
-       MPI_MIN, x%par%comm, ie)
+  call MPI_Allreduce(cval_loc, cval_min, 1, MPIreal_t, &
+       MPI_min, x%par%comm, ie)
   cval = cval_min
 
   return
@@ -806,9 +810,9 @@ end subroutine FNVExtMin
 
 
 !-----------------------------------------------------------------------
-! NOTE: the remaining subroutines are not required when interfacing 
-! with ARKode, and are hence not currently implemented.  If this will 
-! utilize alternate SUNDIALS solvers in the future, some additional 
+! NOTE: the remaining subroutines are not required when interfacing
+! with ARKode, and are hence not currently implemented.  If this will
+! utilize alternate SUNDIALS solvers in the future, some additional
 ! subset of these may need to be implemented as well.
 !-----------------------------------------------------------------------
 
@@ -976,7 +980,7 @@ subroutine FNVExtInvTest(x_C, z_C, cval)
   call c_f_pointer(z_C, z)
 
   ! perform vector operation
-  cval = 0.d0
+  cval = -1
 
   return
 end subroutine FNVExtInvTest
@@ -1019,7 +1023,7 @@ subroutine FNVExtConstrMask(c_C, x_C, m_C, testval)
   call c_f_pointer(m_C, m)
 
   ! perform vector operation
-  testval = 0.d0
+  testval = -1
 
   return
 end subroutine FNVExtConstrMask
@@ -1045,7 +1049,6 @@ subroutine FNVExtMinQuotient(x_C, y_C, cval)
 
   type(NVec_t), pointer :: x => NULL()
   type(NVec_t), pointer :: y => NULL()
-  logical :: notyet
 
   !=======Internals ============
 

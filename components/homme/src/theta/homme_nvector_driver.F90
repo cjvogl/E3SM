@@ -5,6 +5,7 @@ program homme_nvector_driver
   use hybvcoord_mod,  only: hvcoord_t
   use hybrid_mod,     only: hybrid_t
   use derivative_mod, only: derivative_t
+  use parallel_mod,   only: parallel_t
   use dimensions_mod, only: np, nlev
   use, intrinsic :: iso_c_binding
 
@@ -13,13 +14,21 @@ program homme_nvector_driver
   type (hvcoord_t)              :: hvcoord
   type (hybrid_t)               :: hybrid
   type (derivative_t)           :: deriv
+  type (parallel_t)             :: par
   type(NVec_t), target          :: x, y, z
   type(c_ptr)                   :: x_C, y_C, z_C
   integer                       :: nets, nete, qn0, tl_idx, ier
 
   integer                       :: numElem
 
+  include 'mpif.h'
+
   !=======Internals ============
+
+  ! Initialize MPI for par object
+  call MPI_INIT(ier)
+  call MPI_COMM_RANK(MPI_COMM_WORLD,par%rank)
+  par%comm = MPI_COMM_WORLD
 
   ! Set number of testing elements and time level index
   numElem = 1
@@ -36,7 +45,7 @@ program homme_nvector_driver
   elemX(1)%state%dp3d(1:np,1:np,1:nlev,tl_idx) = 1.d0
 
   ! Createt HommeNVector object and corresponding c pointer
-  call MakeHommeNVector(elemX, hvcoord, hybrid, deriv, nets, nete, qn0, tl_idx, x, ier)
+  call MakeHommeNVector(elemX, hvcoord, hybrid, deriv, nets, nete, qn0, tl_idx, par, x, ier)
   if (ier == 1) then
     stop "Error making Homme NVector for x"
   end if
@@ -52,7 +61,7 @@ program homme_nvector_driver
   elemY(1)%state%dp3d(1:np,1:np,1:nlev,tl_idx) = 2.d0
 
   ! Create HommeNVector object and corresponding c pointer
-  call MakeHommeNVector(elemY, hvcoord, hybrid, deriv, nets, nete, qn0, tl_idx, y, ier)
+  call MakeHommeNVector(elemY, hvcoord, hybrid, deriv, nets, nete, qn0, tl_idx, par, y, ier)
   if (ier == 1) then
     stop "Error making Homme NVector for y"
   end if
@@ -63,7 +72,7 @@ program homme_nvector_driver
   tl_idx = 3
 
   ! Create HommeNVector object and corresponding c pointer
-  call MakeHommeNVector(elemY, hvcoord, hybrid, deriv, nets, nete, qn0, tl_idx, z, ier)
+  call MakeHommeNVector(elemY, hvcoord, hybrid, deriv, nets, nete, qn0, tl_idx, par, z, ier)
   if (ier == 1) then
     stop "Error making Homme NVector for z"
   end if
@@ -73,5 +82,8 @@ program homme_nvector_driver
   ! Call function to test and print out result
   call FNVExtLinearSum(1.d0, x_C, 1.d0, y_C, z_C)
   call FNVExtPrint(z_C)
+
+  ! Finalize MPI
+  call MPI_FINALIZE(ier)
 
 end program
