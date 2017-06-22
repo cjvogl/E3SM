@@ -241,7 +241,8 @@ subroutine FNVExtLinearSum(aval, x_C, bval, y_C, z_C)
   !-----------------------------------------------------------------------
   ! z = a*x + b*y
   !-----------------------------------------------------------------------
-  use HommeNVector, only: NVec_t
+  use HommeNVector,   only: NVec_t
+  use dimensions_mod, only: np, nlev
   use, intrinsic :: iso_c_binding
   implicit none
   real(c_double), intent(in) :: aval
@@ -254,7 +255,7 @@ subroutine FNVExtLinearSum(aval, x_C, bval, y_C, z_C)
   type(NVec_t), pointer :: y => NULL()
   type(NVec_t), pointer :: z => NULL()
 
-  integer :: ie
+  integer :: ie, inlev, inp1, inp2
 
   !=======Internals ============
 
@@ -265,25 +266,31 @@ subroutine FNVExtLinearSum(aval, x_C, bval, y_C, z_C)
 
   ! perform vector operation
   do ie=z%nets,z%nete
-     z%elem(ie)%state%v(:,:,:,:,z%tl_idx) = &
-          aval * x%elem(ie)%state%v(:,:,:,:,x%tl_idx) + &
-          bval * y%elem(ie)%state%v(:,:,:,:,y%tl_idx)
-     z%elem(ie)%state%w(:,:,:,z%tl_idx) = &
-          aval * x%elem(ie)%state%w(:,:,:,x%tl_idx) + &
-          bval * y%elem(ie)%state%w(:,:,:,y%tl_idx)
-     z%elem(ie)%state%phi(:,:,:,z%tl_idx) = &
-          aval * x%elem(ie)%state%phi(:,:,:,x%tl_idx) + &
-          bval * y%elem(ie)%state%phi(:,:,:,y%tl_idx)
-     z%elem(ie)%state%theta_dp_cp(:,:,:,z%tl_idx) = &
-          aval * x%elem(ie)%state%theta_dp_cp(:,:,:,x%tl_idx) + &
-          bval * y%elem(ie)%state%theta_dp_cp(:,:,:,y%tl_idx)
-     z%elem(ie)%state%dp3d(:,:,:,z%tl_idx) = &
-          aval * x%elem(ie)%state%dp3d(:,:,:,x%tl_idx) + &
-          bval * y%elem(ie)%state%dp3d(:,:,:,y%tl_idx)
-     !z%elem(ie)%state%psv(:,:,z%tl_idx) = &
-     !     aval * x%elem(ie)%state%psv(:,:,x%tl_idx) + &
-     !     bval * y%elem(ie)%state%psv(:,:,y%tl_idx)
-  end do
+    do inlev=1,nlev
+      do inp2=1,np
+        do inp1=1,np
+          z%elem(ie)%state%v(inp1,inp2,1,inlev,z%tl_idx) = &
+            aval * x%elem(ie)%state%v(inp1,inp2,1,inlev,x%tl_idx) + &
+            bval * y%elem(ie)%state%v(inp1,inp2,1,inlev,y%tl_idx)
+          z%elem(ie)%state%v(inp1,inp2,2,inlev,z%tl_idx) = &
+            aval * x%elem(ie)%state%v(inp1,inp2,2,inlev,x%tl_idx) + &
+            bval * y%elem(ie)%state%v(inp1,inp2,2,inlev,y%tl_idx)
+          z%elem(ie)%state%w(inp1,inp2,inlev,z%tl_idx) = &
+            aval * x%elem(ie)%state%w(inp1,inp2,inlev,x%tl_idx) + &
+            bval * y%elem(ie)%state%w(inp1,inp2,inlev,y%tl_idx)
+          z%elem(ie)%state%phi(inp1,inp2,inlev,z%tl_idx) = &
+            aval * x%elem(ie)%state%phi(inp1,inp2,inlev,x%tl_idx) + &
+            bval * y%elem(ie)%state%phi(inp1,inp2,inlev,y%tl_idx)
+          z%elem(ie)%state%theta_dp_cp(inp1,inp2,inlev,z%tl_idx) = &
+            aval * x%elem(ie)%state%theta_dp_cp(inp1,inp2,inlev,x%tl_idx) + &
+            bval * y%elem(ie)%state%theta_dp_cp(inp1,inp2,inlev,y%tl_idx)
+          z%elem(ie)%state%dp3d(inp1,inp2,inlev,z%tl_idx) = &
+            aval * x%elem(ie)%state%dp3d(inp1,inp2,inlev,x%tl_idx) + &
+            bval * y%elem(ie)%state%dp3d(inp1,inp2,inlev,y%tl_idx)
+        end do ! inp1
+      end do ! inp2
+    end do ! inlev
+  end do ! ie
 
   return
 end subroutine FNVExtLinearSum
@@ -295,7 +302,7 @@ subroutine FNVExtConst(cval, z_C)
   !-----------------------------------------------------------------------
   ! z = c
   !-----------------------------------------------------------------------
-  use HommeNVector, only: NVec_t
+  use HommeNVector,   only: NVec_t
   use, intrinsic :: iso_c_binding
   implicit none
   real(c_double), intent(in) :: cval
@@ -317,7 +324,6 @@ subroutine FNVExtConst(cval, z_C)
      z%elem(ie)%state%phi(:,:,:,z%tl_idx) = cval
      z%elem(ie)%state%theta_dp_cp(:,:,:,z%tl_idx) = cval
      z%elem(ie)%state%dp3d(:,:,:,z%tl_idx) = cval
-     !z%elem(ie)%state%psv(:,:,z%tl_idx) = cval
   end do
 
   return
@@ -330,7 +336,8 @@ subroutine FNVExtProd(x_C, y_C, z_C)
   !-----------------------------------------------------------------------
   ! z = x.*y (Matlab notation)
   !-----------------------------------------------------------------------
-  use HommeNVector, only: NVec_t
+  use HommeNVector,   only: NVec_t
+  use dimensions_mod, only: np, nlev
   use, intrinsic :: iso_c_binding
   implicit none
   type(c_ptr), intent(in) :: x_C
@@ -341,7 +348,7 @@ subroutine FNVExtProd(x_C, y_C, z_C)
   type(NVec_t), pointer :: y => NULL()
   type(NVec_t), pointer :: z => NULL()
 
-  integer :: ie
+  integer :: ie, inlev, inp1, inp2
 
   !=======Internals ============
 
@@ -352,25 +359,31 @@ subroutine FNVExtProd(x_C, y_C, z_C)
 
   ! perform vector operation
   do ie=z%nets,z%nete
-     z%elem(ie)%state%v(:,:,:,:,z%tl_idx) = &
-          x%elem(ie)%state%v(:,:,:,:,x%tl_idx)* &
-          y%elem(ie)%state%v(:,:,:,:,y%tl_idx)
-     z%elem(ie)%state%w(:,:,:,z%tl_idx) = &
-          x%elem(ie)%state%w(:,:,:,x%tl_idx)* &
-          y%elem(ie)%state%w(:,:,:,y%tl_idx)
-     z%elem(ie)%state%phi(:,:,:,z%tl_idx) = &
-          x%elem(ie)%state%phi(:,:,:,x%tl_idx)* &
-          y%elem(ie)%state%phi(:,:,:,y%tl_idx)
-     z%elem(ie)%state%theta_dp_cp(:,:,:,z%tl_idx) = &
-          x%elem(ie)%state%theta_dp_cp(:,:,:,x%tl_idx)* &
-          y%elem(ie)%state%theta_dp_cp(:,:,:,y%tl_idx)
-     z%elem(ie)%state%dp3d(:,:,:,z%tl_idx) = &
-          x%elem(ie)%state%dp3d(:,:,:,x%tl_idx)* &
-          y%elem(ie)%state%dp3d(:,:,:,y%tl_idx)
-     !z%elem(ie)%state%psv(:,:,z%tl_idx) = &
-     !     x%elem(ie)%state%psv(:,:,x%tl_idx)* &
-     !     y%elem(ie)%state%psv(:,:,y%tl_idx)
-  end do
+    do inlev=1,nlev
+      do inp2=1,np
+        do inp1=1,np
+          z%elem(ie)%state%v(inp1,inp2,1,inlev,z%tl_idx) = &
+            x%elem(ie)%state%v(inp1,inp2,1,inlev,x%tl_idx)* &
+            y%elem(ie)%state%v(inp1,inp2,1,inlev,y%tl_idx)
+          z%elem(ie)%state%v(inp1,inp2,2,inlev,z%tl_idx) = &
+            x%elem(ie)%state%v(inp1,inp2,2,inlev,x%tl_idx)* &
+            y%elem(ie)%state%v(inp1,inp2,2,inlev,y%tl_idx)
+          z%elem(ie)%state%w(inp1,inp2,inlev,z%tl_idx) = &
+            x%elem(ie)%state%w(inp1,inp2,inlev,x%tl_idx)* &
+            y%elem(ie)%state%w(inp1,inp2,inlev,y%tl_idx)
+          z%elem(ie)%state%phi(inp1,inp2,inlev,z%tl_idx) = &
+            x%elem(ie)%state%phi(inp1,inp2,inlev,x%tl_idx)* &
+            y%elem(ie)%state%phi(inp1,inp2,inlev,y%tl_idx)
+          z%elem(ie)%state%theta_dp_cp(inp1,inp2,inlev,z%tl_idx) = &
+            x%elem(ie)%state%theta_dp_cp(inp1,inp2,inlev,x%tl_idx)* &
+            y%elem(ie)%state%theta_dp_cp(inp1,inp2,inlev,y%tl_idx)
+          z%elem(ie)%state%dp3d(inp1,inp2,inlev,z%tl_idx) = &
+            x%elem(ie)%state%dp3d(inp1,inp2,inlev,x%tl_idx)* &
+            y%elem(ie)%state%dp3d(inp1,inp2,inlev,y%tl_idx)
+        end do ! inp1
+      end do ! inp2
+    end do ! inlev
+  end do ! ie
 
   return
 end subroutine FNVExtProd
@@ -382,7 +395,8 @@ subroutine FNVExtDiv(x_C, y_C, z_C)
   !-----------------------------------------------------------------------
   ! z = x./y (Matlab notation; doesn't check for legal denominator)
   !-----------------------------------------------------------------------
-  use HommeNVector, only: NVec_t
+  use HommeNVector,   only: NVec_t
+  use dimensions_mod, only: np, nlev
   use, intrinsic :: iso_c_binding
   implicit none
   type(c_ptr), intent(in) :: x_C
@@ -393,7 +407,7 @@ subroutine FNVExtDiv(x_C, y_C, z_C)
   type(NVec_t), pointer :: y => NULL()
   type(NVec_t), pointer :: z => NULL()
 
-  integer :: ie
+  integer :: ie, inlev, inp1, inp2
 
   !=======Internals ============
 
@@ -404,25 +418,31 @@ subroutine FNVExtDiv(x_C, y_C, z_C)
 
   ! perform vector operation
   do ie=z%nets,z%nete
-     z%elem(ie)%state%v(:,:,:,:,z%tl_idx) = &
-          x%elem(ie)%state%v(:,:,:,:,x%tl_idx)/ &
-          y%elem(ie)%state%v(:,:,:,:,y%tl_idx)
-     z%elem(ie)%state%w(:,:,:,z%tl_idx) = &
-          x%elem(ie)%state%w(:,:,:,x%tl_idx)/ &
-          y%elem(ie)%state%w(:,:,:,y%tl_idx)
-     z%elem(ie)%state%phi(:,:,:,z%tl_idx) = &
-          x%elem(ie)%state%phi(:,:,:,x%tl_idx)/ &
-          y%elem(ie)%state%phi(:,:,:,y%tl_idx)
-     z%elem(ie)%state%theta_dp_cp(:,:,:,z%tl_idx) = &
-          x%elem(ie)%state%theta_dp_cp(:,:,:,x%tl_idx)/ &
-          y%elem(ie)%state%theta_dp_cp(:,:,:,y%tl_idx)
-     z%elem(ie)%state%dp3d(:,:,:,z%tl_idx) = &
-          x%elem(ie)%state%dp3d(:,:,:,x%tl_idx)/ &
-          y%elem(ie)%state%dp3d(:,:,:,y%tl_idx)
-     !z%elem(ie)%state%psv(:,:,z%tl_idx) = &
-     !     x%elem(ie)%state%psv(:,:,x%tl_idx)/ &
-     !     y%elem(ie)%state%psv(:,:,y%tl_idx)
-  end do
+    do inlev=1,nlev
+      do inp2=1,np
+        do inp1=1,np
+          z%elem(ie)%state%v(inp1,inp2,1,inlev,z%tl_idx) = &
+            x%elem(ie)%state%v(inp1,inp2,1,inlev,x%tl_idx)/ &
+            y%elem(ie)%state%v(inp1,inp2,1,inlev,y%tl_idx)
+          z%elem(ie)%state%v(inp1,inp2,2,inlev,z%tl_idx) = &
+            x%elem(ie)%state%v(inp1,inp2,2,inlev,x%tl_idx)/ &
+            y%elem(ie)%state%v(inp1,inp2,2,inlev,y%tl_idx)
+          z%elem(ie)%state%w(inp1,inp2,inlev,z%tl_idx) = &
+            x%elem(ie)%state%w(inp1,inp2,inlev,x%tl_idx)/ &
+            y%elem(ie)%state%w(inp1,inp2,inlev,y%tl_idx)
+          z%elem(ie)%state%phi(inp1,inp2,inlev,z%tl_idx) = &
+            x%elem(ie)%state%phi(inp1,inp2,inlev,x%tl_idx)/ &
+            y%elem(ie)%state%phi(inp1,inp2,inlev,y%tl_idx)
+          z%elem(ie)%state%theta_dp_cp(inp1,inp2,inlev,z%tl_idx) = &
+            x%elem(ie)%state%theta_dp_cp(inp1,inp2,inlev,x%tl_idx)/ &
+            y%elem(ie)%state%theta_dp_cp(inp1,inp2,inlev,y%tl_idx)
+          z%elem(ie)%state%dp3d(inp1,inp2,inlev,z%tl_idx) = &
+            x%elem(ie)%state%dp3d(inp1,inp2,inlev,x%tl_idx)/ &
+            y%elem(ie)%state%dp3d(inp1,inp2,inlev,y%tl_idx)
+        end do ! inp1
+      end do ! inp2
+    end do ! inlev
+  end do ! ie
 
   return
 end subroutine FNVExtDiv
@@ -434,7 +454,8 @@ subroutine FNVExtScale(cval, x_C, z_C)
   !-----------------------------------------------------------------------
   ! z = c*x
   !-----------------------------------------------------------------------
-  use HommeNVector, only: NVec_t
+  use HommeNVector,   only: NVec_t
+  use dimensions_mod, only: np, nlev
   use, intrinsic :: iso_c_binding
   implicit none
   real(c_double), intent(in) :: cval
@@ -444,7 +465,7 @@ subroutine FNVExtScale(cval, x_C, z_C)
   type(NVec_t), pointer :: x => NULL()
   type(NVec_t), pointer :: z => NULL()
 
-  integer :: ie
+  integer :: ie, inlev, inp2, inp1
 
   !=======Internals ============
 
@@ -454,19 +475,25 @@ subroutine FNVExtScale(cval, x_C, z_C)
 
   ! perform vector operation
   do ie=z%nets,z%nete
-     z%elem(ie)%state%v(:,:,:,:,z%tl_idx) = &
-          cval * x%elem(ie)%state%v(:,:,:,:,x%tl_idx)
-     z%elem(ie)%state%w(:,:,:,z%tl_idx) = &
-          cval * x%elem(ie)%state%w(:,:,:,x%tl_idx)
-     z%elem(ie)%state%phi(:,:,:,z%tl_idx) = &
-          cval * x%elem(ie)%state%phi(:,:,:,x%tl_idx)
-     z%elem(ie)%state%theta_dp_cp(:,:,:,z%tl_idx) = &
-          cval * x%elem(ie)%state%theta_dp_cp(:,:,:,x%tl_idx)
-     z%elem(ie)%state%dp3d(:,:,:,z%tl_idx) = &
-          cval * x%elem(ie)%state%dp3d(:,:,:,x%tl_idx)
-     !z%elem(ie)%state%psv(:,:,z%tl_idx) = &
-     !     cval * x%elem(ie)%state%psv(:,:,x%tl_idx)
-  end do
+    do inlev=1,nlev
+      do inp2=1,np
+        do inp1=1,np
+          z%elem(ie)%state%v(inp1,inp2,1,inlev,z%tl_idx) = &
+            cval * x%elem(ie)%state%v(inp1,inp2,1,inlev,x%tl_idx)
+          z%elem(ie)%state%v(inp1,inp2,2,inlev,z%tl_idx) = &
+            cval * x%elem(ie)%state%v(inp1,inp2,2,inlev,x%tl_idx)
+          z%elem(ie)%state%w(inp1,inp2,inlev,z%tl_idx) = &
+            cval * x%elem(ie)%state%w(inp1,inp2,inlev,x%tl_idx)
+          z%elem(ie)%state%phi(inp1,inp2,inlev,z%tl_idx) = &
+            cval * x%elem(ie)%state%phi(inp1,inp2,inlev,x%tl_idx)
+          z%elem(ie)%state%theta_dp_cp(inp1,inp2,inlev,z%tl_idx) = &
+            cval * x%elem(ie)%state%theta_dp_cp(inp1,inp2,inlev,x%tl_idx)
+          z%elem(ie)%state%dp3d(inp1,inp2,inlev,z%tl_idx) = &
+            cval * x%elem(ie)%state%dp3d(inp1,inp2,inlev,x%tl_idx)
+        end do ! inp1
+      end do ! inp2
+    end do ! inlev
+  end do ! ie
 
   return
 end subroutine FNVExtScale
@@ -478,7 +505,8 @@ subroutine FNVExtAbs(x_C, z_C)
   !-----------------------------------------------------------------------
   ! z = |x|  (componentwise)
   !-----------------------------------------------------------------------
-  use HommeNVector, only: NVec_t
+  use HommeNVector,   only: NVec_t
+  use dimensions_mod, only: np, nlev
   use, intrinsic :: iso_c_binding
   implicit none
   type(c_ptr), intent(in) :: x_C
@@ -487,7 +515,7 @@ subroutine FNVExtAbs(x_C, z_C)
   type(NVec_t), pointer :: x => NULL()
   type(NVec_t), pointer :: z => NULL()
 
-  integer :: ie
+  integer :: ie, inlev, inp1, inp2
 
   !=======Internals ============
 
@@ -497,19 +525,25 @@ subroutine FNVExtAbs(x_C, z_C)
 
   ! perform vector operation
   do ie=z%nets,z%nete
-     z%elem(ie)%state%v(:,:,:,:,z%tl_idx) = &
-          abs(x%elem(ie)%state%v(:,:,:,:,x%tl_idx))
-     z%elem(ie)%state%w(:,:,:,z%tl_idx) = &
-          abs(x%elem(ie)%state%w(:,:,:,x%tl_idx))
-     z%elem(ie)%state%phi(:,:,:,z%tl_idx) = &
-          abs(x%elem(ie)%state%phi(:,:,:,x%tl_idx))
-     z%elem(ie)%state%theta_dp_cp(:,:,:,z%tl_idx) = &
-          abs(x%elem(ie)%state%theta_dp_cp(:,:,:,x%tl_idx))
-     z%elem(ie)%state%dp3d(:,:,:,z%tl_idx) = &
-          abs(x%elem(ie)%state%dp3d(:,:,:,x%tl_idx))
-     !z%elem(ie)%state%psv(:,:,z%tl_idx) = &
-     !     abs(x%elem(ie)%state%psv(:,:,x%tl_idx))
-  end do
+    do inlev=1,nlev
+      do inp2=1,np
+        do inp1=1,np
+          z%elem(ie)%state%v(inp1,inp2,1,inlev,z%tl_idx) = &
+            abs(x%elem(ie)%state%v(inp1,inp2,1,inlev,x%tl_idx))
+          z%elem(ie)%state%v(inp1,inp2,2,inlev,z%tl_idx) = &
+            abs(x%elem(ie)%state%v(inp1,inp2,2,inlev,x%tl_idx))
+          z%elem(ie)%state%w(inp1,inp2,inlev,z%tl_idx) = &
+            abs(x%elem(ie)%state%w(inp1,inp2,inlev,x%tl_idx))
+          z%elem(ie)%state%phi(inp1,inp2,inlev,z%tl_idx) = &
+            abs(x%elem(ie)%state%phi(inp1,inp2,inlev,x%tl_idx))
+          z%elem(ie)%state%theta_dp_cp(inp1,inp2,inlev,z%tl_idx) = &
+            abs(x%elem(ie)%state%theta_dp_cp(inp1,inp2,inlev,x%tl_idx))
+          z%elem(ie)%state%dp3d(inp1,inp2,inlev,z%tl_idx) = &
+            abs(x%elem(ie)%state%dp3d(inp1,inp2,inlev,x%tl_idx))
+        end do ! inp1
+      end do ! inp2
+    end do ! inlev
+  end do ! ie
 
   return
 end subroutine FNVExtAbs
@@ -521,7 +555,8 @@ subroutine FNVExtInv(x_C, z_C)
   !-----------------------------------------------------------------------
   ! z = 1./x (Matlab notation: doesn't check for division by zero)
   !-----------------------------------------------------------------------
-  use HommeNVector, only: NVec_t
+  use HommeNVector,   only: NVec_t
+  use dimensions_mod, only: np, nlev
   use, intrinsic :: iso_c_binding
   implicit none
   type(c_ptr), intent(in) :: x_C
@@ -530,7 +565,7 @@ subroutine FNVExtInv(x_C, z_C)
   type(NVec_t), pointer :: x => NULL()
   type(NVec_t), pointer :: z => NULL()
 
-  integer :: ie
+  integer :: ie, inlev, inp1, inp2
 
   !=======Internals ============
 
@@ -540,19 +575,25 @@ subroutine FNVExtInv(x_C, z_C)
 
   ! perform vector operation
   do ie=z%nets,z%nete
-     z%elem(ie)%state%v(:,:,:,:,z%tl_idx) = &
-          1.d0 / x%elem(ie)%state%v(:,:,:,:,x%tl_idx)
-     z%elem(ie)%state%w(:,:,:,z%tl_idx) = &
-          1.d0 / x%elem(ie)%state%w(:,:,:,x%tl_idx)
-     z%elem(ie)%state%phi(:,:,:,z%tl_idx) = &
-          1.d0 / x%elem(ie)%state%phi(:,:,:,x%tl_idx)
-     z%elem(ie)%state%theta_dp_cp(:,:,:,z%tl_idx) = &
-          1.d0 / x%elem(ie)%state%theta_dp_cp(:,:,:,x%tl_idx)
-     z%elem(ie)%state%dp3d(:,:,:,z%tl_idx) = &
-          1.d0 / x%elem(ie)%state%dp3d(:,:,:,x%tl_idx)
-     !z%elem(ie)%state%psv(:,:,z%tl_idx) = &
-     !     1.d0 / x%elem(ie)%state%psv(:,:,x%tl_idx)
-  end do
+    do inlev=1,nlev
+      do inp2=1,np
+        do inp1=1,np
+          z%elem(ie)%state%v(inp1,inp2,1,inlev,z%tl_idx) = &
+            1.d0 / x%elem(ie)%state%v(inp1,inp2,1,inlev,x%tl_idx)
+          z%elem(ie)%state%v(inp1,inp2,2,inlev,z%tl_idx) = &
+            1.d0 / x%elem(ie)%state%v(inp1,inp2,2,inlev,x%tl_idx)
+          z%elem(ie)%state%w(inp1,inp2,inlev,z%tl_idx) = &
+            1.d0 / x%elem(ie)%state%w(inp1,inp2,inlev,x%tl_idx)
+          z%elem(ie)%state%phi(inp1,inp2,inlev,z%tl_idx) = &
+            1.d0 / x%elem(ie)%state%phi(inp1,inp2,inlev,x%tl_idx)
+          z%elem(ie)%state%theta_dp_cp(inp1,inp2,inlev,z%tl_idx) = &
+            1.d0 / x%elem(ie)%state%theta_dp_cp(inp1,inp2,inlev,x%tl_idx)
+          z%elem(ie)%state%dp3d(inp1,inp2,inlev,z%tl_idx) = &
+            1.d0 / x%elem(ie)%state%dp3d(inp1,inp2,inlev,x%tl_idx)
+        end do ! inp1
+      end do ! inp2
+    end do ! inlev
+  end do ! ie
 
   return
 end subroutine FNVExtInv
@@ -563,7 +604,8 @@ subroutine FNVExtAddConst(cval, x_C, z_C)
   !-----------------------------------------------------------------------
   ! z = x+c (add c to each component of the vector x)
   !-----------------------------------------------------------------------
-  use HommeNVector, only: NVec_t
+  use HommeNVector,   only: NVec_t
+  use dimensions_mod, only: np, nlev
   use, intrinsic :: iso_c_binding
   implicit none
   real(c_double), intent(in) :: cval
@@ -573,7 +615,7 @@ subroutine FNVExtAddConst(cval, x_C, z_C)
   type(NVec_t), pointer :: x => NULL()
   type(NVec_t), pointer :: z => NULL()
 
-  integer :: ie
+  integer :: ie, inlev, inp1, inp2
 
   !=======Internals ============
 
@@ -583,19 +625,25 @@ subroutine FNVExtAddConst(cval, x_C, z_C)
 
   ! perform vector operation
   do ie=z%nets,z%nete
-     z%elem(ie)%state%v(:,:,:,:,z%tl_idx) = &
-          x%elem(ie)%state%v(:,:,:,:,x%tl_idx) + cval
-     z%elem(ie)%state%w(:,:,:,z%tl_idx) = &
-          x%elem(ie)%state%w(:,:,:,x%tl_idx) + cval
-     z%elem(ie)%state%phi(:,:,:,z%tl_idx) = &
-          x%elem(ie)%state%phi(:,:,:,x%tl_idx) + cval
-     z%elem(ie)%state%theta_dp_cp(:,:,:,z%tl_idx) = &
-          x%elem(ie)%state%theta_dp_cp(:,:,:,x%tl_idx) + cval
-     z%elem(ie)%state%dp3d(:,:,:,z%tl_idx) = &
-          x%elem(ie)%state%dp3d(:,:,:,x%tl_idx) + cval
-     !z%elem(ie)%state%psv(:,:,z%tl_idx) = &
-     !     x%elem(ie)%state%psv(:,:,x%tl_idx) + cval
-  end do
+    do inlev=1,nlev
+      do inp2=1,np
+        do inp1=1,np
+          z%elem(ie)%state%v(inp1,inp2,1,inlev,z%tl_idx) = &
+            x%elem(ie)%state%v(inp1,inp2,1,inlev,x%tl_idx) + cval
+          z%elem(ie)%state%v(inp1,inp2,2,inlev,z%tl_idx) = &
+            x%elem(ie)%state%v(inp1,inp2,2,inlev,x%tl_idx) + cval
+          z%elem(ie)%state%w(inp1,inp2,inlev,z%tl_idx) = &
+            x%elem(ie)%state%w(inp1,inp2,inlev,x%tl_idx) + cval
+          z%elem(ie)%state%phi(inp1,inp2,inlev,z%tl_idx) = &
+            x%elem(ie)%state%phi(inp1,inp2,inlev,x%tl_idx) + cval
+          z%elem(ie)%state%theta_dp_cp(inp1,inp2,inlev,z%tl_idx) = &
+            x%elem(ie)%state%theta_dp_cp(inp1,inp2,inlev,x%tl_idx) + cval
+          z%elem(ie)%state%dp3d(inp1,inp2,inlev,z%tl_idx) = &
+            x%elem(ie)%state%dp3d(inp1,inp2,inlev,x%tl_idx) + cval
+        end do ! inp1
+      end do ! inp2
+    end do ! inlev
+  end do ! ie
 
   return
 end subroutine FNVExtAddConst
@@ -607,8 +655,9 @@ subroutine FNVExtDotProd(x_C, y_C, cval)
   !-----------------------------------------------------------------------
   ! c = <x,y>  (only include 'active' data; no ghost cells, etc.)
   !-----------------------------------------------------------------------
-  use HommeNVector, only: NVec_t
-  use parallel_mod, only: MPIreal_t, MPI_sum
+  use HommeNVector,   only: NVec_t
+  use dimensions_mod, only: np, nlev
+  use parallel_mod,   only: MPIreal_t, MPI_sum
   use, intrinsic :: iso_c_binding
   implicit none
   type(c_ptr),    intent(in)  :: x_C
@@ -618,7 +667,7 @@ subroutine FNVExtDotProd(x_C, y_C, cval)
   type(NVec_t), pointer :: x => NULL()
   type(NVec_t), pointer :: y => NULL()
 
-  integer :: ie
+  integer :: ie, inlev, inp1, inp2
   double precision :: cval_loc, cval_tot
 
   !=======Internals ============
@@ -631,20 +680,26 @@ subroutine FNVExtDotProd(x_C, y_C, cval)
   ! perform vector operation
   cval_loc = 0.d0
   do ie=x%nets,x%nete
-     cval_loc = cval_loc + &
-          sum(x%elem(ie)%state%v(:,:,:,:,x%tl_idx)* &
-              y%elem(ie)%state%v(:,:,:,:,y%tl_idx)) + &
-          sum(x%elem(ie)%state%w(:,:,:,x%tl_idx)* &
-              y%elem(ie)%state%w(:,:,:,y%tl_idx)) + &
-          sum(x%elem(ie)%state%phi(:,:,:,x%tl_idx)* &
-              y%elem(ie)%state%phi(:,:,:,y%tl_idx)) + &
-          sum(x%elem(ie)%state%theta_dp_cp(:,:,:,x%tl_idx)* &
-              y%elem(ie)%state%theta_dp_cp(:,:,:,y%tl_idx)) + &
-          sum(x%elem(ie)%state%dp3d(:,:,:,x%tl_idx)* &
-              y%elem(ie)%state%dp3d(:,:,:,y%tl_idx)) !+ &
-          !sum(x%elem(ie)%state%psv(:,:,:,x%tl_idx)* &
-          !    y%elem(ie)%state%psv(:,:,:,y%tl_idx))
-  end do
+    do inlev=1,nlev
+      do inp2=1,np
+        do inp1=1,np
+          cval_loc = cval_loc + &
+            x%elem(ie)%state%v(inp1,inp2,1,inlev,x%tl_idx)* &
+              y%elem(ie)%state%v(inp1,inp2,1,inlev,y%tl_idx) + &
+            x%elem(ie)%state%v(inp1,inp2,2,inlev,x%tl_idx)* &
+              y%elem(ie)%state%v(inp1,inp2,2,inlev,y%tl_idx) + &
+            x%elem(ie)%state%w(inp1,inp2,inlev,x%tl_idx)* &
+              y%elem(ie)%state%w(inp1,inp2,inlev,y%tl_idx) + &
+            x%elem(ie)%state%phi(inp1,inp2,inlev,x%tl_idx)* &
+              y%elem(ie)%state%phi(inp1,inp2,inlev,y%tl_idx) + &
+            x%elem(ie)%state%theta_dp_cp(inp1,inp2,inlev,x%tl_idx)* &
+              y%elem(ie)%state%theta_dp_cp(inp1,inp2,inlev,y%tl_idx) + &
+            x%elem(ie)%state%dp3d(inp1,inp2,inlev,x%tl_idx)* &
+              y%elem(ie)%state%dp3d(inp1,inp2,inlev,y%tl_idx)
+        end do ! inp1
+      end do ! inp2
+    end do ! inlev
+  end do ! ie
 
   ! accumulate in a local "double precision" variable
   ! just to be safe, and then copy to cval
@@ -662,8 +717,9 @@ subroutine FNVExtMaxNorm(x_C, cval)
   !-----------------------------------------------------------------------
   ! c = max(|x|)
   !-----------------------------------------------------------------------
-  use HommeNVector, only: NVec_t
-  use parallel_mod, only: MPIreal_t, MPI_max
+  use HommeNVector,   only: NVec_t
+  use dimensions_mod, only: np, nlev
+  use parallel_mod,   only: MPIreal_t, MPI_max
   use, intrinsic :: iso_c_binding
   implicit none
   type(c_ptr),    intent(in)  :: x_C
@@ -671,7 +727,7 @@ subroutine FNVExtMaxNorm(x_C, cval)
 
   type(NVec_t), pointer :: x => NULL()
 
-  integer :: ie
+  integer :: ie, inlev, inp1, inp2
   double precision :: cval_loc, cval_max
 
   !=======Internals ============
@@ -683,15 +739,21 @@ subroutine FNVExtMaxNorm(x_C, cval)
   ! perform vector operation
   cval_loc = 0.d0
   do ie=x%nets,x%nete
-    cval_loc = max(cval_loc, &
-          maxval(abs(x%elem(ie)%state%v(:,:,:,:,x%tl_idx))), &
-          maxval(abs(x%elem(ie)%state%w(:,:,:,x%tl_idx))), &
-          maxval(abs(x%elem(ie)%state%phi(:,:,:,x%tl_idx))), &
-          maxval(abs(x%elem(ie)%state%theta_dp_cp(:,:,:,x%tl_idx))), &
-          maxval(abs(x%elem(ie)%state%dp3d(:,:,:,x%tl_idx))), &
-          maxval(abs(x%elem(ie)%state%dp3d(:,:,:,x%tl_idx))))
-          !maxval(abs(x%elem(ie)%state%psv(:,:,x%tl_idx))))
-  end do
+    do inlev=1,nlev
+      do inp2=1,np
+        do inp1=1,np
+          cval_loc = max(cval_loc, &
+            abs(x%elem(ie)%state%v(inp1,inp2,1,inlev,x%tl_idx)), &
+            abs(x%elem(ie)%state%v(inp1,inp2,2,inlev,x%tl_idx)), &
+            abs(x%elem(ie)%state%w(inp1,inp2,inlev,x%tl_idx)), &
+            abs(x%elem(ie)%state%phi(inp1,inp2,inlev,x%tl_idx)), &
+            abs(x%elem(ie)%state%theta_dp_cp(inp1,inp2,inlev,x%tl_idx)), &
+            abs(x%elem(ie)%state%dp3d(inp1,inp2,inlev,x%tl_idx)), &
+            abs(x%elem(ie)%state%dp3d(inp1,inp2,inlev,x%tl_idx)))
+        end do ! inp1
+      end do ! inp2
+    end do ! inlev
+  end do ! ie
 
   ! accumulate in a local "double precision" variable
   ! just to be safe, and then copy to cval
@@ -721,8 +783,8 @@ subroutine FNVExtWrmsNorm(x_C, w_C, cval)
   type(NVec_t), pointer :: x => NULL()
   type(NVec_t), pointer :: w => NULL()
 
-  integer :: ie
-  double precision :: cval_loc(2), cval_sum(2)
+  integer :: ie, inlev, inp1, inp2
+  double precision :: cval_loc, count_loc, send_buf(2), recv_buf(2)
 
   !=======Internals ============
 
@@ -732,30 +794,40 @@ subroutine FNVExtWrmsNorm(x_C, w_C, cval)
 
   ! TODO: check that the loop isn't including 'inactive' data
   ! perform vector operation
-  cval_loc(2) = (x%nete-x%nets+1)*np*np*nlev*6 ! needs to be updated if psv included
-  cval_loc(1) = 0.d0
+  cval_loc = 0.d0
+  count_loc = 0.d0
   do ie=x%nets,x%nete
-    cval_loc(1) = sum( (x%elem(ie)%state%v(:,:,:,:,x%tl_idx)* &
-                        w%elem(ie)%state%v(:,:,:,:,w%tl_idx))**2 ) + &
-                  sum( (x%elem(ie)%state%w(:,:,:,x%tl_idx)* &
-                        w%elem(ie)%state%w(:,:,:,w%tl_idx))**2 ) + &
-                  sum( (x%elem(ie)%state%phi(:,:,:,x%tl_idx)* &
-                        w%elem(ie)%state%phi(:,:,:,w%tl_idx))**2 ) + &
-                  sum( (x%elem(ie)%state%theta_dp_cp(:,:,:,x%tl_idx)* &
-                        w%elem(ie)%state%theta_dp_cp(:,:,:,w%tl_idx))**2 ) + &
-                  sum( (x%elem(ie)%state%dp3d(:,:,:,x%tl_idx)* &
-                        w%elem(ie)%state%dp3d(:,:,:,w%tl_idx))**2 ) !+ &
-                  !sum( (x%elem(ie)%state%psv(:,:,:,:,x%tl_idx)* &
-                  !      w%elem(ie)%state%psv(:,:,:,:,w%tl_idx))**2 )
-  end do
+    do inlev=1,nlev
+      do inp2=1,np
+        do inp1=1,np
+          cval_loc = cval_loc + &
+            (x%elem(ie)%state%v(inp1,inp2,1,inlev,x%tl_idx)* &
+              w%elem(ie)%state%v(inp1,inp2,1,inlev,w%tl_idx))**2 + &
+            (x%elem(ie)%state%v(inp1,inp2,2,inlev,x%tl_idx)* &
+              w%elem(ie)%state%v(inp1,inp2,2,inlev,w%tl_idx))**2 + &
+            (x%elem(ie)%state%w(inp1,inp2,inlev,x%tl_idx)* &
+              w%elem(ie)%state%w(inp1,inp2,inlev,w%tl_idx))**2 + &
+            (x%elem(ie)%state%phi(inp1,inp2,inlev,x%tl_idx)* &
+              w%elem(ie)%state%phi(inp1,inp2,inlev,w%tl_idx))**2 + &
+            (x%elem(ie)%state%theta_dp_cp(inp1,inp2,inlev,x%tl_idx)* &
+              w%elem(ie)%state%theta_dp_cp(inp1,inp2,inlev,w%tl_idx))**2 + &
+            (x%elem(ie)%state%dp3d(inp1,inp2,inlev,x%tl_idx)* &
+              w%elem(ie)%state%dp3d(inp1,inp2,inlev,w%tl_idx))**2
+          count_loc = count_loc + 6.d0
+        end do ! inp1
+      end do ! inp2
+    end do ! inlev
+  end do ! ie
 
   ! accumulate totals; although the denominator should technically be a long
   ! integer, using a double should result in similar roundoff-level accuracy
   ! since all contributions are positive and generally equally sized, with one
   ! fewer reduction operation
-  call MPI_Allreduce(cval_loc, cval_sum, 2, MPIreal_t, &
+  send_buf(1) = cval_loc
+  send_buf(2) = count_loc
+  call MPI_Allreduce(send_buf, recv_buf, 2, MPIreal_t, &
        MPI_sum, x%par%comm, ie)
-  cval = sqrt(cval_sum(1)/cval_sum(2))
+  cval = sqrt(recv_buf(1)/recv_buf(2))
 
   return
 end subroutine FNVExtWrmsNorm
@@ -767,8 +839,9 @@ subroutine FNVExtMin(x_C, cval)
   !-----------------------------------------------------------------------
   ! cval = min(|xvec|)
   !-----------------------------------------------------------------------
-  use HommeNVector, only: NVec_t
-  use parallel_mod, only: MPIreal_t, MPI_min
+  use HommeNVector,   only: NVec_t
+  use dimensions_mod, only: np, nlev
+  use parallel_mod,   only: MPIreal_t, MPI_min
   use, intrinsic :: iso_c_binding
   implicit none
   type(c_ptr),    intent(in)  :: x_C
@@ -776,7 +849,7 @@ subroutine FNVExtMin(x_C, cval)
 
   type(NVec_t), pointer :: x => NULL()
 
-  integer :: ie
+  integer :: ie, inlev, inp1, inp2
   double precision :: cval_loc, cval_min
 
   !=======Internals ============
@@ -787,13 +860,20 @@ subroutine FNVExtMin(x_C, cval)
   ! perform vector operation
   cval_loc = abs(x%elem(x%nets)%state%v(1,1,1,1,x%tl_idx))
   do ie=x%nets,x%nete
-    cval_loc = min( minval(abs(x%elem(ie)%state%v(:,:,:,:,x%tl_idx))), &
-                    minval(abs(x%elem(ie)%state%w(:,:,:,x%tl_idx))), &
-                    minval(abs(x%elem(ie)%state%phi(:,:,:,x%tl_idx))), &
-                    minval(abs(x%elem(ie)%state%theta_dp_cp(:,:,:,x%tl_idx))), &
-                    minval(abs(x%elem(ie)%state%dp3d(:,:,:,x%tl_idx))) )
-                    !minval(x%elem(ie)%state%psv(:,:,:,:,x%tl_idx)))
-  end do
+    do inlev=1,nlev
+      do inp2=1,np
+        do inp1=1,np
+          cval_loc = min(cval_loc, &
+            abs(x%elem(ie)%state%v(inp1,inp2,1,inlev,x%tl_idx)), &
+            abs(x%elem(ie)%state%v(inp1,inp2,2,inlev,x%tl_idx)), &
+            abs(x%elem(ie)%state%w(inp1,inp2,inlev,x%tl_idx)), &
+            abs(x%elem(ie)%state%phi(inp1,inp2,inlev,x%tl_idx)), &
+            abs(x%elem(ie)%state%theta_dp_cp(inp1,inp2,inlev,x%tl_idx)), &
+            abs(x%elem(ie)%state%dp3d(inp1,inp2,inlev,x%tl_idx)))
+        end do ! inp1
+      end do ! inp2
+    end do ! inlev
+  end do ! ie
 
   ! accumulate in a local "double precision" variable
   ! just to be safe, and then copy to cval
