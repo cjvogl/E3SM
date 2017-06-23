@@ -245,6 +245,23 @@ subroutine farkifun(t, y, fy, ipar, rpar, ierr)
      elem(ie)%state%dp3d(:,:,:,1)        = Fvectemp(nete-nets+ie,:,:,:,6)
    end do 
 
+
+  ! The function call to compute_andor_apply_rhs is as follows:
+  !  compute_andor_apply_rhs(np1,nm1,n0,qn0,dt2,elem,hvcoord,hybrid,&
+  !     deriv,nets,nete,compute_diagnostics,eta_ave_w,scale1,scale2,scale3)
+  !
+  !  This call returns the following:
+  !
+  !   u(np1) = scale3*u(nm1) + dt2*DSS[ nonstiffRHS(u(n0))*scale1 + stiffRHS(un0)*scale2 ]
+  !
+  !   nonstiffRHS and the stiffRHS are determined within the function and can be change by 
+  !   multiplying different terms by scale1 and scale2
+  !
+  !  Setting scale1=scale2=1.0, scale3=0.0, and dt2=1.0 returns the full rhs
+  !
+  !  DSS is the averaging procedure for the active and inactive nodes
+  !  
+
    call compute_andor_apply_rhs(1,1,1,qn0,1.d0,elem,hvcoord,hybrid,&
        deriv,nets,nete,.false.,1.d0,0.d0,1.d0,0.d0)
 
