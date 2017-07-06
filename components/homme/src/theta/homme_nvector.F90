@@ -655,9 +655,10 @@ subroutine FNVExtDotProd(x_C, y_C, cval)
   !-----------------------------------------------------------------------
   ! c = <x,y>  (only include 'active' data; no ghost cells, etc.)
   !-----------------------------------------------------------------------
-  use HommeNVector,   only: NVec_t
-  use dimensions_mod, only: np, nlev
-  use parallel_mod,   only: MPIreal_t, MPI_sum
+  use HommeNVector,     only: NVec_t
+  use dimensions_mod,   only: np, nlev
+  use parallel_mod,     only: abortmp, global_shared_buf, global_shared_sum
+  use global_norms_mod, only: wrap_repro_sum
   use, intrinsic :: iso_c_binding
   implicit none
   type(c_ptr),    intent(in)  :: x_C
@@ -668,7 +669,6 @@ subroutine FNVExtDotProd(x_C, y_C, cval)
   type(NVec_t), pointer :: y => NULL()
 
   integer :: ie, inlev, inpx, inpy
-  double precision :: cval_loc, cval_tot
 
   !=======Internals ============
 
@@ -679,12 +679,12 @@ subroutine FNVExtDotProd(x_C, y_C, cval)
   ! NOTE: this use of spheremp acknowledges the fact that unknowns are 
   ! duplicated, in that the sum including spheremp performs the 
   ! integral over the domain 
-  cval_loc = 0.d0
   do ie=x%nets,x%nete
+    global_shared_buf(ie,1) = 0.d0
     do inlev=1,nlev
       do inpy=1,np
         do inpx=1,np
-          cval_loc = cval_loc + &
+          global_shared_buf(ie,1) = global_shared_buf(ie,1) + &
             (x%elem(ie)%state%v(inpx,inpy,1,inlev,x%tl_idx)* &
               y%elem(ie)%state%v(inpx,inpy,1,inlev,y%tl_idx) + &
             x%elem(ie)%state%v(inpx,inpy,2,inlev,x%tl_idx)* &
@@ -703,11 +703,10 @@ subroutine FNVExtDotProd(x_C, y_C, cval)
     end do ! inlev
   end do ! ie
 
-  ! accumulate in a local "double precision" variable
-  ! just to be safe, and then copy to cval
-  call MPI_Allreduce(cval_loc, cval_tot, 1, MPIreal_t, &
-       MPI_sum, x%par%comm, ie)
-  cval = cval_tot
+  ! accumulate sum using wrap_repro_sum and then copy to cval
+  ! Q: should we divide by 4*pi to account for the integral?
+  call wrap_repro_sum(nvars=1, comm=x%par%comm)
+  cval = global_shared_sum(1)
 
   return
 end subroutine FNVExtDotProd
@@ -776,7 +775,8 @@ subroutine FNVExtWrmsNorm(x_C, w_C, cval)
   use HommeNVector,       only: NVec_t
   use dimensions_mod,     only: np, nlev
   use physical_constants, only: dd_pi
-  use parallel_mod,       only: MPIreal_t, MPI_sum
+  use parallel_mod,       only: abortmp, global_shared_buf, global_shared_sum
+  use global_norms_mod,   only: wrap_repro_sum
   use, intrinsic :: iso_c_binding
   implicit none
   type(c_ptr),    intent(in)  :: x_C
@@ -787,7 +787,6 @@ subroutine FNVExtWrmsNorm(x_C, w_C, cval)
   type(NVec_t), pointer :: w => NULL()
 
   integer :: ie, inlev, inpx, inpy
-  double precision :: cval_loc
 
   !=======Internals ============
 
@@ -799,12 +798,12 @@ subroutine FNVExtWrmsNorm(x_C, w_C, cval)
   ! duplicated, in that the sum including spheremp performs the 
   ! integral over the domain.  We also use the fact that the overall 
   ! spherical domain has area 4*pi
-  cval_loc = 0.d0
   do ie=x%nets,x%nete
+    global_shared_buf(ie,1) = 0.d0
     do inlev=1,nlev
       do inpy=1,np
         do inpx=1,np
-          cval_loc = cval_loc + &
+          global_shared_buf(ie,1) = global_shared_buf(ie,1) + &
             (x%elem(ie)%state%v(inpx,inpy,1,inlev,x%tl_idx)* &
               w%elem(ie)%state%v(inpx,inpy,1,inlev,w%tl_idx))**2 + &
             (x%elem(ie)%state%v(inpx,inpy,2,inlev,x%tl_idx)* &
@@ -823,10 +822,10 @@ subroutine FNVExtWrmsNorm(x_C, w_C, cval)
     end do ! inlev
   end do ! ie
 
-  ! accumulate total
-  call MPI_Allreduce(cval_loc, cval, 1, MPIreal_t, &
-       MPI_sum, x%par%comm, ie)
-  cval = sqrt(cval/4.d0/dd_pi/nlev)
+  ! accumulate sum using wrap_repro_sum and then copy to cval
+  ! Q: should we divide by something other than 4*pi to account for the integral?
+  call wrap_repro_sum(nvars=1, comm=x%par%comm)
+  cval = sqrt(global_shared_sum(1)/4.d0/dd_pi/nlev)
 
   return
 end subroutine FNVExtWrmsNorm
