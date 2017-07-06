@@ -676,15 +676,16 @@ subroutine FNVExtDotProd(x_C, y_C, cval)
   call c_f_pointer(x_C, x)
   call c_f_pointer(y_C, y)
 
-  ! TODO: check that the loop isn't including 'inactive' data
-  ! perform vector operation
+  ! NOTE: this use of spheremp acknowledges the fact that unknowns are 
+  ! duplicated, in that the sum including spheremp performs the 
+  ! integral over the domain 
   cval_loc = 0.d0
   do ie=x%nets,x%nete
     do inlev=1,nlev
       do inpy=1,np
         do inpx=1,np
           cval_loc = cval_loc + &
-            x%elem(ie)%state%v(inpx,inpy,1,inlev,x%tl_idx)* &
+            (x%elem(ie)%state%v(inpx,inpy,1,inlev,x%tl_idx)* &
               y%elem(ie)%state%v(inpx,inpy,1,inlev,y%tl_idx) + &
             x%elem(ie)%state%v(inpx,inpy,2,inlev,x%tl_idx)* &
               y%elem(ie)%state%v(inpx,inpy,2,inlev,y%tl_idx) + &
@@ -695,7 +696,8 @@ subroutine FNVExtDotProd(x_C, y_C, cval)
             x%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,x%tl_idx)* &
               y%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,y%tl_idx) + &
             x%elem(ie)%state%dp3d(inpx,inpy,inlev,x%tl_idx)* &
-              y%elem(ie)%state%dp3d(inpx,inpy,inlev,y%tl_idx)
+              y%elem(ie)%state%dp3d(inpx,inpy,inlev,y%tl_idx)) & 
+            * x%elem(ie)%spheremp(inpx,inpy)
         end do ! inpx
       end do ! inpy
     end do ! inlev
@@ -735,8 +737,8 @@ subroutine FNVExtMaxNorm(x_C, cval)
   ! dereference x_C pointer for NVec_t object
   call c_f_pointer(x_C, x)
 
-  ! TODO: check that the loop isn't including 'inactive' data
-  ! perform vector operation
+  ! NOTE: we do not use spheremp here since we want the 'max' 
+  ! and all 'inactive' data are just duplicates of 'active' data
   cval_loc = 0.d0
   do ie=x%nets,x%nete
     do inlev=1,nlev
@@ -771,9 +773,10 @@ subroutine FNVExtWrmsNorm(x_C, w_C, cval)
   !-----------------------------------------------------------------------
   ! cval = sqrt(||x.*w||^2_2 / Ntotal)
   !-----------------------------------------------------------------------
-  use HommeNVector,   only: NVec_t
-  use dimensions_mod, only: np, nlev
-  use parallel_mod,   only: MPIreal_t, MPI_sum
+  use HommeNVector,       only: NVec_t
+  use dimensions_mod,     only: np, nlev
+  use physical_constants, only: dd_pi
+  use parallel_mod,       only: MPIreal_t, MPI_sum
   use, intrinsic :: iso_c_binding
   implicit none
   type(c_ptr),    intent(in)  :: x_C
@@ -784,7 +787,7 @@ subroutine FNVExtWrmsNorm(x_C, w_C, cval)
   type(NVec_t), pointer :: w => NULL()
 
   integer :: ie, inlev, inpx, inpy
-  double precision :: cval_loc, count_loc, send_buf(2), recv_buf(2)
+  double precision :: cval_loc
 
   !=======Internals ============
 
@@ -792,10 +795,11 @@ subroutine FNVExtWrmsNorm(x_C, w_C, cval)
   call c_f_pointer(x_C, x)
   call c_f_pointer(w_C, w)
 
-  ! TODO: check that the loop isn't including 'inactive' data
-  ! perform vector operation
+  ! NOTE: this use of spheremp acknowledges the fact that unknowns are 
+  ! duplicated, in that the sum including spheremp performs the 
+  ! integral over the domain.  We also use the fact that the overall 
+  ! spherical domain has area 4*pi
   cval_loc = 0.d0
-  count_loc = 0.d0
   do ie=x%nets,x%nete
     do inlev=1,nlev
       do inpy=1,np
@@ -812,22 +816,17 @@ subroutine FNVExtWrmsNorm(x_C, w_C, cval)
             (x%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,x%tl_idx)* &
               w%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,w%tl_idx))**2 + &
             (x%elem(ie)%state%dp3d(inpx,inpy,inlev,x%tl_idx)* &
-              w%elem(ie)%state%dp3d(inpx,inpy,inlev,w%tl_idx))**2
-          count_loc = count_loc + 6.d0
+              w%elem(ie)%state%dp3d(inpx,inpy,inlev,w%tl_idx))**2 &
+            * x%elem(ie)%spheremp(inpx,inpy)
         end do ! inpx
       end do ! inpy
     end do ! inlev
   end do ! ie
 
-  ! accumulate totals; although the denominator should technically be a long
-  ! integer, using a double should result in similar roundoff-level accuracy
-  ! since all contributions are positive and generally equally sized, with one
-  ! fewer reduction operation
-  send_buf(1) = cval_loc
-  send_buf(2) = count_loc
-  call MPI_Allreduce(send_buf, recv_buf, 2, MPIreal_t, &
+  ! accumulate total
+  call MPI_Allreduce(cval_loc, cval, 1, MPIreal_t, &
        MPI_sum, x%par%comm, ie)
-  cval = sqrt(recv_buf(1)/recv_buf(2))
+  cval = sqrt(cval/4.d0/dd_pi/nlev)
 
   return
 end subroutine FNVExtWrmsNorm
@@ -857,8 +856,8 @@ subroutine FNVExtMin(x_C, cval)
   ! dereference x_C pointer for NVec_t object
   call c_f_pointer(x_C, x)
 
-  ! TODO: check that the loop isn't including 'inactive' data
-  ! perform vector operation
+  ! NOTE: we do not use spheremp here since we want the 'min' 
+  ! and all 'inactive' data are just duplicates of 'active' data
   cval_loc = abs(x%elem(x%nets)%state%v(1,1,1,1,x%tl_idx))
   do ie=x%nets,x%nete
     do inlev=1,nlev
