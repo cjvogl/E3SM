@@ -218,7 +218,12 @@ program prim_main
      hybrid = hybrid_create(par,ithr,nthreads)
      nets=dom_mt(ithr)%start
      nete=dom_mt(ithr)%end
-     
+  
+#if (defined TEST_HOMME_NVEC_INLINE)
+     call test_homme_nvector(elem,hvcoord,hybrid,nets,nete,tl,par)
+     stop
+#endif
+   
      nstep = nextoutputstep(tl)
      do while(tl%nstep<nstep)
         call t_startf('prim_run')

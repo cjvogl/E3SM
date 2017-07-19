@@ -27,6 +27,7 @@ cd $HOMME_ROOT/build
 # configure build
 cmake \
     \
+    -D TEST_HOMME_NVEC_INLINE=ON     \
     -D CMAKE_Fortran_COMPILER=mpif90 \
     -D CMAKE_C_COMPILER=mpicc        \
     -D CMAKE_CXX_COMPILER=mpicxx     \
