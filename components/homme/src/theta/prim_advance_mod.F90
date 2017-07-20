@@ -23,7 +23,6 @@ module prim_advance_mod
   use time_mod,       only: timelevel_t
   use test_mod,       only: set_prescribed_wind
   use hevi_mod,       only: state_save,state_read,backsubstitution,mgs,elemstate_add
-  use FortranVector
 
   implicit none
   private
@@ -34,6 +33,7 @@ module prim_advance_mod
 !  type (EdgeBuffer_t) :: edge5
   type (EdgeBuffer_t) :: edge6
   real (kind=real_kind), allocatable :: ur_weights(:)
+  type (parallel_t), pointer :: par_ptr
 
 
 contains
@@ -42,7 +42,7 @@ contains
     use edge_mod, only : initEdgeBuffer
     implicit none
     
-    type (parallel_t) :: par
+    type (parallel_t), target :: par
     type (element_t), intent(inout), target   :: elem(:)
     character(len=*)    , intent(in) :: integration
     integer :: i
@@ -50,6 +50,9 @@ contains
 
 !    call initEdgeBuffer(par,edge5,elem,5*nlev)
     call initEdgeBuffer(par,edge6,elem,6*nlev)
+
+    ! store pointer to par for use in NVec_t object
+    par_ptr => par
 
     ! compute averaging weights for RK+LF (tstep_type=1) timestepping:
     allocate(ur_weights(qsplit))
@@ -91,6 +94,7 @@ contains
     use edgetype_mod,   only: EdgeBuffer_t
     use reduction_mod,  only: reductionbuffer_ordered_1d_t, parallelmax
     use time_mod,       only: timelevel_qdp
+    use HommeNVector,   only: NVec_t, MakeHommeNVector
     use iso_c_binding
 
 #ifdef TRILINOS
@@ -114,13 +118,10 @@ contains
     real (kind=real_kind) ::  itertol
     real (kind=real_kind) ::  statesave(nete-nets+1,np,np,nlev,6)
     real (kind=real_kind) ::  gamma,delta
-    real (kind=real_kind), pointer  ::  Fvectemp(:,:,:,:,:)
-    type (Fvec), allocatable :: reshapeFvectemp(:)
     real (kind=real_kind), pointer :: upt(:,:,:),vpt(:,:,:),wpt(:,:,:)
     real (kind=real_kind), pointer :: phipt(:,:,:),thetapt(:,:,:),dp3dpt(:,:,:)
-
-    type(Fvec), pointer :: y(:)
-
+    type(NVec_t), target :: y
+    type(c_ptr) :: y_C
 
 
     integer :: ie,nm1,n0,np1,nstep,qsplit_stage,k, qn0
@@ -171,52 +172,52 @@ contains
     endif
 #endif
   
-    ! initiate arkode if needed
+    ! initialize arkode if needed  (ideally, this should only be performed *once* 
+    ! at the start of the simulation instead of every time step, and the solution 
+    ! vector y should be reused -- at a minimum the value of 'n0' should *never* 
+    ! be changed.)
     if (tstep_type==8) then
-      allocate(Fvectemp(nete-nets+1,np,np,nlev,6))
-      do ie=nets,nete
-        upt => elem(ie)%state%v(:,:,1,:,n0)
-        Fvectemp(nete-nets+ie,:,:,:,1) = upt(:,:,:)
-        vpt => elem(ie)%state%v(:,:,2,:,n0)
-        Fvectemp(nete-nets+ie,:,:,:,2) = vpt(:,:,:)
-        wpt => elem(ie)%state%w(:,:,:,n0)
-        Fvectemp(nete-nets+ie,:,:,:,3) = wpt(:,:,:)
-        phipt => elem(ie)%state%v(:,:,1,:,n0)
-        Fvectemp(nete-nets+ie,:,:,:,4) = phipt(:,:,:)
-        thetapt => elem(ie)%state%theta_dp_cp(:,:,:,n0)
-        Fvectemp(nete-nets+ie,:,:,:,5) = thetapt(:,:,:)
-        dp3dpt => elem(ie)%state%dp3d(:,:,:,n0)
-        Fvectemp(nete-nets+ie,:,:,:,6) = dp3dpt(:,:,:)
-      end do
-      allocate(y((nete-nets+1)*np*np*nlev))
-      y(:)%u           = reshape(Fvectemp(:,:,:,:,1),(/(nete-nets+1)*np*np*nlev/))
-      y(:)%v           = reshape(Fvectemp(:,:,:,:,2),(/(nete-nets+1)*np*np*nlev/))
-      y(:)%w           = reshape(Fvectemp(:,:,:,:,3),(/(nete-nets+1)*np*np*nlev/))
-      y(:)%phi         = reshape(Fvectemp(:,:,:,:,4),(/(nete-nets+1)*np*np*nlev/))
-      y(:)%theta_dp_cp = reshape(Fvectemp(:,:,:,:,5),(/(nete-nets+1)*np*np*nlev/))
-      y(:)%dp3d        = reshape(Fvectemp(:,:,:,:,6),(/(nete-nets+1)*np*np*nlev/))
-      deallocate(Fvectemp)
-      atol = 1d-1
-      rtol = 1d-1
-      iout = 0
-      rout = 0.d0
-      tcur = tstart
-      print *, 'Fvec structures initialized'
-      call arkode_init(0.d0, dt, y, rtol, atol, iout, rout, ierr)
-      print *, 'ierr', ierr
-      if (ierr /= 0) then
-        print *,  'Error in arkode_init, ierr = ', ierr, '; halting'
-        stop
-      end if 
+       
+       ! 'create' NVec_t object 'y' to hold current solution
+       call MakeHommeNVector(elem, hvcoord, hybrid, deriv, nets, nete, qn0, &
+            n0, par_ptr, y, ierr)
+       if (ierr /= 0) then
+          print *,  'Error in MakeHommeNVector, ierr = ', ierr, '; halting'
+          stop
+       end if
+
+       ! create C pointer to y
+       y_C = c_loc(y)
+
+       ! initialize arkode
+       atol = 1d-1    ! do all solution components have unit magnitude, or could 
+                      ! their units vary considerably?  If units can vary, then 
+                      ! a scalar-valued atol is a **bad** idea
+       rtol = 1d-1    ! do you really only want one digit of accuracy?  When using
+                      ! fixed time steps and an explicit method this input is unused, 
+                      ! but in all other cases it corresponds to how tightly things 
+                      ! are solved, and should rougly correspond with the desired 
+                      ! number of digits
+       iout = 0
+       rout = 0.d0
+       tstart = 0.d0
+       tcur = tstart  ! if you initialize ARKode over and over at each time step, 
+                      ! then this should be the *current* time.  I'll note that in 
+                      ! this routine the variable 'tstart' was uninitialized (so it 
+                      ! could be anything) -- I changed it to just be 0.d0.  This 
+                      ! will only be valid if we're solving an autonomous IVP, 
+                      ! i.e. y' = f(y) instead of y' = f(t,y)
+       call arkode_init(tstart, dt, y_C, rtol, atol, iout, rout, ierr)
+       if (ierr /= 0) then
+          print *,  'Error in arkode_init, ierr = ', ierr, '; halting'
+          stop
+       end if
      
-      print *,'\nFinished initialization, starting time steps'
-      print *, '   '
-      print *, '      t           u           v           w'
-      print *, '----------------------------------------------------'
-      print '(1x,4(es12.5,1x))', tcur
-
-      deallocate(y)
-
+       print *,'\nFinished initialization, starting time steps'
+       print *, '   '
+       print *, '      t           u           v           w'
+       print *, '----------------------------------------------------'
+       print '(1x,4(es12.5,1x))', tcur
 
     endif
 
@@ -377,34 +378,33 @@ contains
 !=========================================================================================
     else if (tstep_type==8) then ! use arkode
             
-      print *, 'hey it works'
- !     call FNVExtPrint(elem)
- !     print *, 'keep going'
-      print *, 'size of elem', size(elem), 'nelem', nelem, 'n0', n0
-      print *, 'size of y' , size(y)
- !     call compute_andor_apply_rhs(np1,n0,n0,qn0,gamma*dt,elem,hvcoord,hybrid,&
- !       deriv,nets,nete,.false.,1.d0,1.d0,1.d0,1.d0)
-              
-      ! call ARKode to perform a single step 
-!       itask = 2          ! use 'one-step' mode
-!       print *, 'tout', tout
-!       print *, 'tcur', tcur
-!       print *, 'itask', itask
-!       print *, 'ierr', ierr
+       ! notify ARKode of desired time step (only actually required if changing dt between calls)
+       call farksetrin('FIXED_STEP', dt, ierr)
+       if (ierr /= 0) then
+          write(0,*) 'farksetrin failed, ierr = ', ierr
+       endif
 
-       call arkode_init(0.d0, dt, y, rtol, atol, iout, rout, ierr)
+       ! call ARKode to perform a single step 
+       itask = 2          ! use 'one-step' mode
+       tout = tcur + dt   ! not entirely relevant in one-step mode
+       call farkode(tout, tcur, y_C, itask, ierr)
+       if (ierr /= 0) then
+          write(0,*) 'farkode failed, ierr = ', ierr
+       endif
 
-!       call farksetrin('FIXED_STEP', dt, ierr)
-!       if (ierr /= 0) then
-!         write(0,*) 'farksetrin failed, ierr = ', ierr
-!       endif
-!       call farkode(tcur+dt, tcur, y, itask, ierr)
-!       tcur=tcur+dt
- !     if (ierr /= 0) then
- !       write(0,*) 'farkode failed, ierr = ', ierr
- !     endif
     else
        call abortmp('ERROR: bad choice of tstep_type')
+    endif
+
+
+
+    ! because arkode is currently re-initialized at *every* time step, it must be 
+    ! freed at the end of those time steps to avoid a memory leak. Again, this 
+    ! should ideally only be performed *once* (at the end of the simulation)
+    if (tstep_type==8) then
+       
+       call farkfree
+
     endif
 
 
@@ -1659,4 +1659,3 @@ contains
   end subroutine compute_stage_value_dirk
 
 end module prim_advance_mod
-
