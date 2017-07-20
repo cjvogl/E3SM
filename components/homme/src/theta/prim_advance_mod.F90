@@ -35,13 +35,6 @@ module prim_advance_mod
   type (EdgeBuffer_t) :: edge6
   real (kind=real_kind), allocatable :: ur_weights(:)
 
-  type, public :: arkode_pars
-    integer             :: nets,nete,qn0
-    type (hybrid_t)     :: hybrid
-    type (hvcoord_t)    :: hvcoord
-    type (derivative_t) :: deriv
-  end type arkode_pars
-
 
 contains
 
