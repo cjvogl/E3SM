@@ -20,8 +20,8 @@
 #
 #  set paths to source code, build directory and run directory
 #
-set wdir =  ~/scratch1/preqx             # run directory
-set HOMME = `pwd`/../..                  # HOMME svn checkout     
+set wdir =  /p/lscratchd/vogl2/homme             # run directory
+set HOMME = /g/g14/vogl2/workspace/acme/components/homme # HOMME svn checkout     
 set input = $HOMME/test/jw_baroclinic    # input files for test case
 set vdir = $HOMME/test/vcoord            # vertical coordinate files
 set bld = $wdir/bld                      # cmake/build directory
@@ -92,7 +92,7 @@ set namelist = jw_baroclinic.nl  # CAM-style, vertically lagrangian
 #
 mkdir -p $bld
 cd $bld
-set exe = $bld/src/preqx/preqx
+set exe = $bld/src/theta/theta
 set build = 1  # set to 1 to force build
 # rm $bld/CMakeCache.txt    # remove this file to force re-configure
 if (! -f CMakeCache.txt) then
@@ -100,15 +100,17 @@ if (! -f CMakeCache.txt) then
    #rm -rf utils/pio  utils/timing utils/cprnc   # may also need to do this
    echo "running CMAKE to configure the model"
 
-   cmake -C $MACH -DQSIZE_D=$qsize -DPREQX_PLEV=$nlev -DPREQX_NP=4  \
-   -DBUILD_HOMME_SWEQX=FALSE                     \
-   -DPREQX_USE_ENERGY=TRUE  $HOMME
+   $HOMME/cmake_homme_cab.sh 4 4 $nlev $qsize
+
+#   cmake -C $MACH -DQSIZE_D=$qsize -DPREQX_PLEV=$nlev -DPREQX_NP=4  \
+#   -DBUILD_HOMME_SWEQX=FALSE                     \
+#   -DPREQX_USE_ENERGY=TRUE  $HOMME
 
    make -j4 clean
 endif
 if ( ! -f $exe) set build = 1   # no exe, force build
 if ( $build == 1 ) then
-   make -j4 preqx
+   make -j4 theta
    if ($status) exit
 endif
 
@@ -225,4 +227,3 @@ $mpirun $exe  < input.nl
 date
 
 ncl $input/zeta.ncl
-

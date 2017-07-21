@@ -5,9 +5,9 @@ export ACME_ROOT=$HOME/workspace/acme
 export HOMME_ROOT=$ACME_ROOT/components/homme
 
 # HOMME Settings
-NP=4
-NLEVELS=26
-NTRACERS=4
+NP=$2
+NLEVELS=$3
+NTRACERS=$4
 
 # machine specific settings (compilers, libraries, etc.)
 source /usr/local/tools/dotkit/init.sh
@@ -19,21 +19,20 @@ use hdf5-intel-parallel-mvapich2-1.10.0
 use netcdf-intel-4.3.3.1
 use netcdf-fortran-intel-4.4.2
 
-# make build directory
-rm -rf $HOMME_ROOT/build
-mkdir -p $HOMME_ROOT/build || exit -1
-cd $HOMME_ROOT/build
+## make build directory
+#rm -rf $HOMME_ROOT/build
+#mkdir -p $HOMME_ROOT/build || exit -1
+#cd $HOMME_ROOT/build
 
 # configure build
 cmake \
     \
-    -D TEST_HOMME_NVEC_INLINE=ON     \
     -D CMAKE_Fortran_COMPILER=mpif90 \
     -D CMAKE_C_COMPILER=mpicc        \
     -D CMAKE_CXX_COMPILER=mpicxx     \
     \
     -D OPT_FLAGS="-O0"  \
-    -D DEBUG_FLAGS="-g" \
+    -D DEBUG_FLAGS="-g -DTEST_HOMME_NVEC_INLINE" \
     \
     -D NETCDF_DIR=$NETCDF            \
     -D WITH_PNETCDF=FALSE            \

@@ -24,11 +24,15 @@ subroutine test_homme_nvector(elem,hvcoord,hybrid,nets,nete,tl,par)
   integer, intent(in)                   :: nets, nete
 
   type(NVec_t), target          :: x
+  type(c_ptr)                   :: x_C
   integer                       :: ier, qn0, tl_idx
 
   !=======Internals ============
 
+  print *, ""
+  print *, "***************************"
   print *, "Running HOMME NVector Tests"
+  print *, ""
 
   tl_idx = tl%n0
   call TimeLevel_Qdp(tl, qsplit, qn0)
@@ -36,10 +40,19 @@ subroutine test_homme_nvector(elem,hvcoord,hybrid,nets,nete,tl,par)
   ! Test MakeHommeNVector
   print *, "Testing MakeHommeNVector"
   call MakeHommeNVector(elem, hvcoord, hybrid, deriv1, nets, nete, qn0, tl_idx, par, x, ier)  
+  x_C = c_loc(x)
   if (ier == 1) then
     stop "Error making Homme NVector for x"
   else
-    print *, "success\n"
+    print *, "success"
+    print *, ""
   end if
+
+  ! Test FNVExtPrint
+  print *, "Testing FNExtPrint"
+  call FNVExtPrint(x_C)
+
+  print *, "***************************"
+  print *, ""
 
 end subroutine test_homme_nvector
