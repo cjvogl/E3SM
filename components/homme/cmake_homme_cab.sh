@@ -4,11 +4,6 @@
 export ACME_ROOT=$HOME/workspace/acme
 export HOMME_ROOT=$ACME_ROOT/components/homme
 
-# HOMME Settings
-NP=$2
-NLEVELS=$3
-NTRACERS=$4
-
 # machine specific settings (compilers, libraries, etc.)
 source /usr/local/tools/dotkit/init.sh
 
@@ -19,10 +14,22 @@ use hdf5-intel-parallel-mvapich2-1.10.0
 use netcdf-intel-4.3.3.1
 use netcdf-fortran-intel-4.4.2
 
-## make build directory
-#rm -rf $HOMME_ROOT/build
-#mkdir -p $HOMME_ROOT/build || exit -1
-#cd $HOMME_ROOT/build
+# HOMME Settings
+if [[$# > 1]]
+  then
+    NP=$2
+    NLEVELS=$3
+    NTRACERS=$4
+  else
+    NP=4
+    NLEVELS=26
+    NTRACERS=4
+
+    # make build directory
+    rm -rf $HOMME_ROOT/build
+    mkdir -p $HOMME_ROOT/build || exit -1
+    cd $HOMME_ROOT/build
+fi
 
 # configure build
 cmake \
