@@ -11,24 +11,15 @@ module HommeNVector
   ! Description: simple Fortran user-defined type for example interface
   !-----------------------------------------------------------------------
   use element_mod,    only: element_t
-  use hybvcoord_mod,  only: hvcoord_t
-  use hybrid_mod,     only: hybrid_t
-  use derivative_mod, only: derivative_t
   use element_state,  only: timelevels
-  use parallel_mod,   only: parallel_t
   use, intrinsic :: iso_c_binding
   public
 
   type :: NVec_t
-     type(element_t),    pointer :: elem(:)
-     type(hvcoord_t),    pointer :: hvcoord
-     type(hybrid_t),     pointer :: hybrid
-     type(derivative_t), pointer :: deriv
-     integer                     :: nets
-     integer                     :: nete
-     integer                     :: qn0
-     integer                     :: tl_idx
-     type(parallel_t),   pointer :: par
+     type(element_t), pointer :: elem(:)
+     integer                  :: nets
+     integer                  :: nete
+     integer                  :: tl_idx
   end type NVec_t
 
   save
@@ -54,24 +45,15 @@ contains
     return
   end function ReserveHommeNVectorRegistryIdx
 
-  subroutine MakeHommeNVector(elem, hvcoord, hybrid, deriv, nets, nete, qn0, tl_idx, par, vec, ier)
+  subroutine MakeHommeNVector(elem, nets, nete, tl_idx, vec, ier)
     ! Function to create an NVec_t wrapper (vec) to the Homme solution
     !   structure, and reserve its index in the vector registry.
     ! The return value is 0 if succssful, 1 if failure (if the registry
     !   index is already taken)
     use element_mod,    only: element_t
-    use hybvcoord_mod,  only: hvcoord_t
-    use hybrid_mod,     only: hybrid_t
-    use derivative_mod, only: derivative_t
-    use parallel_mod,   only: parallel_t
     type (element_t),    target    :: elem(:)
-    type (hvcoord_t),    target    :: hvcoord
-    type (hybrid_t),     target    :: hybrid
-    type (derivative_t), target    :: deriv
-    type (parallel_t),   target    :: par
     integer, intent(in)            :: nets
     integer, intent(in)            :: nete
-    integer, intent(in)            :: qn0
     integer, intent(in)            :: tl_idx
     type(NVec_t), intent(out)      :: vec
     integer, intent(out)           :: ier
@@ -85,13 +67,8 @@ contains
 
     ! otherwise, set up wrapper and reserve registry entry
     vec%elem => elem
-    vec%hvcoord => hvcoord
-    vec%hybrid => hybrid
-    vec%deriv => deriv
-    vec%par => par
     vec%nets = nets
     vec%nete = nete
-    vec%qn0 = qn0
     vec%tl_idx = tl_idx
     HommeNVectorRegistry(tl_idx) = .true.
 
@@ -110,9 +87,10 @@ subroutine FNVExtPrint(x_C)
   ! Note: this function is not required by ARKode (or any of SUNDIALS) --
   !       it is merely here for convenience when debugging
   !-----------------------------------------------------------------------
-  use HommeNVector,   only: NVec_t
-  use dimensions_mod, only: np, nlev
-
+  use HommeNVector,     only: NVec_t
+  use dimensions_mod,   only: np, nlev
+  use prim_advance_mod, only: par_ptr
+  
   use, intrinsic :: iso_c_binding
   implicit none
   type(c_ptr) :: x_C
@@ -131,17 +109,17 @@ subroutine FNVExtPrint(x_C)
       do inpx=1,np
         do inpy=1,np
           print '(/,"proc ",i3,",", " elem ",i3,",", " u(",i1,",",i1,",",i2,") = ",f10.5)', &
-            x%par%rank, ie, inpx, inpy, inlev, x%elem(ie)%state%v(inpx,inpy,1,inlev,x%tl_idx)
+            par_ptr%rank, ie, inpx, inpy, inlev, x%elem(ie)%state%v(inpx,inpy,1,inlev,x%tl_idx)
           print '("proc ",i3,",", " elem ",i3,",", " v(",i1,",",i1,",",i2,") = ",f10.5)', &
-            x%par%rank, ie, inpx, inpy, inlev, x%elem(ie)%state%v(inpx,inpy,2,inlev,x%tl_idx)
+            par_ptr%rank, ie, inpx, inpy, inlev, x%elem(ie)%state%v(inpx,inpy,2,inlev,x%tl_idx)
           print '("proc ",i3,",", " elem ",i3,",", " w(",i1,",",i1,",",i2,") = ",f10.5)', &
-            x%par%rank, ie, inpx, inpy, inlev, x%elem(ie)%state%w(inpx,inpy,inlev,x%tl_idx)
+            par_ptr%rank, ie, inpx, inpy, inlev, x%elem(ie)%state%w(inpx,inpy,inlev,x%tl_idx)
           print '("proc ",i3,",", " elem ",i3,",", " phi(",i1,",",i1,",",i2,") = ",f10.5)', &
-            x%par%rank, ie, inpx, inpy, inlev, x%elem(ie)%state%phi(inpx,inpy,inlev,x%tl_idx)
+            par_ptr%rank, ie, inpx, inpy, inlev, x%elem(ie)%state%phi(inpx,inpy,inlev,x%tl_idx)
           print '("proc ",i3,",", " elem ",i3,",", " theta_dp_cp(",i1,",",i1,",",i2,") = ",f10.5)', &
-            x%par%rank, ie, inpx, inpy, inlev, x%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,x%tl_idx)
+            par_ptr%rank, ie, inpx, inpy, inlev, x%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,x%tl_idx)
           print '("proc ",i3,",", " elem ",i3,",", " dp3d(",i1,",",i1,",",i2,") = ",f10.5,/)', &
-            x%par%rank, ie, inpx, inpy, inlev, x%elem(ie)%state%dp3d(inpx,inpy,inlev,x%tl_idx)
+            par_ptr%rank, ie, inpx, inpy, inlev, x%elem(ie)%state%dp3d(inpx,inpy,inlev,x%tl_idx)
         end do
       end do
     end do
@@ -185,13 +163,8 @@ subroutine FNVExtClone(x_C, y_C)
 
   ! setup y to replicate x, but with unique registry index
   y%elem => x%elem
-  y%hvcoord => x%hvcoord
-  y%hybrid => x%hybrid
-  y%deriv => x%deriv
-  y%par => x%par
   y%nets = x%nets
   y%nete = x%nete
-  y%qn0 = x%qn0
   y%tl_idx = tl_idx
 
   ! associate y_C pointer with y
@@ -224,10 +197,6 @@ subroutine FNVExtDestroy(x_C)
 
   ! detach pointers, deallocate vector and nullify x_C
   if (associated(x%elem))     nullify(x%elem)
-  if (associated(x%hvcoord))  nullify(x%hvcoord)
-  if (associated(x%hybrid))   nullify(x%hybrid)
-  if (associated(x%deriv))    nullify(x%deriv)
-  if (associated(x%par))      nullify(x%par)
   deallocate(x)
   x_C = C_NULL_PTR
 
@@ -659,6 +628,7 @@ subroutine FNVExtDotProd(x_C, y_C, cval)
   use dimensions_mod,   only: np, nlev
   use parallel_mod,     only: abortmp, global_shared_buf, global_shared_sum
   use global_norms_mod, only: wrap_repro_sum
+  use prim_advance_mod, only: par_ptr
   use, intrinsic :: iso_c_binding
   implicit none
   type(c_ptr),    intent(in)  :: x_C
@@ -705,7 +675,7 @@ subroutine FNVExtDotProd(x_C, y_C, cval)
 
   ! accumulate sum using wrap_repro_sum and then copy to cval
   ! Q: should we divide by 4*pi to account for the integral?
-  call wrap_repro_sum(nvars=1, comm=x%par%comm)
+  call wrap_repro_sum(nvars=1, comm=par_ptr%comm)
   cval = global_shared_sum(1)
 
   return
@@ -718,9 +688,10 @@ subroutine FNVExtMaxNorm(x_C, cval)
   !-----------------------------------------------------------------------
   ! c = max(|x|)
   !-----------------------------------------------------------------------
-  use HommeNVector,   only: NVec_t
-  use dimensions_mod, only: np, nlev
-  use parallel_mod,   only: MPIreal_t, MPI_max
+  use HommeNVector,     only: NVec_t
+  use dimensions_mod,   only: np, nlev
+  use parallel_mod,     only: MPIreal_t, MPI_max
+  use prim_advance_mod, only: par_ptr
   use, intrinsic :: iso_c_binding
   implicit none
   type(c_ptr),    intent(in)  :: x_C
@@ -759,7 +730,7 @@ subroutine FNVExtMaxNorm(x_C, cval)
   ! accumulate in a local "double precision" variable
   ! just to be safe, and then copy to cval
   call MPI_Allreduce(cval_loc, cval_max, 1, MPIreal_t, &
-       MPI_max, x%par%comm, ie)
+       MPI_max, par_ptr%comm, ie)
   cval = cval_max
 
   return
@@ -777,6 +748,7 @@ subroutine FNVExtWrmsNorm(x_C, w_C, cval)
   use physical_constants, only: dd_pi
   use parallel_mod,       only: abortmp, global_shared_buf, global_shared_sum
   use global_norms_mod,   only: wrap_repro_sum
+  use prim_advance_mod,   only: par_ptr
   use, intrinsic :: iso_c_binding
   implicit none
   type(c_ptr),    intent(in)  :: x_C
@@ -824,7 +796,7 @@ subroutine FNVExtWrmsNorm(x_C, w_C, cval)
 
   ! accumulate sum using wrap_repro_sum and then copy to cval
   ! Q: should we divide by something other than 4*pi to account for the integral?
-  call wrap_repro_sum(nvars=1, comm=x%par%comm)
+  call wrap_repro_sum(nvars=1, comm=par_ptr%comm)
   cval = sqrt(global_shared_sum(1)/4.d0/dd_pi/nlev)
 
   return
@@ -837,9 +809,10 @@ subroutine FNVExtMin(x_C, cval)
   !-----------------------------------------------------------------------
   ! cval = min(|xvec|)
   !-----------------------------------------------------------------------
-  use HommeNVector,   only: NVec_t
-  use dimensions_mod, only: np, nlev
-  use parallel_mod,   only: MPIreal_t, MPI_min
+  use HommeNVector,     only: NVec_t
+  use dimensions_mod,   only: np, nlev
+  use parallel_mod,     only: MPIreal_t, MPI_min
+  use prim_advance_mod, only: par_ptr
   use, intrinsic :: iso_c_binding
   implicit none
   type(c_ptr),    intent(in)  :: x_C
@@ -877,7 +850,7 @@ subroutine FNVExtMin(x_C, cval)
   ! accumulate in a local "double precision" variable
   ! just to be safe, and then copy to cval
   call MPI_Allreduce(cval_loc, cval_min, 1, MPIreal_t, &
-       MPI_min, x%par%comm, ie)
+       MPI_min, par_ptr%comm, ie)
   cval = cval_min
 
   return

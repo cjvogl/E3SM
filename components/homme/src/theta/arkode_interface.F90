@@ -189,12 +189,12 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   !======= Inclusions ===========
   use iso_c_binding
   use HommeNVector,     only: NVec_t
-  use prim_advance_mod, only: compute_andor_apply_rhs
   use element_mod,      only: element_t
   use hybrid_mod,       only: hybrid_t
   use derivative_mod,   only: derivative_t
   use hybvcoord_mod,    only: hvcoord_t
   use dimensions_mod,   only: np,nlev
+  use prim_advance_mod
 
   !======= Declarations =========
   implicit none
@@ -210,6 +210,7 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   ! local variables
   type(NVec_t), pointer :: y => NULL()
   type(NVec_t), pointer :: fy => NULL()
+  real (kind=real_kind) :: ci
 
   integer :: ie, inlev, inpx, inpy
 
@@ -222,6 +223,9 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   call c_f_pointer(y_C, y)
   call c_f_pointer(fy_C, fy)
 
+  ! determine 'stage time' from t, tcur and dt
+  ci = (t - tcur)/dt_save
+  
   ! The function call to compute_andor_apply_rhs is as follows:
   !  compute_andor_apply_rhs(np1, nm1, n0, qn0, dt2, elem, hvcoord, hybrid, &
   !     deriv, nets, nete, compute_diagnostics, eta_ave_w, scale1, scale2, scale3)
@@ -237,11 +241,9 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   !
   !  DSS is the averaging procedure for the active and inactive nodes
   !  
-  call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, y%qn0, &
-       1.d0, y%elem, y%hvcoord, y%hybrid, y%deriv, y%nets, y%nete, &
-       .false., 1.d0, 0.d0, 1.d0, 0.d0)
-
-  !!! DRR QUESTION: should eta_ave_w equal 1.d0 here??
+  call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0_save, &
+       1.d0, y%elem, hvcoord_ptr, hybrid_ptr, deriv_ptr, y%nets, y%nete, &
+       .false., ci*eta_ave_w, 0.d0, 1.d0, 0.d0)
 
   return
 end subroutine farkifun
@@ -268,12 +270,12 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   !-----------------------------------------------------------------
   use iso_c_binding
   use HommeNVector,     only: NVec_t
-  use prim_advance_mod, only: compute_andor_apply_rhs
   use element_mod,      only: element_t
   use hybrid_mod,       only: hybrid_t
   use derivative_mod,   only: derivative_t
   use hybvcoord_mod,    only: hvcoord_t
   use dimensions_mod,   only: np,nlev
+  use prim_advance_mod
 
   !======= Declarations =========
   implicit none
@@ -289,6 +291,7 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   ! local variables
   type(NVec_t), pointer :: y => NULL()
   type(NVec_t), pointer :: fy => NULL()
+  real (kind=real_kind) :: ci
 
   integer :: ie, inlev, inpx, inpy
 
@@ -301,6 +304,9 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   call c_f_pointer(y_C, y)
   call c_f_pointer(fy_C, fy)
 
+  ! determine 'stage time' from t, tcur and dt
+  ci = (t - tcur)/dt_save
+  
   ! The function call to compute_andor_apply_rhs is as follows:
   !  compute_andor_apply_rhs(np1, nm1, n0, qn0, dt2, elem, hvcoord, hybrid, &
   !     deriv, nets, nete, compute_diagnostics, eta_ave_w, scale1, scale2, scale3)
@@ -316,11 +322,9 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   !
   !  DSS is the averaging procedure for the active and inactive nodes
   !  
-  call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, y%qn0, &
-       1.d0, y%elem, y%hvcoord, y%hybrid, y%deriv, y%nets, y%nete, &
-       .false., 1.d0, 1.d0, 0.d0, 0.d0)
-
-  !!! DRR QUESTION: should eta_ave_w equal 1.d0 here??
+  call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0_save, &
+       1.d0, y%elem, hvcoord_ptr, hybrid_ptr, deriv_ptr, y%nets, y%nete, &
+       .false., ci*eta_ave_w, 1.d0, 0.d0, 0.d0)
 
   return
 end subroutine farkefun

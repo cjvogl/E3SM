@@ -33,8 +33,14 @@ module prim_advance_mod
 !  type (EdgeBuffer_t) :: edge5
   type (EdgeBuffer_t) :: edge6
   real (kind=real_kind), allocatable :: ur_weights(:)
-  type (parallel_t), pointer :: par_ptr
 
+  ! storage to enable ARKode interface
+  type (parallel_t), pointer :: par_ptr
+  real (kind=real_kind) :: tcur, dt_save, eta_ave_w
+  integer :: qn0_save
+  type(hvcoord_t), pointer :: hvcoord_ptr
+  type(hybrid_t), pointer :: hybrid_ptr
+  type(derivative_t), pointer :: deriv_ptr
 
 contains
 
@@ -85,7 +91,7 @@ contains
 
 
   !_____________________________________________________________________
-  subroutine prim_advance_exp(elem, deriv, hvcoord, hybrid,dt, tl,  nets, nete, compute_diagnostics)
+  subroutine prim_advance_exp(elem, deriv, hvcoord, hybrid,dt, tl, nets, nete, compute_diagnostics)
 
     use bndry_mod,      only: bndry_exchangev
     use control_mod,    only: prescribed_wind, qsplit, tstep_type, rsplit, &
@@ -114,21 +120,21 @@ contains
     integer              , intent(in)            :: nete
     logical,               intent(in)            :: compute_diagnostics
 
-    real (kind=real_kind) ::  dt2, time, dt_vis, x, eta_ave_w
+    real (kind=real_kind) ::  dt2, time, dt_vis, x
     real (kind=real_kind) ::  itertol
     real (kind=real_kind) ::  statesave(nete-nets+1,np,np,nlev,6)
     real (kind=real_kind) ::  gamma,delta
     real (kind=real_kind), pointer :: upt(:,:,:),vpt(:,:,:),wpt(:,:,:)
     real (kind=real_kind), pointer :: phipt(:,:,:),thetapt(:,:,:),dp3dpt(:,:,:)
-    type(NVec_t), target :: y
-    type(c_ptr) :: y_C
+    type(NVec_t), target :: y, ynew
+    type(c_ptr) :: y_C, ynew_C
 
 
     integer :: ie,nm1,n0,np1,nstep,qsplit_stage,k, qn0
     integer :: n,i,j,maxiter
 
     ! initializers for arkode
-    real*8 :: tstart, tend, tcur, tout, rtol, rout(40)
+    real*8 :: tstart, tend, tout, rtol, rout(40)
     integer :: maxiters, diagfreq
     integer(C_INT) :: ierr, itask
     integer(C_LONG) :: iout(40)
@@ -178,16 +184,28 @@ contains
     ! be changed.)
     if (tstep_type==8) then
        
-       ! 'create' NVec_t object 'y' to hold current solution
-       call MakeHommeNVector(elem, hvcoord, hybrid, deriv, nets, nete, qn0, &
-            n0, par_ptr, y, ierr)
+       ! 'create' NVec_t objects 'y' and 'ynew' to hold current solution
+       call MakeHommeNVector(elem, nets, nete, n0, y, ierr)
+       if (ierr /= 0) then
+          print *,  'Error in MakeHommeNVector, ierr = ', ierr, '; halting'
+          stop
+       end if
+       call MakeHommeNVector(elem, nets, nete, np1, ynew, ierr)
        if (ierr /= 0) then
           print *,  'Error in MakeHommeNVector, ierr = ', ierr, '; halting'
           stop
        end if
 
-       ! create C pointer to y
+
+       ! set saved parameters for passing through ARKode interface
+       qn0_save = qn0
+       hvcoord_ptr => hvcoord
+       hybrid_ptr => hybrid
+       deriv_ptr => deriv
+       
+       ! create C pointers to y and ynew
        y_C = c_loc(y)
+       ynew_C = c_loc(ynew)
 
        ! initialize arkode
        atol = 1d-1    ! do all solution components have unit magnitude, or could 
@@ -212,13 +230,43 @@ contains
           print *,  'Error in arkode_init, ierr = ', ierr, '; halting'
           stop
        end if
-     
-       print *,'\nFinished initialization, starting time steps'
-       print *, '   '
-       print *, '      t           u           v           w'
-       print *, '----------------------------------------------------'
-       print '(1x,4(es12.5,1x))', tcur
 
+
+       !! Set additional ARKode options (e.g. Butcher table)
+!!$       CALL FARKSETERKTABLE(S, Q, P, C, A, B, B2, IER)
+!!$
+!!$     The arguments are:
+!!$       S = the number of stages in the table [int, input]
+!!$       Q = the global order of accuracy of the method [int, input]
+!!$       P = the global order of accuracy of the embedding [int, input]
+!!$       C = array of length S containing the stage times [realtype, input]
+!!$       A = array of length S*S containing the ERK coefficients (stored in 
+!!$           row-major, "C", order) [realtype, input]
+!!$       B = array of length S containing the solution coefficients
+!!$           [realtype, input]
+!!$       B2 = array of length S containing the embedding coefficients
+!!$           [realtype, input]
+
+!!$       RK2:
+!!$          A = [ 0, 0; 2/3, 0];   !!! A = (/ 0.d0, 0.d0, 2.d0/3.d0, 0.d0 /)
+!!$          b = [ 1/4, 3/4];
+!!$          c = [ 0; 2/3];
+!!$          q = 3;  p = 0;
+!!$          b2 = [ 1/4, 3/4 ];
+!!$          s = 2;
+
+!!$       Ullrich 3rd order 5 stage
+!!$          s = 6;
+!!$          q = 3;
+!!$          A = zeros(s,s);
+!!$          A(2,1) = 0.2;
+!!$          A(3,2) = 0.2;
+!!$          A(4,3) = 1/3;
+!!$          A(5,4) = 2/3;
+!!$          A(6,1) = 0.25;  A(6,5) = 0.75;
+!!$          c = [0; 0.2; 0.2; 1/3; 2/3; 1];
+!!$          b = [0.25, 0, 0, 0, 0.75, 0];
+       
     endif
 
   ! Start time stepping                                                                                  
@@ -377,7 +425,13 @@ contains
       call t_stopf("ARS232_timestep")
 !=========================================================================================
     else if (tstep_type==8) then ! use arkode
-            
+
+       ! need to copy y into ynew 
+       call FNVExtScale(1.d0, y_C, ynew_C)
+
+       ! store current step size for passing through ARKode interface
+       dt_save = dt
+       
        ! notify ARKode of desired time step (only actually required if changing dt between calls)
        call farksetrin('FIXED_STEP', dt, ierr)
        if (ierr /= 0) then
@@ -387,7 +441,7 @@ contains
        ! call ARKode to perform a single step 
        itask = 2          ! use 'one-step' mode
        tout = tcur + dt   ! not entirely relevant in one-step mode
-       call farkode(tout, tcur, y_C, itask, ierr)
+       call farkode(tout, tcur, ynew_C, itask, ierr)
        if (ierr /= 0) then
           write(0,*) 'farkode failed, ierr = ', ierr
        endif
