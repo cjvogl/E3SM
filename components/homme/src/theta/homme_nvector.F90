@@ -12,6 +12,7 @@ module HommeNVector
   !-----------------------------------------------------------------------
   use element_mod,    only: element_t
   use element_state,  only: timelevels
+  use parallel_mod,   only: parallel_t
   use, intrinsic :: iso_c_binding
   public
 
@@ -26,10 +27,20 @@ module HommeNVector
 
   integer, parameter :: RegistryLength=timelevels
   logical :: HommeNVectorRegistry(RegistryLength)=.false.
+  type (parallel_t), pointer :: par_ptr
 
   !-------------------------------------
 
 contains
+
+  subroutine SetParPtr(par)
+    ! Simple routine to set parallel pointer
+    use parallel_mod, only: parallel_t
+    implicit none
+    type (parallel_t), target :: par
+
+    par_ptr => par
+  end subroutine SetParPtr
 
   integer function ReserveHommeNVectorRegistryIdx()
     ! Marks first available vector from registry as used (if any are available)
@@ -87,10 +98,9 @@ subroutine FNVExtPrint(x_C)
   ! Note: this function is not required by ARKode (or any of SUNDIALS) --
   !       it is merely here for convenience when debugging
   !-----------------------------------------------------------------------
-  use HommeNVector,     only: NVec_t
+  use HommeNVector,     only: NVec_t, par_ptr
   use dimensions_mod,   only: np, nlev
-  use prim_advance_mod, only: par_ptr
-  
+
   use, intrinsic :: iso_c_binding
   implicit none
   type(c_ptr) :: x_C
@@ -624,11 +634,10 @@ subroutine FNVExtDotProd(x_C, y_C, cval)
   !-----------------------------------------------------------------------
   ! c = <x,y>  (only include 'active' data; no ghost cells, etc.)
   !-----------------------------------------------------------------------
-  use HommeNVector,     only: NVec_t
+  use HommeNVector,     only: NVec_t, par_ptr
   use dimensions_mod,   only: np, nlev
   use parallel_mod,     only: abortmp, global_shared_buf, global_shared_sum
   use global_norms_mod, only: wrap_repro_sum
-  use prim_advance_mod, only: par_ptr
   use, intrinsic :: iso_c_binding
   implicit none
   type(c_ptr),    intent(in)  :: x_C
@@ -646,9 +655,9 @@ subroutine FNVExtDotProd(x_C, y_C, cval)
   call c_f_pointer(x_C, x)
   call c_f_pointer(y_C, y)
 
-  ! NOTE: this use of spheremp acknowledges the fact that unknowns are 
-  ! duplicated, in that the sum including spheremp performs the 
-  ! integral over the domain 
+  ! NOTE: this use of spheremp acknowledges the fact that unknowns are
+  ! duplicated, in that the sum including spheremp performs the
+  ! integral over the domain
   do ie=x%nets,x%nete
     global_shared_buf(ie,1) = 0.d0
     do inlev=1,nlev
@@ -666,7 +675,7 @@ subroutine FNVExtDotProd(x_C, y_C, cval)
             x%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,x%tl_idx)* &
               y%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,y%tl_idx) + &
             x%elem(ie)%state%dp3d(inpx,inpy,inlev,x%tl_idx)* &
-              y%elem(ie)%state%dp3d(inpx,inpy,inlev,y%tl_idx)) & 
+              y%elem(ie)%state%dp3d(inpx,inpy,inlev,y%tl_idx)) &
             * x%elem(ie)%spheremp(inpx,inpy)
         end do ! inpx
       end do ! inpy
@@ -688,10 +697,9 @@ subroutine FNVExtMaxNorm(x_C, cval)
   !-----------------------------------------------------------------------
   ! c = max(|x|)
   !-----------------------------------------------------------------------
-  use HommeNVector,     only: NVec_t
+  use HommeNVector,     only: NVec_t, par_ptr
   use dimensions_mod,   only: np, nlev
   use parallel_mod,     only: MPIreal_t, MPI_max
-  use prim_advance_mod, only: par_ptr
   use, intrinsic :: iso_c_binding
   implicit none
   type(c_ptr),    intent(in)  :: x_C
@@ -707,7 +715,7 @@ subroutine FNVExtMaxNorm(x_C, cval)
   ! dereference x_C pointer for NVec_t object
   call c_f_pointer(x_C, x)
 
-  ! NOTE: we do not use spheremp here since we want the 'max' 
+  ! NOTE: we do not use spheremp here since we want the 'max'
   ! and all 'inactive' data are just duplicates of 'active' data
   cval_loc = 0.d0
   do ie=x%nets,x%nete
@@ -743,12 +751,11 @@ subroutine FNVExtWrmsNorm(x_C, w_C, cval)
   !-----------------------------------------------------------------------
   ! cval = sqrt(||x.*w||^2_2 / Ntotal)
   !-----------------------------------------------------------------------
-  use HommeNVector,       only: NVec_t
+  use HommeNVector,       only: NVec_t, par_ptr
   use dimensions_mod,     only: np, nlev
   use physical_constants, only: dd_pi
   use parallel_mod,       only: abortmp, global_shared_buf, global_shared_sum
   use global_norms_mod,   only: wrap_repro_sum
-  use prim_advance_mod,   only: par_ptr
   use, intrinsic :: iso_c_binding
   implicit none
   type(c_ptr),    intent(in)  :: x_C
@@ -766,9 +773,9 @@ subroutine FNVExtWrmsNorm(x_C, w_C, cval)
   call c_f_pointer(x_C, x)
   call c_f_pointer(w_C, w)
 
-  ! NOTE: this use of spheremp acknowledges the fact that unknowns are 
-  ! duplicated, in that the sum including spheremp performs the 
-  ! integral over the domain.  We also use the fact that the overall 
+  ! NOTE: this use of spheremp acknowledges the fact that unknowns are
+  ! duplicated, in that the sum including spheremp performs the
+  ! integral over the domain.  We also use the fact that the overall
   ! spherical domain has area 4*pi
   do ie=x%nets,x%nete
     global_shared_buf(ie,1) = 0.d0
@@ -809,10 +816,9 @@ subroutine FNVExtMin(x_C, cval)
   !-----------------------------------------------------------------------
   ! cval = min(|xvec|)
   !-----------------------------------------------------------------------
-  use HommeNVector,     only: NVec_t
+  use HommeNVector,     only: NVec_t, par_ptr
   use dimensions_mod,   only: np, nlev
   use parallel_mod,     only: MPIreal_t, MPI_min
-  use prim_advance_mod, only: par_ptr
   use, intrinsic :: iso_c_binding
   implicit none
   type(c_ptr),    intent(in)  :: x_C
@@ -828,7 +834,7 @@ subroutine FNVExtMin(x_C, cval)
   ! dereference x_C pointer for NVec_t object
   call c_f_pointer(x_C, x)
 
-  ! NOTE: we do not use spheremp here since we want the 'min' 
+  ! NOTE: we do not use spheremp here since we want the 'min'
   ! and all 'inactive' data are just duplicates of 'active' data
   cval_loc = abs(x%elem(x%nets)%state%v(1,1,1,1,x%tl_idx))
   do ie=x%nets,x%nete
