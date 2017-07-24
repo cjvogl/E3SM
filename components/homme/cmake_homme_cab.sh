@@ -15,7 +15,7 @@ use netcdf-intel-4.3.3.1
 use netcdf-fortran-intel-4.4.2
 
 # HOMME Settings
-if [[$# > 1]]
+if [[ $# -gt 1 ]]
   then
     NP=$2
     NLEVELS=$3
