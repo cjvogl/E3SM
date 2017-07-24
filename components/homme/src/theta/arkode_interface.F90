@@ -188,13 +188,16 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   !-----------------------------------------------------------------
   !======= Inclusions ===========
   use iso_c_binding
+  use kinds,            only: real_kind
   use HommeNVector,     only: NVec_t
   use element_mod,      only: element_t
   use hybrid_mod,       only: hybrid_t
+  use kinds,            only: real_kind
   use derivative_mod,   only: derivative_t
   use hybvcoord_mod,    only: hvcoord_t
   use dimensions_mod,   only: np,nlev
-  use prim_advance_mod
+  use prim_advance_mod, only: compute_andor_apply_rhs, dt_save, eta_ave_w_save, &
+                              qn0_save, hvcoord_ptr, hybrid_ptr, deriv_ptr
 
   !======= Declarations =========
   implicit none
@@ -224,7 +227,10 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   call c_f_pointer(fy_C, fy)
 
   ! determine 'stage time' from t, tcur and dt
-  ci = (t - tcur)/dt_save
+  ! TODO: we don't have access to tcur here
+  ! ci = (t - tcur)/dt_save 
+  ci = 1.d0 ! DEBUG
+  
   
   ! The function call to compute_andor_apply_rhs is as follows:
   !  compute_andor_apply_rhs(np1, nm1, n0, qn0, dt2, elem, hvcoord, hybrid, &
@@ -240,10 +246,12 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   !  Setting scale1=scale2=1.0, scale3=0.0, and dt2=1.0 returns the full rhs
   !
   !  DSS is the averaging procedure for the active and inactive nodes
-  !  
+  !
+
+    
   call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0_save, &
        1.d0, y%elem, hvcoord_ptr, hybrid_ptr, deriv_ptr, y%nets, y%nete, &
-       .false., ci*eta_ave_w, 0.d0, 1.d0, 0.d0)
+       .false., ci*eta_ave_w_save, 0.d0, 1.d0, 0.d0)
 
   return
 end subroutine farkifun
@@ -269,13 +277,15 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   !            1=>recoverable error, -1=>non-recoverable error
   !-----------------------------------------------------------------
   use iso_c_binding
+  use kinds,            only: real_kind
   use HommeNVector,     only: NVec_t
   use element_mod,      only: element_t
   use hybrid_mod,       only: hybrid_t
   use derivative_mod,   only: derivative_t
   use hybvcoord_mod,    only: hvcoord_t
   use dimensions_mod,   only: np,nlev
-  use prim_advance_mod
+  use prim_advance_mod, only: compute_andor_apply_rhs, dt_save, eta_ave_w_save, &
+                              qn0_save, hvcoord_ptr, hybrid_ptr, deriv_ptr
 
   !======= Declarations =========
   implicit none
@@ -305,7 +315,9 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   call c_f_pointer(fy_C, fy)
 
   ! determine 'stage time' from t, tcur and dt
-  ci = (t - tcur)/dt_save
+  ! TODO: we don't have access to tcur here
+  ! ci = (t - tcur)/dt_save 
+  ci = 1.d0 ! DEBUG
   
   ! The function call to compute_andor_apply_rhs is as follows:
   !  compute_andor_apply_rhs(np1, nm1, n0, qn0, dt2, elem, hvcoord, hybrid, &
@@ -324,7 +336,7 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   !  
   call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0_save, &
        1.d0, y%elem, hvcoord_ptr, hybrid_ptr, deriv_ptr, y%nets, y%nete, &
-       .false., ci*eta_ave_w, 1.d0, 0.d0, 0.d0)
+       .false., ci*eta_ave_w_save, 1.d0, 0.d0, 0.d0)
 
   return
 end subroutine farkefun

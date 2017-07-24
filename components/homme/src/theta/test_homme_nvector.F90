@@ -27,7 +27,7 @@ subroutine test_homme_nvector(elem,nets,nete,tl)
   print *, "Testing MakeHommeNVector"
   call MakeHommeNVector(elem, nets, nete, tl%n0, x, ierr)
   x_C = c_loc(x)
-  if (ier == 1) then
+  if (ierr == 1) then
     stop "Error making Homme NVector for x"
   else
     print *, "success"

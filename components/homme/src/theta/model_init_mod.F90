@@ -21,7 +21,7 @@ contains
   subroutine model_init2( elem , deriv, nets, nete, tl )
     use element_mod, only: element_t
     use derivative_mod, only: derivative_t
-    use time_mod,       only: TimeLevel_t
+    use time_mod,       only: TimeLevel_t, tstep
     use HommeNVector, only: NVec_t, MakeHommeNVector
 
     implicit none
@@ -35,10 +35,10 @@ contains
     integer(C_LONG) :: iout(40)
     integer(C_INT) :: ierr
 
-    #if (defined TEST_HOMME_NVEC_INLINE)
+#ifdef TEST_HOMME_NVEC_INLINE
     call test_homme_nvector(elem,nets,nete,tl)
     stop
-    #endif
+#endif
 
     ! 'create' NVec_t objects 'y' and 'ynew' to hold current solution
     call MakeHommeNVector(elem, nets, nete, tl%n0, y, ierr)
@@ -72,7 +72,7 @@ contains
      iout = 0
      rout = 0.d0
      tstart = 0.d0
-     call arkode_init(tstart, dt, y_C, rtol, atol, iout, rout, ierr)
+     call arkode_init(tstart, tstep, y_C, rtol, atol, iout, rout, ierr)
      if (ierr /= 0) then
        print *,  'Error in arkode_init, ierr = ', ierr, '; halting'
        stop

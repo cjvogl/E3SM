@@ -33,13 +33,16 @@ module prim_advance_mod
 !  type (EdgeBuffer_t) :: edge5
   type (EdgeBuffer_t) :: edge6
   real (kind=real_kind), allocatable :: ur_weights(:)
+  real (kind=real_kind) :: eta_ave_w
 
   ! storage to enable ARKode interface
-  real (kind=real_kind) :: dt_save, eta_ave_w
+  real (kind=real_kind) :: dt_save, eta_ave_w_save
   integer :: qn0_save
   type(hvcoord_t), pointer :: hvcoord_ptr
   type(hybrid_t), pointer :: hybrid_ptr
   type(derivative_t), pointer :: deriv_ptr
+  public :: dt_save, eta_ave_w_save, qn0_save, hvcoord_ptr, hybrid_ptr, deriv_ptr
+
 
 contains
 
@@ -107,9 +110,9 @@ contains
     implicit none
 
     type (element_t),      intent(inout), target :: elem(:)
-    type (derivative_t),   intent(in)            :: deriv
-    type (hvcoord_t)                             :: hvcoord
-    type (hybrid_t),       intent(in)            :: hybrid
+    type (derivative_t),   intent(in),    target :: deriv
+    type (hvcoord_t),                     target :: hvcoord
+    type (hybrid_t),       intent(in),    target :: hybrid
     real (kind=real_kind), intent(in)            :: dt
     type (TimeLevel_t)   , intent(in)            :: tl
     integer              , intent(in)            :: nets
@@ -128,8 +131,7 @@ contains
     integer :: n,i,j,maxiter
 
     ! initializers for arkode
-    real*8 :: tend, tout
-    integer :: maxiters, diagfreq
+    real*8 :: tend, tout, tcur
     integer(C_INT) :: ierr, itask
 
     call t_startf('prim_advance_exp')
@@ -170,12 +172,10 @@ contains
     endif
 #endif
 
-    ! initialize arkode if needed  (ideally, this should only be performed *once*
-    ! at the start of the simulation instead of every time step, and the solution
-    ! vector y should be reused -- at a minimum the value of 'n0' should *never*
-    ! be changed.)
     if (tstep_type==8) then
        ! set saved parameters for passing through ARKode interface
+       dt_save = dt
+       eta_ave_w_save = eta_ave_w_save
        qn0_save = qn0
        hvcoord_ptr => hvcoord
        hybrid_ptr => hybrid
@@ -342,9 +342,6 @@ contains
        ! need to copy y into ynew
        call FNVExtScale(1.d0, y_C, ynew_C)
 
-       ! store current step size for passing through ARKode interface
-       dt_save = dt
-
        ! notify ARKode of desired time step (only actually required if changing dt between calls)
        call farksetrin('FIXED_STEP', dt, ierr)
        if (ierr /= 0) then
@@ -353,7 +350,8 @@ contains
 
        ! call ARKode to perform a single step
        itask = 2          ! use 'one-step' mode
-       tout = tcur + dt   ! not entirely relevant in one-step mode
+       tcur = 0.d0        ! don't have a way of determining current time yet
+       tout = tcur + dt   ! not entirely relevant in one-step mode, so tcur=0.d0 is ok
        call farkode(tout, tcur, ynew_C, itask, ierr)
        if (ierr /= 0) then
           write(0,*) 'farkode failed, ierr = ', ierr
