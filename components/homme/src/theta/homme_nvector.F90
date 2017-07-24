@@ -56,7 +56,7 @@ contains
     return
   end function ReserveHommeNVectorRegistryIdx
 
-  subroutine MakeHommeNVector(elem, nets, nete, tl_idx, vec, ier)
+  subroutine MakeHommeNVector(elem, nets, nete, tl_idx, vec, ierr)
     ! Function to create an NVec_t wrapper (vec) to the Homme solution
     !   structure, and reserve its index in the vector registry.
     ! The return value is 0 if succssful, 1 if failure (if the registry
@@ -67,12 +67,12 @@ contains
     integer, intent(in)            :: nete
     integer, intent(in)            :: tl_idx
     type(NVec_t), intent(out)      :: vec
-    integer, intent(out)           :: ier
+    integer(C_INT), intent(out)    :: ierr
 
     ! if registry index is already taken, return failure
-    ier = 0
+    ierr = 0
     if (HommeNVectorRegistry(tl_idx)) then
-       ier = 1
+       ierr = 1
        return
     end if
 

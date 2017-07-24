@@ -35,7 +35,7 @@ module prim_advance_mod
   real (kind=real_kind), allocatable :: ur_weights(:)
 
   ! storage to enable ARKode interface
-  real (kind=real_kind) :: tcur, dt_save, eta_ave_w
+  real (kind=real_kind) :: dt_save, eta_ave_w
   integer :: qn0_save
   type(hvcoord_t), pointer :: hvcoord_ptr
   type(hybrid_t), pointer :: hybrid_ptr
@@ -55,9 +55,6 @@ contains
 
 !    call initEdgeBuffer(par,edge5,elem,5*nlev)
     call initEdgeBuffer(par,edge6,elem,6*nlev)
-
-    ! store pointer to par for use in NVec_t object
-    par_ptr => par
 
     ! compute averaging weights for RK+LF (tstep_type=1) timestepping:
     allocate(ur_weights(qsplit))
@@ -97,9 +94,9 @@ contains
                               qsplit, integration, hypervis_order, nu, dcmip16_mu, dcmip16_mu_s
     use edge_mod,       only: edgevpack, edgevunpack, initEdgeBuffer
     use edgetype_mod,   only: EdgeBuffer_t
+    use model_init_mod, only: y_C, ynew_C
     use reduction_mod,  only: reductionbuffer_ordered_1d_t, parallelmax
     use time_mod,       only: timelevel_qdp
-    use HommeNVector,   only: NVec_t, MakeHommeNVector
     use iso_c_binding
 
 #ifdef TRILINOS
@@ -125,19 +122,15 @@ contains
     real (kind=real_kind) ::  gamma,delta
     real (kind=real_kind), pointer :: upt(:,:,:),vpt(:,:,:),wpt(:,:,:)
     real (kind=real_kind), pointer :: phipt(:,:,:),thetapt(:,:,:),dp3dpt(:,:,:)
-    type(NVec_t), target :: y, ynew
-    type(c_ptr) :: y_C, ynew_C
 
 
     integer :: ie,nm1,n0,np1,nstep,qsplit_stage,k, qn0
     integer :: n,i,j,maxiter
 
     ! initializers for arkode
-    real*8 :: tstart, tend, tout, rtol, rout(40)
+    real*8 :: tend, tout
     integer :: maxiters, diagfreq
     integer(C_INT) :: ierr, itask
-    integer(C_LONG) :: iout(40)
-    real*8 :: atol
 
     call t_startf('prim_advance_exp')
     nm1   = tl%nm1
@@ -182,36 +175,11 @@ contains
     ! vector y should be reused -- at a minimum the value of 'n0' should *never*
     ! be changed.)
     if (tstep_type==8) then
-
        ! set saved parameters for passing through ARKode interface
        qn0_save = qn0
        hvcoord_ptr => hvcoord
        hybrid_ptr => hybrid
        deriv_ptr => deriv
-
-       ! create C pointers to y and ynew
-       y_C = c_loc(y)
-       ynew_C = c_loc(ynew)
-
-       ! initialize arkode
-       atol = 1d-1    ! do all solution components have unit magnitude, or could
-                      ! their units vary considerably?  If units can vary, then
-                      ! a scalar-valued atol is a **bad** idea
-       rtol = 1d-1    ! do you really only want one digit of accuracy?  When using
-                      ! fixed time steps and an explicit method this input is unused,
-                      ! but in all other cases it corresponds to how tightly things
-                      ! are solved, and should rougly correspond with the desired
-                      ! number of digits
-       iout = 0
-       rout = 0.d0
-       tstart = 0.d0
-       tcur = tstart  ! if you initialize ARKode over and over at each time step,
-                      ! then this should be the *current* time.  I'll note that in
-                      ! this routine the variable 'tstart' was uninitialized (so it
-                      ! could be anything) -- I changed it to just be 0.d0.  This
-                      ! will only be valid if we're solving an autonomous IVP,
-                      ! i.e. y' = f(y) instead of y' = f(t,y)
-
     endif
 
   ! Start time stepping
