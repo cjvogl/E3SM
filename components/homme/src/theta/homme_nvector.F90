@@ -121,17 +121,17 @@ subroutine FNVExtPrint(x_C)
       do inpx=1,np
         do inpy=1,np
 #endif
-          print '(/,"proc ",i2,",", " elem ",i4,",", " u(",i1,",",i1,",",i2,") = ",f10.5)', &
+          print '(/,"proc ",i2,",", " elem ",i4,",", " u(",i1,",",i1,",",i2,") = ",f15.5)', &
             rank, ie, inpx, inpy, inlev, x%elem(ie)%state%v(inpx,inpy,1,inlev,x%tl_idx)
-          print '("proc ",i2,",", " elem ",i4,",", " v(",i1,",",i1,",",i2,") = ",f10.5)', &
+          print '("proc ",i2,",", " elem ",i4,",", " v(",i1,",",i1,",",i2,") = ",f15.5)', &
             rank, ie, inpx, inpy, inlev, x%elem(ie)%state%v(inpx,inpy,2,inlev,x%tl_idx)
-          print '("proc ",i2,",", " elem ",i4,",", " w(",i1,",",i1,",",i2,") = ",f10.5)', &
+          print '("proc ",i2,",", " elem ",i4,",", " w(",i1,",",i1,",",i2,") = ",f15.5)', &
             rank, ie, inpx, inpy, inlev, x%elem(ie)%state%w(inpx,inpy,inlev,x%tl_idx)
-          print '("proc ",i2,",", " elem ",i4,",", " phi(",i1,",",i1,",",i2,") = ",f10.5)', &
+          print '("proc ",i2,",", " elem ",i4,",", " phi(",i1,",",i1,",",i2,") = ",f15.5)', &
             rank, ie, inpx, inpy, inlev, x%elem(ie)%state%phi(inpx,inpy,inlev,x%tl_idx)
-          print '("proc ",i2,",", " elem ",i4,",", " theta_dp_cp(",i1,",",i1,",",i2,") = ",f10.5)', &
+          print '("proc ",i2,",", " elem ",i4,",", " theta_dp_cp(",i1,",",i1,",",i2,") = ",f15.5)', &
             rank, ie, inpx, inpy, inlev, x%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,x%tl_idx)
-          print '("proc ",i2,",", " elem ",i4,",", " dp3d(",i1,",",i1,",",i2,") = ",f10.5,/)', &
+          print '("proc ",i2,",", " elem ",i4,",", " dp3d(",i1,",",i1,",",i2,") = ",f15.5,/)', &
             rank, ie, inpx, inpy, inlev, x%elem(ie)%state%dp3d(inpx,inpy,inlev,x%tl_idx)
         end do
       end do
@@ -639,7 +639,7 @@ subroutine FNVExtDotProd(x_C, y_C, cval)
   !-----------------------------------------------------------------------
   use HommeNVector,     only: NVec_t
   use dimensions_mod,   only: np, nlev
-  use parallel_mod,     only: abortmp, global_shared_buf, global_shared_sum
+  use parallel_mod,     only: global_shared_buf, global_shared_sum
   use global_norms_mod, only: wrap_repro_sum
   use, intrinsic :: iso_c_binding
   implicit none
@@ -762,7 +762,7 @@ end subroutine FNVExtMaxNorm
 
 subroutine FNVExtWrmsNorm(x_C, w_C, cval)
   !-----------------------------------------------------------------------
-  ! cval = sqrt(||x.*w||^2_2 / Ntotal)
+  ! cval = sqrt( sum_i smp(i)*[x(i)*w(i)]^2 / [4*pi*6*nlev] )
   !-----------------------------------------------------------------------
   use HommeNVector,       only: NVec_t
   use dimensions_mod,     only: np, nlev
@@ -797,32 +797,35 @@ subroutine FNVExtWrmsNorm(x_C, w_C, cval)
       do inpy=1,np
         do inpx=1,np
           global_shared_buf(ie,1) = global_shared_buf(ie,1) + &
-            (x%elem(ie)%state%v(inpx,inpy,1,inlev,x%tl_idx)* &
-              w%elem(ie)%state%v(inpx,inpy,1,inlev,w%tl_idx))**2 + &
-            (x%elem(ie)%state%v(inpx,inpy,2,inlev,x%tl_idx)* &
-              w%elem(ie)%state%v(inpx,inpy,2,inlev,w%tl_idx))**2 + &
-            (x%elem(ie)%state%w(inpx,inpy,inlev,x%tl_idx)* &
-              w%elem(ie)%state%w(inpx,inpy,inlev,w%tl_idx))**2 + &
-            (x%elem(ie)%state%phi(inpx,inpy,inlev,x%tl_idx)* &
-              w%elem(ie)%state%phi(inpx,inpy,inlev,w%tl_idx))**2 + &
-            (x%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,x%tl_idx)* &
-              w%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,w%tl_idx))**2 + &
-            (x%elem(ie)%state%dp3d(inpx,inpy,inlev,x%tl_idx)* &
-              w%elem(ie)%state%dp3d(inpx,inpy,inlev,w%tl_idx))**2 &
-            * x%elem(ie)%spheremp(inpx,inpy)
+            ( &
+              (x%elem(ie)%state%v(inpx,inpy,1,inlev,x%tl_idx)* &
+                w%elem(ie)%state%v(inpx,inpy,1,inlev,w%tl_idx))**2 + &
+              (x%elem(ie)%state%v(inpx,inpy,2,inlev,x%tl_idx)* &
+                w%elem(ie)%state%v(inpx,inpy,2,inlev,w%tl_idx))**2 + &
+              (x%elem(ie)%state%w(inpx,inpy,inlev,x%tl_idx)* &
+                w%elem(ie)%state%w(inpx,inpy,inlev,w%tl_idx))**2 + &
+              (x%elem(ie)%state%phi(inpx,inpy,inlev,x%tl_idx)* &
+                w%elem(ie)%state%phi(inpx,inpy,inlev,w%tl_idx))**2 + &
+              (x%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,x%tl_idx)* &
+                w%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,w%tl_idx))**2 + &
+              (x%elem(ie)%state%dp3d(inpx,inpy,inlev,x%tl_idx)* &
+                w%elem(ie)%state%dp3d(inpx,inpy,inlev,w%tl_idx))**2 &
+                ) * x%elem(ie)%spheremp(inpx,inpy)
         end do ! inpx
       end do ! inpy
     end do ! inlev
   end do ! ie
 
-  ! accumulate sum using wrap_repro_sum and then copy to cval
-  ! Q: should we divide by something other than 4*pi to account for the integral?
+  ! accumulate sum using wrap_repro_sum and then copy to cval and divide
+  ! note that if all x_C entries are alpha and all w_C entries are 1/beta,
+  ! then ||x_C||_wrms < 1 implies that alpha < beta, because
+  ! sum_i smp(i)*[x(i)*w(i)]^2 = 4*pi*nlev*6*alpha^2/beta^2)
 #ifdef CAM
   print 'FNVExtWrmsNorm in homme_nvector.F90 assumes MPI_COMM_WORLD is MPI communicator'
   stop
 #endif
   call wrap_repro_sum(nvars=1, comm=MPI_COMM_WORLD)
-  cval = sqrt(global_shared_sum(1)/4.d0/dd_pi/nlev)
+  cval = sqrt(global_shared_sum(1)/4.d0/dd_pi/6.d0/nlev)
 
   return
 end subroutine FNVExtWrmsNorm
