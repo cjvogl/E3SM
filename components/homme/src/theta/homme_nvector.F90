@@ -110,21 +110,28 @@ subroutine FNVExtPrint(x_C)
   call MPI_comm_rank(MPI_COMM_WORLD,rank,ierr)
 
   ! print vector data
+#ifdef TEST_HOMME_NVEC_INLINE
+  do inlev=1,2
+    do ie=x%nets,x%nets+1
+      do inpx=1,2
+        do inpy=1,2
+#else
   do inlev=1,nlev
     do ie=x%nets,x%nete
       do inpx=1,np
         do inpy=1,np
-          print '(/,"proc ",i3,",", " elem ",i3,",", " u(",i1,",",i1,",",i2,") = ",f10.5)', &
+#endif
+          print '(/,"proc ",i2,",", " elem ",i4,",", " u(",i1,",",i1,",",i2,") = ",f10.5)', &
             rank, ie, inpx, inpy, inlev, x%elem(ie)%state%v(inpx,inpy,1,inlev,x%tl_idx)
-          print '("proc ",i3,",", " elem ",i3,",", " v(",i1,",",i1,",",i2,") = ",f10.5)', &
+          print '("proc ",i2,",", " elem ",i4,",", " v(",i1,",",i1,",",i2,") = ",f10.5)', &
             rank, ie, inpx, inpy, inlev, x%elem(ie)%state%v(inpx,inpy,2,inlev,x%tl_idx)
-          print '("proc ",i3,",", " elem ",i3,",", " w(",i1,",",i1,",",i2,") = ",f10.5)', &
+          print '("proc ",i2,",", " elem ",i4,",", " w(",i1,",",i1,",",i2,") = ",f10.5)', &
             rank, ie, inpx, inpy, inlev, x%elem(ie)%state%w(inpx,inpy,inlev,x%tl_idx)
-          print '("proc ",i3,",", " elem ",i3,",", " phi(",i1,",",i1,",",i2,") = ",f10.5)', &
+          print '("proc ",i2,",", " elem ",i4,",", " phi(",i1,",",i1,",",i2,") = ",f10.5)', &
             rank, ie, inpx, inpy, inlev, x%elem(ie)%state%phi(inpx,inpy,inlev,x%tl_idx)
-          print '("proc ",i3,",", " elem ",i3,",", " theta_dp_cp(",i1,",",i1,",",i2,") = ",f10.5)', &
+          print '("proc ",i2,",", " elem ",i4,",", " theta_dp_cp(",i1,",",i1,",",i2,") = ",f10.5)', &
             rank, ie, inpx, inpy, inlev, x%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,x%tl_idx)
-          print '("proc ",i3,",", " elem ",i3,",", " dp3d(",i1,",",i1,",",i2,") = ",f10.5,/)', &
+          print '("proc ",i2,",", " elem ",i4,",", " dp3d(",i1,",",i1,",",i2,") = ",f10.5,/)', &
             rank, ie, inpx, inpy, inlev, x%elem(ie)%state%dp3d(inpx,inpy,inlev,x%tl_idx)
         end do
       end do
@@ -145,8 +152,8 @@ subroutine FNVExtClone(x_C, y_C)
   use HommeNVector, only: NVec_t, ReserveHommeNVectorRegistryIdx
   use, intrinsic :: iso_c_binding
   implicit none
-  type(c_ptr) :: x_C
-  type(c_ptr) :: y_C
+  type(c_ptr), intent(in) :: x_C
+  type(c_ptr), intent(out) :: y_C
   type(NVec_t), pointer :: x => NULL()
   type(NVec_t), pointer :: y => NULL()
   integer :: tl_idx

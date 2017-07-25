@@ -23,13 +23,17 @@ contains
     use derivative_mod, only: derivative_t
     use time_mod,       only: TimeLevel_t, tstep
     use HommeNVector, only: NVec_t, MakeHommeNVector
+#ifdef TEST_HOMME_NVEC_INLINE
+    use testing_mod, only: test_homme_nvector
+#endif
 
     implicit none
-    type(element_t)   , intent(in) :: elem(:)
-    type(derivative_t), intent(in) :: deriv
-    type(TimeLevel_t),  intent(in) :: tl
-    integer,            intent(in) :: nets
-    integer,            intent(in) :: nete
+    type(element_t),          intent(in) :: elem(:)
+    type(derivative_t),       intent(in) :: deriv
+    type(TimeLevel_t),        intent(in) :: tl
+    integer,                  intent(in) :: nets
+    integer,                  intent(in) :: nete
+
     type(NVec_t), target :: y, ynew
     real*8 :: tstart, atol, rtol, rout(40)
     integer(C_LONG) :: iout(40)
