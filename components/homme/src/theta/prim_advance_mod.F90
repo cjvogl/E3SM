@@ -23,6 +23,7 @@ module prim_advance_mod
   use time_mod,       only: timelevel_t
   use test_mod,       only: set_prescribed_wind
   use hevi_mod,       only: state_save,state_read,backsubstitution,mgs,elemstate_add
+  use iso_c_binding
 
   implicit none
   private
@@ -41,7 +42,9 @@ module prim_advance_mod
   type(hvcoord_t), pointer :: hvcoord_ptr
   type(hybrid_t), pointer :: hybrid_ptr
   type(derivative_t), pointer :: deriv_ptr
-  public :: dt_save, eta_ave_w_save, qn0_save, hvcoord_ptr, hybrid_ptr, deriv_ptr
+  type(c_ptr), pointer :: y_C, ynew_C ! set in model_init_mod
+  public :: dt_save, eta_ave_w_save, qn0_save, hvcoord_ptr, &
+            hybrid_ptr, deriv_ptr, y_C, ynew_C
 
 
 contains
@@ -97,10 +100,8 @@ contains
                               qsplit, integration, hypervis_order, nu, dcmip16_mu, dcmip16_mu_s
     use edge_mod,       only: edgevpack, edgevunpack, initEdgeBuffer
     use edgetype_mod,   only: EdgeBuffer_t
-    use model_init_mod, only: y_C, ynew_C
     use reduction_mod,  only: reductionbuffer_ordered_1d_t, parallelmax
     use time_mod,       only: timelevel_qdp
-    use iso_c_binding
 
 #ifdef TRILINOS
     use prim_derived_type_mod ,only : derived_type, initialize
