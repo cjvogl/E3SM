@@ -810,7 +810,7 @@ subroutine FNVExtWrmsNorm(x_C, w_C, cval)
                 w%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,w%tl_idx))**2 + &
               (x%elem(ie)%state%dp3d(inpx,inpy,inlev,x%tl_idx)* &
                 w%elem(ie)%state%dp3d(inpx,inpy,inlev,w%tl_idx))**2 &
-                ) * x%elem(ie)%spheremp(inpx,inpy)
+            ) * x%elem(ie)%spheremp(inpx,inpy)
         end do ! inpx
       end do ! inpy
     end do ! inlev
