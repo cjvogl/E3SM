@@ -11,6 +11,7 @@ module HommeNVector
   !-----------------------------------------------------------------------
   use element_mod,    only: element_t
   use element_state,  only: timelevels
+  use parallel_mod,   only: parallel_t
   use, intrinsic :: iso_c_binding
   public
 
@@ -25,10 +26,18 @@ module HommeNVector
 
   integer, parameter :: RegistryLength=timelevels
   logical :: HommeNVectorRegistry(RegistryLength)=.false.
+  type(parallel_t), pointer :: par_ptr
 
   !-------------------------------------
 
 contains
+
+  subroutine SetHommeNVectorPar(par)
+    ! sets current par object pointer for MPI_Allreduce and wrap_repro_sum calls
+    implicit none
+    type(parallel_t), target, intent(in) :: par
+    par_ptr => par
+  end subroutine
 
   integer function ReserveHommeNVectorRegistryIdx()
     ! Marks first available vector from registry as used (if any are available)
@@ -86,7 +95,7 @@ subroutine FNVExtPrint(x_C)
   ! Note: this function is not required by ARKode (or any of SUNDIALS) --
   !       it is merely here for convenience when debugging
   !-----------------------------------------------------------------------
-  use HommeNVector,     only: NVec_t
+  use HommeNVector,     only: NVec_t, par_ptr
   use dimensions_mod,   only: np, nlev
 
   use, intrinsic :: iso_c_binding
@@ -103,24 +112,13 @@ subroutine FNVExtPrint(x_C)
   call c_f_pointer(x_C, x)
 
   ! get rank
-#ifdef CAM
-  print 'FNVExtPrint in homme_nvector.F90 assumes MPI_COMM_WORLD is MPI communicator'
-  stop
-#endif
-  call MPI_comm_rank(MPI_COMM_WORLD,rank,ierr)
+  call MPI_comm_rank(par_ptr%comm,rank,ierr)
 
   ! print vector data
-#ifdef TEST_HOMME_NVEC_INLINE
-  do inlev=1,2
-    do ie=x%nets,x%nets+1
-      do inpx=1,2
-        do inpy=1,2
-#else
   do inlev=1,nlev
     do ie=x%nets,x%nete
       do inpx=1,np
         do inpy=1,np
-#endif
           print '(/,"proc ",i2,",", " elem ",i4,",", " u(",i1,",",i1,",",i2,") = ",f15.5)', &
             rank, ie, inpx, inpy, inlev, x%elem(ie)%state%v(inpx,inpy,1,inlev,x%tl_idx)
           print '("proc ",i2,",", " elem ",i4,",", " v(",i1,",",i1,",",i2,") = ",f15.5)', &
@@ -637,13 +635,12 @@ subroutine FNVExtDotProd(x_C, y_C, cval)
   !-----------------------------------------------------------------------
   ! c = <x,y>  (only include 'active' data; no ghost cells, etc.)
   !-----------------------------------------------------------------------
-  use HommeNVector,     only: NVec_t
+  use HommeNVector,     only: NVec_t, par_ptr
   use dimensions_mod,   only: np, nlev
   use parallel_mod,     only: global_shared_buf, global_shared_sum
   use global_norms_mod, only: wrap_repro_sum
   use, intrinsic :: iso_c_binding
   implicit none
-#include <mpif.h>
   type(c_ptr),    intent(in)  :: x_C
   type(c_ptr),    intent(in)  :: y_C
   real(c_double), intent(out) :: cval
@@ -688,11 +685,7 @@ subroutine FNVExtDotProd(x_C, y_C, cval)
 
   ! accumulate sum using wrap_repro_sum and then copy to cval
   ! Q: should we divide by 4*pi to account for the integral?
-#ifdef CAM
-  print 'FNVExtDotProd in homme_nvector.F90 assumes MPI_COMM_WORLD is MPI communicator'
-  stop
-#endif
-  call wrap_repro_sum(nvars=1, comm=MPI_COMM_WORLD)
+  call wrap_repro_sum(nvars=1, comm=par_ptr%comm)
   cval = global_shared_sum(1)
 
   return
@@ -705,7 +698,7 @@ subroutine FNVExtMaxNorm(x_C, cval)
   !-----------------------------------------------------------------------
   ! c = max(|x|)
   !-----------------------------------------------------------------------
-  use HommeNVector,     only: NVec_t
+  use HommeNVector,     only: NVec_t, par_ptr
   use dimensions_mod,   only: np, nlev
   use parallel_mod,     only: MPIreal_t
   use, intrinsic :: iso_c_binding
@@ -746,12 +739,8 @@ subroutine FNVExtMaxNorm(x_C, cval)
 
   ! accumulate in a local "double precision" variable
   ! just to be safe, and then copy to cval
-#ifdef CAM
-  print 'FNVExtMaxNorm in homme_nvector.F90 assumes MPI_COMM_WORLD is MPI communicator'
-  stop
-#endif
   call MPI_Allreduce(cval_loc, cval_max, 1, MPIreal_t, &
-       MPI_MAX, MPI_COMM_WORLD, ie)
+       MPI_MAX, par_ptr%comm, ie)
   cval = cval_max
 
   return
@@ -764,14 +753,13 @@ subroutine FNVExtWrmsNorm(x_C, w_C, cval)
   !-----------------------------------------------------------------------
   ! cval = sqrt( sum_i smp(i)*[x(i)*w(i)]^2 / [4*pi*6*nlev] )
   !-----------------------------------------------------------------------
-  use HommeNVector,       only: NVec_t
+  use HommeNVector,       only: NVec_t, par_ptr
   use dimensions_mod,     only: np, nlev
   use physical_constants, only: dd_pi
   use parallel_mod,       only: abortmp, global_shared_buf, global_shared_sum
   use global_norms_mod,   only: wrap_repro_sum
   use, intrinsic :: iso_c_binding
   implicit none
-#include <mpif.h>
   type(c_ptr),    intent(in)  :: x_C
   type(c_ptr),    intent(in)  :: w_C
   real(c_double), intent(out) :: cval
@@ -820,11 +808,7 @@ subroutine FNVExtWrmsNorm(x_C, w_C, cval)
   ! note that if all x_C entries are alpha and all w_C entries are 1/beta,
   ! then ||x_C||_wrms < 1 implies that alpha < beta, because
   ! sum_i smp(i)*[x(i)*w(i)]^2 = 4*pi*nlev*6*alpha^2/beta^2)
-#ifdef CAM
-  print 'FNVExtWrmsNorm in homme_nvector.F90 assumes MPI_COMM_WORLD is MPI communicator'
-  stop
-#endif
-  call wrap_repro_sum(nvars=1, comm=MPI_COMM_WORLD)
+  call wrap_repro_sum(nvars=1, comm=par_ptr%comm)
   cval = sqrt(global_shared_sum(1)/4.d0/dd_pi/6.d0/nlev)
 
   return
@@ -837,7 +821,7 @@ subroutine FNVExtMin(x_C, cval)
   !-----------------------------------------------------------------------
   ! cval = min(|xvec|)
   !-----------------------------------------------------------------------
-  use HommeNVector,     only: NVec_t
+  use HommeNVector,     only: NVec_t, par_ptr
   use dimensions_mod,   only: np, nlev
   use parallel_mod,     only: MPIreal_t
   use, intrinsic :: iso_c_binding
@@ -877,12 +861,8 @@ subroutine FNVExtMin(x_C, cval)
 
   ! accumulate in a local "double precision" variable
   ! just to be safe, and then copy to cval
-#ifdef CAM
-  print 'FNVExtMin in homme_nvector.F90 assumes MPI_COMM_WORLD is MPI communicator'
-  stop
-#endif
   call MPI_Allreduce(cval_loc, cval_min, 1, MPIreal_t, &
-       MPI_MIN, MPI_COMM_WORLD, ie)
+       MPI_MIN, par_ptr%comm, ie)
   cval = cval_min
 
   return

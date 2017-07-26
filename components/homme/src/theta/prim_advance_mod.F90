@@ -100,6 +100,7 @@ contains
                               qsplit, integration, hypervis_order, nu, dcmip16_mu, dcmip16_mu_s
     use edge_mod,       only: edgevpack, edgevunpack, initEdgeBuffer
     use edgetype_mod,   only: EdgeBuffer_t
+    use HommeNVector,   only: SetHommeNVectorPar
     use reduction_mod,  only: reductionbuffer_ordered_1d_t, parallelmax
     use time_mod,       only: timelevel_qdp
 
@@ -339,6 +340,9 @@ contains
       call t_stopf("ARS232_timestep")
 !=========================================================================================
     else if (tstep_type==8) then ! use arkode
+
+       ! need to set current communicator
+       call SetHommeNVectorPar(hybrid%par)
 
        ! need to copy y into ynew
        call FNVExtScale(1.d0, y_C, ynew_C)
