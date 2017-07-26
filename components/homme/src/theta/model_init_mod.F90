@@ -119,7 +119,7 @@ contains
   subroutine test_homme_nvector(elem,nets,nete,tl)
 
     use time_mod,           only: TimeLevel_t
-    use HommeNVector,       only: NVec_t, MakeHommeNVector
+    use HommeNVector,       only: NVec_t, MakeHommeNVector, SetHommeNVectorComm
     use element_mod,        only: element_t
     use parallel_mod,       only: parallel_t
     use physical_constants, only: dd_pi
@@ -127,6 +127,7 @@ contains
     use iso_c_binding
 
     implicit none
+#include <mpif.h>
     integer, intent(in)                   :: nets, nete
     type (element_t), intent(in)          :: elem(:)
     type (TimeLevel_t), intent(in)        :: tl
@@ -139,6 +140,8 @@ contains
     !=======Internals ============
 
     tol = 1.d-12
+
+    call SetHommeNVectorComm(MPI_COMM_WORLD)
 
     print *, ""
     print *, "***************************"
