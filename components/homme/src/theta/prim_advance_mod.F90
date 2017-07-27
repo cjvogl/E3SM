@@ -42,7 +42,7 @@ module prim_advance_mod
   type(hvcoord_t), pointer :: hvcoord_ptr
   type(hybrid_t), pointer :: hybrid_ptr
   type(derivative_t), pointer :: deriv_ptr
-  type(c_ptr), pointer :: y_C, ynew_C ! set in model_init_mod
+  type(c_ptr) :: y_C, ynew_C ! set in model_init_mod
   public :: dt_save, eta_ave_w_save, qn0_save, hvcoord_ptr, &
             hybrid_ptr, deriv_ptr, y_C, ynew_C
 

@@ -39,7 +39,7 @@ cmake \
     -D CMAKE_CXX_COMPILER=mpicxx     \
     \
     -D OPT_FLAGS="-O0"  \
-    -D DEBUG_FLAGS="-g -DTEST_HOMME_NVEC_INLINE" \
+    -D DEBUG_FLAGS="-g" \
     \
     -D NETCDF_DIR=$NETCDF            \
     -D WITH_PNETCDF=FALSE            \

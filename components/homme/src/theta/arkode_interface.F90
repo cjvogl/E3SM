@@ -2,9 +2,9 @@
 ! Daniel R. Reynolds
 ! SMU Mathematics
 !
-! This file contains all required subroutines for interfacing to 
-! the ARKode Fortran interface, as well as a small number of 
-! auxiliary routines to assist.  This uses a custom NVector 
+! This file contains all required subroutines for interfacing to
+! the ARKode Fortran interface, as well as a small number of
+! auxiliary routines to assist.  This uses a custom NVector
 ! interface, implemented in Fortran.
 !
 ! The following subroutines are 'users' of the ARKode Fortran
@@ -12,24 +12,24 @@
 !    arkode_init -- initializes NVectors and ARKode for subsequent
 !                   solves (only called once)
 !
-! The following user-supplied subroutines are required by the 
+! The following user-supplied subroutines are required by the
 ! ARKode Fortran interface:
-!    farkifun -- implements all implicit portions of the ODE 
+!    farkifun -- implements all implicit portions of the ODE
 !                right-hand side function
-!    farkefun -- implements all explicit portions of the ODE 
+!    farkefun -- implements all explicit portions of the ODE
 !                right-hand side function
 !
-! The following user-supplied subroutines are optional within 
+! The following user-supplied subroutines are optional within
 ! the ARKode Fortran interface:
-!    farkjtimes -- implements a Jacobian-vector product, J*v, 
-!                  where J(u) is the Jacobian of farkifun 
+!    farkjtimes -- implements a Jacobian-vector product, J*v,
+!                  where J(u) is the Jacobian of farkifun
 !                  with respect to u.
 !    farkpset -- performs setup for the preconditioner matrix
 !                (called infrequently)
 !    farkpsol -- performs the preconditioner solve (called every
 !                linear iteration)
 !
-! The following are 'helper' subroutines that I often use when 
+! The following are 'helper' subroutines that I often use when
 ! interfacing to SUNDIALS solvers from Fortran:
 !    farkdiags -- writes ARKode solver diagnostics to the screen
 !
@@ -49,7 +49,7 @@ subroutine arkode_init(t0, dt, y_C, rtol, atol, iout, rout, ierr)
   !     atol - (dbl, input) absolute tolerance (for iterative solves)
   !     iout - (int*, input) integer solver parameter storage
   !     rout - (dbl*, input) real solver parameter storage
-  !     ierr - (int, output) return flag: 0=>success, 
+  !     ierr - (int, output) return flag: 0=>success,
   !             1=>recoverable error, -1=>non-recoverable error
   !-----------------------------------------------------------------
   !======= Inclusions ===========
@@ -58,7 +58,7 @@ subroutine arkode_init(t0, dt, y_C, rtol, atol, iout, rout, ierr)
 
   !======= Declarations =========
   implicit none
-  
+
   ! calling variables
   real*8,          intent(in)  :: t0
   real*8,          intent(in)  :: dt
@@ -73,7 +73,27 @@ subroutine arkode_init(t0, dt, y_C, rtol, atol, iout, rout, ierr)
   integer(C_INT)  :: idef, iatol, imex, precLR, gstype, maxl
   real*8          :: rpar(1), lintol
   integer(C_LONG) :: lidef, ipar(1)
-       
+
+  ! Butcher table parameters for RK2
+  integer :: S_RK2 = 2
+  integer :: Q_RK2 = 3
+  integer :: P_RK2 = 0
+  real*8  :: C_RK2(2) = (/ 0.d0, 2.d0/3.d0 /)
+  real*8  :: A_RK2(4) = (/ 0.d0, 0.d0, 2.d0/3.d0, 0.d0 /)
+  real*8  :: B_RK2(2) = (/ 1.d0/4.d0, 3.d0/4.d0 /)
+
+  !  -!!$       Ullrich 3rd order 5 stage
+!  -!!$          s = 6;
+!  -!!$          q = 3;
+!  -!!$          A = zeros(s,s);
+!  -!!$          A(2,1) = 0.2;
+!  -!!$          A(3,2) = 0.2;
+!  -!!$          A(4,3) = 1/3;
+!  -!!$          A(5,4) = 2/3;
+!  -!!$          A(6,1) = 0.25;  A(6,5) = 0.75;
+!  -!!$          c = [0; 0.2; 0.2; 1/3; 2/3; 1];
+!  -!!$          b = [0.25, 0, 0, 0, 0.75, 0];
+
 
   !======= Internals ============
 
@@ -102,15 +122,22 @@ subroutine arkode_init(t0, dt, y_C, rtol, atol, iout, rout, ierr)
   !    ARKode options
   print *, 'Setting ARKode options'
 
-  !      Indicate that we will set time step sizes ourselves, and the step 
+  !      Indicate that we will set time step sizes ourselves, and the step
   !      size to use on the first time step (disable adaptivity)
   call farksetrin('FIXED_STEP', dt, ierr)
   if (ierr /= 0) then
      write(0,*) ' arkode_init: farksetrin failed'
   endif
 
+
+  !     Set ERK Butcher table
+  call farkseterktable(S_RK2, Q_RK2, P_RK2, C_RK2, A_RK2, B_RK2, B_RK2, ierr)
+  if (ierr /= 0) then
+     write(0,*) ' arkode_init: farkseterktables failed'
+  endif
+
   !      Requested order of accuracy for ARK method (3,4,5 are supported).
-  !      Alternately, a user can supply a custom Butcher table pair to 
+  !      Alternately, a user can supply a custom Butcher table pair to
   !      define their ARK method, by calling FARKSETARKTABLES()
   lidef = 4
   call farksetiin('ORDER', lidef, ierr)
@@ -118,7 +145,8 @@ subroutine arkode_init(t0, dt, y_C, rtol, atol, iout, rout, ierr)
      write(0,*) ' arkode_init: farksetiin failed'
   endif
 
-  !      To indicate that the implicit problem is linear, make the following 
+
+  !      To indicate that the implicit problem is linear, make the following
   !      call.  The argument specifies whether the linearly implicit problem
   !      changes as the problem evolves (1) or not (0)
 !  lidef = 0
@@ -131,7 +159,7 @@ subroutine arkode_init(t0, dt, y_C, rtol, atol, iout, rout, ierr)
   !      precLR -- type of preconditioning: 0=none, 1=left, 2=right, 3=left+right
   !      gstype -- type of Gram-Schmidt orthogonalization: 1=modified, 2=classical
   !      maxl -- maximum size of Krylov subspace (# of iterations/vectors)
-  !      lintol -- linear convergence tolerance factor (0 indicates default); this 
+  !      lintol -- linear convergence tolerance factor (0 indicates default); this
   !                example is very stiff so it requires tight linear solves
 !  precLR = 0
 !  gstype = 1
@@ -142,7 +170,7 @@ subroutine arkode_init(t0, dt, y_C, rtol, atol, iout, rout, ierr)
 !     write(0,*) ' arkode_init: farkspgmr failed'
 !  endif
 
-  !      Indicate to use our own Jacobian-vector product routine (otherwise it 
+  !      Indicate to use our own Jacobian-vector product routine (otherwise it
   !      uses a finite-difference approximation)
   !idef = 1
   !call farkspilssetjac(idef, ierr)
@@ -150,7 +178,7 @@ subroutine arkode_init(t0, dt, y_C, rtol, atol, iout, rout, ierr)
   !   write(0,*) ' arkode_init: farkspilssetjac failed'
   !endif
 
-  !      Indicate to use our own preconditioner setup/solve routines (otherwise 
+  !      Indicate to use our own preconditioner setup/solve routines (otherwise
   !      preconditioning is disabled)
   !idef = 1
   !call farkspilssetprec(idef, ierr)
@@ -181,9 +209,9 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   !    fy_C - (ptr) C pointer to NVec_t to hold right-hand side function
   !    ipar - (long int(*), input) integer user parameter data
   !           (passed back here, unused)
-  !    rpar - (dbl(*), input) real user parameter data (passed here, 
+  !    rpar - (dbl(*), input) real user parameter data (passed here,
   !           unused)
-  !    ierr - (int, output) return flag: 0=>success, 
+  !    ierr - (int, output) return flag: 0=>success,
   !            1=>recoverable error, -1=>non-recoverable error
   !-----------------------------------------------------------------
   !======= Inclusions ===========
@@ -209,7 +237,7 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   integer(C_LONG),   intent(in)         :: ipar(1)
   real*8,            intent(in)         :: rpar(1)
   integer(C_INT),    intent(out)        :: ierr
- 
+
   ! local variables
   type(NVec_t), pointer :: y => NULL()
   type(NVec_t), pointer :: fy => NULL()
@@ -228,10 +256,10 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
 
   ! determine 'stage time' from t, tcur and dt
   ! TODO: we don't have access to tcur here
-  ! ci = (t - tcur)/dt_save 
+  ! ci = (t - tcur)/dt_save
   ci = 1.d0 ! DEBUG
-  
-  
+
+
   ! The function call to compute_andor_apply_rhs is as follows:
   !  compute_andor_apply_rhs(np1, nm1, n0, qn0, dt2, elem, hvcoord, hybrid, &
   !     deriv, nets, nete, compute_diagnostics, eta_ave_w, scale1, scale2, scale3)
@@ -240,7 +268,7 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   !
   !   u(np1) = scale3*u(nm1) + dt2*DSS[ nonstiffRHS(u(n0))*scale1 + stiffRHS(un0)*scale2 ]
   !
-  !   nonstiffRHS and the stiffRHS are determined within the function and can be change by 
+  !   nonstiffRHS and the stiffRHS are determined within the function and can be change by
   !   multiplying different terms by scale1 and scale2
   !
   !  Setting scale1=scale2=1.0, scale3=0.0, and dt2=1.0 returns the full rhs
@@ -248,7 +276,7 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   !  DSS is the averaging procedure for the active and inactive nodes
   !
 
-    
+
   call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0_save, &
        1.d0, y%elem, hvcoord_ptr, hybrid_ptr, deriv_ptr, y%nets, y%nete, &
        .false., ci*eta_ave_w_save, 0.d0, 1.d0, 0.d0)
@@ -271,9 +299,9 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   !    fy_C - (ptr) C pointer to NVec_t to hold right-hand side function
   !    ipar - (long int(*), input) integer user parameter data
   !           (passed back here, unused)
-  !    rpar - (dbl(*), input) real user parameter data (passed here, 
+  !    rpar - (dbl(*), input) real user parameter data (passed here,
   !           unused)
-  !    ierr - (int, output) return flag: 0=>success, 
+  !    ierr - (int, output) return flag: 0=>success,
   !            1=>recoverable error, -1=>non-recoverable error
   !-----------------------------------------------------------------
   use iso_c_binding
@@ -297,7 +325,7 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   integer(C_LONG),   intent(in)         :: ipar(1)
   real*8,            intent(in)         :: rpar(1)
   integer(C_INT),    intent(out)        :: ierr
- 
+
   ! local variables
   type(NVec_t), pointer :: y => NULL()
   type(NVec_t), pointer :: fy => NULL()
@@ -316,9 +344,9 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
 
   ! determine 'stage time' from t, tcur and dt
   ! TODO: we don't have access to tcur here
-  ! ci = (t - tcur)/dt_save 
+  ! ci = (t - tcur)/dt_save
   ci = 1.d0 ! DEBUG
-  
+
   ! The function call to compute_andor_apply_rhs is as follows:
   !  compute_andor_apply_rhs(np1, nm1, n0, qn0, dt2, elem, hvcoord, hybrid, &
   !     deriv, nets, nete, compute_diagnostics, eta_ave_w, scale1, scale2, scale3)
@@ -327,13 +355,13 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   !
   !   u(np1) = scale3*u(nm1) + dt2*DSS[ nonstiffRHS(u(n0))*scale1 + stiffRHS(un0)*scale2 ]
   !
-  !   nonstiffRHS and the stiffRHS are determined within the function and can be change by 
+  !   nonstiffRHS and the stiffRHS are determined within the function and can be change by
   !   multiplying different terms by scale1 and scale2
   !
   !  Setting scale1=scale2=1.0, scale3=0.0, and dt2=1.0 returns the full rhs
   !
   !  DSS is the averaging procedure for the active and inactive nodes
-  !  
+  !
   call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0_save, &
        1.d0, y%elem, hvcoord_ptr, hybrid_ptr, deriv_ptr, y%nets, y%nete, &
        .false., ci*eta_ave_w_save, 1.d0, 0.d0, 0.d0)
@@ -349,7 +377,7 @@ subroutine farkdiags(iout, rout)
   ! Description: subroutine to output arkode diagnostics
   !
   ! Arguments:
-  !        iout - (long int*, input) integer optional outputs 
+  !        iout - (long int*, input) integer optional outputs
   !        rout - (dbl*, input) real optional outputs
   !-----------------------------------------------------------------
   !======= Inclusions ===========
@@ -405,13 +433,13 @@ end subroutine farkdiags
 
 
 !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-! 
+!
 ! NOTE: All of the remaining subroutines are not required when
-! interfacing with ARKode, and so they are not currently 
-! implemented.  These may be provided to improve ARKode 
-! performance on this application; if so they should be 'enabled' 
+! interfacing with ARKode, and so they are not currently
+! implemented.  These may be provided to improve ARKode
+! performance on this application; if so they should be 'enabled'
 ! by calling the relevant ARKode interface routine.
-! 
+!
 !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 
@@ -419,7 +447,7 @@ subroutine farkjtimes(v_C, Jv_C, t, y_C, fy_C, h, ipar, rpar, v1_C, ierr)
   !-----------------------------------------------------------------
   ! Description: farkjtimes provides the Jacobian-vector product
   !    routine for the linearized Newton system.
-  ! 
+  !
   !  Arguments:
   !       v_C - (ptr) C pointer to NVec_t vector to multiply
   !      Jv_C - (ptr) C pointer to NVec_t for result of Jacobian-vector product
@@ -427,12 +455,12 @@ subroutine farkjtimes(v_C, Jv_C, t, y_C, fy_C, h, ipar, rpar, v1_C, ierr)
   !       y_C - (ptr) C pointer to NVec_t containing current solution
   !      fy_C - (ptr) C pointer to NVec_t containing current implicit ODE rhs
   !         h - (dbl, input) time step size for last internal step
-  !      ipar - (long int(*), input) integer user parameter data 
+  !      ipar - (long int(*), input) integer user parameter data
   !             (passed back here, unused)
-  !      rpar - (dbl(*), input) real user parameter data (passed here, 
+  !      rpar - (dbl(*), input) real user parameter data (passed here,
   !             unused)
   !      v1_C - (ptr) C pointer to NVec_t scratch vector
-  !      ierr - (int, output) return flag: 0=>success, 
+  !      ierr - (int, output) return flag: 0=>success,
   !             1=>recoverable error, -1=>non-recoverable error
   !-----------------------------------------------------------------
   !======= Inclusions ===========
@@ -487,28 +515,28 @@ end subroutine farkjtimes
 subroutine farkpset(t, y_C, fy_C, jok, jcur, gamma, h, ipar, rpar, &
                     v1_C, v2_C, v3_C, ierr)
   !-----------------------------------------------------------------
-  ! Description: farkpset provides the preconditioner setup 
+  ! Description: farkpset provides the preconditioner setup
   !    routine for the linearized Newton system.
-  ! 
+  !
   !  Arguments:
   !         t - (dbl, input) current time
   !       y_C - (ptr) C pointer to NVec_t containing current solution
   !      fy_C - (ptr) C pointer to NVec_t containing current implicit ODE rhs
-  !       jok - (int, input) flag denoting whether to recompute 
+  !       jok - (int, input) flag denoting whether to recompute
   !              Jacobian-related data: 0=>recompute, 1=>unnecessary
-  !      jcur - (int, output) output flag to say if Jacobian data 
+  !      jcur - (int, output) output flag to say if Jacobian data
   !              was recomputed: 1=>was recomputed, 0=>was not
   !     gamma - (dbl, input) the scalar appearing in the Newton matrix
   !              A = M-gamma*J
   !         h - (dbl, input) time step size for last internal step
-  !      ipar - (long int(*), input) integer user parameter data 
+  !      ipar - (long int(*), input) integer user parameter data
   !             (passed back here, unused)
-  !      rpar - (dbl(*), input) real user parameter data (passed here, 
+  !      rpar - (dbl(*), input) real user parameter data (passed here,
   !             unused)
   !      v1_C - (ptr) C pointer to NVec_t scratch vector
   !      v2_C - (ptr) C pointer to NVec_t scratch vector
   !      v3_C - (ptr) C pointer to NVec_t scratch vector
-  !      ierr - (int, output) return flag: 0=>success, 
+  !      ierr - (int, output) return flag: 0=>success,
   !             1=>recoverable error, -1=>non-recoverable error
   !-----------------------------------------------------------------
   !======= Inclusions ===========
@@ -533,7 +561,7 @@ subroutine farkpset(t, y_C, fy_C, jok, jcur, gamma, h, ipar, rpar, &
   type(c_ptr),     intent(in), target :: v2_C
   type(c_ptr),     intent(in), target :: v3_C
   integer(C_INT),  intent(out)        :: ierr
-  
+
   ! local variables
   type(NVec_t), pointer :: y  => NULL()
   type(NVec_t), pointer :: fy => NULL()
@@ -556,8 +584,8 @@ subroutine farkpset(t, y_C, fy_C, jok, jcur, gamma, h, ipar, rpar, &
 
   ! return if no preconditioner update is required
   if (jok == 1)  return
-  
-  ! update the preconditioner 
+
+  ! update the preconditioner
 
   ! set Jacobian recomputation flag
   jcur = 1
@@ -572,7 +600,7 @@ end subroutine farkpset
 subroutine farkpsol(t, y_C, fy_C, r_C, z_C, gamma, delta, lr, ipar, &
                     rpar, vt_C, ierr)
   !-----------------------------------------------------------------
-  ! Description: farkpsol provides the preconditioner solve routine 
+  ! Description: farkpsol provides the preconditioner solve routine
   !    for the preconditioning of the linearized Newton system.
   !         i.e. solves P*z = r
   !
@@ -580,23 +608,23 @@ subroutine farkpsol(t, y_C, fy_C, r_C, z_C, gamma, delta, lr, ipar, &
   !         t - (dbl, input) current time
   !       y_C - (ptr) C pointer to NVec_t containing current solution
   !      fy_C - (ptr) C pointer to NVec_t containing current implicit ODE rhs
-  !       r_C - (ptr) C pointer to NVec_t rhs vector of prec. system 
+  !       r_C - (ptr) C pointer to NVec_t rhs vector of prec. system
   !       z_C - (ptr) C pointer to NVec_t solution vector of prec. system
   !     gamma - (dbl, input) scalar appearing in the Newton Matrix
   !             A = M-gamma*J
   !     delta - (dbl, input) desired tolerance if using an iterative
-  !             method.  In that case, solve until 
+  !             method.  In that case, solve until
   !                  Sqrt[Sum((r-Pz).*ewt)^2] < delta
-  !             where the ewt vector is obtainable by calling 
+  !             where the ewt vector is obtainable by calling
   !             FARKGETERRWEIGHTS()
-  !        lr - (int, input) flag indicating preconditioning type to 
+  !        lr - (int, input) flag indicating preconditioning type to
   !             apply: 1 => left,  2 => right
-  !      ipar - (long int(*), input) integer user parameter data 
+  !      ipar - (long int(*), input) integer user parameter data
   !             (passed back here, unused)
-  !      rpar - (dbl(*), input) real user parameter data (passed here, 
+  !      rpar - (dbl(*), input) real user parameter data (passed here,
   !             unused)
   !      vt_C - (ptr) C pointer to NVec_t scratch vector
-  !      ierr - (int, output) return flag: 0=>success, 
+  !      ierr - (int, output) return flag: 0=>success,
   !             1=>recoverable error, -1=>non-recoverable error
   !-----------------------------------------------------------------
   !======= Inclusions ===========
