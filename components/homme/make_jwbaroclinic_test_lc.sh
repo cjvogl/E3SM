@@ -15,9 +15,9 @@ fi
 
 if [[ $? == 0 ]]; then
   mkdir -p $WORKDIR
-  rm -f $WORKDIR/theta $WORKDIR/baro.job $WORKDIR/jw_baroclini.nl $WORKDIR/*.ascii
+  rm -f $WORKDIR/theta $WORKDIR/baro.job $WORKDIR/jw_baroclinic.nl $WORKDIR/*.ascii
   cp build_$SYSTEM/src/theta/theta $WORKDIR/
-  cp test/jw_baroclinic/baro.job $WORKDIR/
   cp test/jw_baroclinic/jw_baroclinic.nl $WORKDIR/
   cp test/vcoord/*.ascii $WORKDIR/
+  ln -s $PWD/test/jw_baroclinic/baro_${SYSTEM}.job $WORKDIR/baro.job
 fi
