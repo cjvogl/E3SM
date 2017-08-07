@@ -62,6 +62,9 @@ contains
 !    call initEdgeBuffer(par,edge5,elem,5*nlev)
     call initEdgeBuffer(par,edge6,elem,6*nlev)
 
+    ! store pointer to par for use in NVec_t object
+    par_ptr => par
+
     ! compute averaging weights for RK+LF (tstep_type=1) timestepping:
     allocate(ur_weights(qsplit))
     ur_weights(:)=0.0d0

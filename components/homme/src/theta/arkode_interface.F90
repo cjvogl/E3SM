@@ -259,6 +259,12 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   ! ci = (t - tcur)/dt_save
   ci = 1.d0 ! DEBUG
 
+  ! set return value to success
+  ierr = 0
+
+  ! dereference pointer for NVec_t objects
+  call c_f_pointer(y_C, y)
+  call c_f_pointer(fy_C, fy)
 
   ! The function call to compute_andor_apply_rhs is as follows:
   !  compute_andor_apply_rhs(np1, nm1, n0, qn0, dt2, elem, hvcoord, hybrid, &
