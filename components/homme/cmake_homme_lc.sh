@@ -15,6 +15,7 @@ if [[ $HOSTNAME == "cab"* ]]; then
   use netcdf-fortran-intel-4.4.2
 elif [[ $HOSTNAME == "quartz"* ]]; then
   SYSTEM=quartz
+  module purge
   module load cmake
   module load intel/16.0.3
   module load mvapich2/2.2

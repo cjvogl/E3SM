@@ -19,5 +19,5 @@ if [[ $? == 0 ]]; then
   cp build_$SYSTEM/src/theta/theta $WORKDIR/
   cp test/jw_baroclinic/jw_baroclinic.nl $WORKDIR/
   cp test/vcoord/*.ascii $WORKDIR/
-  ln -s $PWD/test/jw_baroclinic/baro_${SYSTEM}.job $WORKDIR/baro.job
+  ln -s $PWD/test/jw_baroclinic/baro_lc.job $WORKDIR/baro.job
 fi
