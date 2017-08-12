@@ -38,41 +38,41 @@
 
 
 
-subroutine arkode_init(t0, dt, y_C, rtol, atol, iout, rout, ierr)
+subroutine arkode_init(elem, nets, nete, tl, y_C, ierr)
   !-----------------------------------------------------------------
   ! Description: arkode_init initializes the ARKode solver.
   !   Arguments:
-  !       t0 - (dbl, input) initial time
-  !       dt - (dbl, input) time step size to use (first step)
-  !      y_C - (ptr, input) C pointer to NVec_t template solution vector
-  !     rtol - (dbl, input) relative tolerance (for iterative solves)
-  !     atol - (dbl, input) absolute tolerance (for iterative solves)
-  !     iout - (int*, input) integer solver parameter storage
-  !     rout - (dbl*, input) real solver parameter storage
+  !     elem - (obj*, input) element objects
+  !     nets - (int, input) starting index for elem array
+  !     nete - (int, input) ending index for elem array
+  !       tl - (obj, input) timelevel object
+  !      y_C - (ptr(3), output) C pointers to NVec_t template solution vectors
   !     ierr - (int, output) return flag: 0=>success,
   !             1=>recoverable error, -1=>non-recoverable error
   !-----------------------------------------------------------------
   !======= Inclusions ===========
+  use element_mod,      only: element_t
+  use HommeNVector,     only: NVec_t, MakeHommeNVector
+  use time_mod,         only: TimeLevel_t, tstep
   use iso_c_binding
-  use HommeNVector, only: NVec_t
 
   !======= Declarations =========
   implicit none
 
   ! calling variables
-  real*8,          intent(in)  :: t0
-  real*8,          intent(in)  :: dt
-  type(c_ptr),     intent(in)  :: y_C
-  real*8,          intent(in)  :: rtol
-  real*8,          intent(in)  :: atol
-  integer(C_LONG), intent(in)  :: iout(40)
-  real*8,          intent(in)  :: rout(40)
-  integer(C_INT),  intent(out) :: ierr
+  type(element_t),   intent(in)  :: elem(nets:nete)
+  type(TimeLevel_t), intent(in)  :: tl
+  integer,           intent(in)  :: nets, nete
+  type(c_ptr),       intent(out) :: y_C(3)
+  integer(C_INT),    intent(out) :: ierr
 
   ! local variables
+  type(NVec_t), target :: y(3)
   integer(C_INT)  :: idef, iatol, imex, precLR, gstype, maxl
-  real*8          :: rpar(1), lintol
-  integer(C_LONG) :: lidef, ipar(1)
+  real*8          :: rpar(1), lintol, tstart, rtol, atol, rout(40)
+  integer(C_LONG) :: lidef, ipar(1), iout(40)
+  integer :: i
+
 
   ! Butcher table parameters for RK2
   integer :: S_RK2 = 2
@@ -97,8 +97,42 @@ subroutine arkode_init(t0, dt, y_C, rtol, atol, iout, rout, ierr)
 
   !======= Internals ============
 
+  ! atol - absolute tolerance (for iterative solves)
+  iatol = 1    ! specify type for atol: 1=scalar, 2=array
+  atol = 1d-1    ! do all solution components have unit magnitude, or coul
+               ! their units vary considerably?  If units can vary, then
+               ! a scalar-valued atol is a **bad** idea
+
+  ! rtol - relative tolerance (for iterative solves)
+  rtol = 1d-1    ! do you really only want one digit of accuracy?  When us
+               ! fixed time steps and an explicit method this input is u
+               ! but in all other cases it corresponds to how tightly th
+               ! are solved, and should rougly correspond with the desir
+               ! fixed time steps and an explicit method this input is u
+               ! but in all other cases it corresponds to how tightly th
+               ! are solved, and should rougly correspond with the desir
+               ! number of digits
+
+  iout = 0
+  rout = 0.d0
+  tstart = 0.d0
+
+
   ! initialize error flag
   ierr = 0
+
+  ! 'create' NVec_t objects that will correspond to the original 3 HOMME
+  ! timelevels, assuming that tl%nm1, tl%n0, and tl%np1 are taken from the
+  ! set {1,2,3}
+  do i=1,3
+    call MakeHommeNVector(elem, nets, nete, i, y(i), ierr)
+    if (ierr /= 0) then
+      print *,  'Error in MakeHommeNVector, ierr = ', ierr, '; halting'
+      stop
+    end if
+    ! get C pointer
+    y_C(i) = c_loc(y(i))
+  end do
 
   ! initialize ARKode data & operators
   !    Nvector specs
@@ -109,22 +143,16 @@ subroutine arkode_init(t0, dt, y_C, rtol, atol, iout, rout, ierr)
   endif
 
   !    ARKode dataspace
-  iatol = 1    ! specify type for atol: 1=scalar, 2=array
   imex = 1     ! specify problem type: 0=implicit, 1=explicit, 2=imex
-  call farkmalloc(t0, y_C, imex, iatol, rtol, atol, &
+  call farkmalloc(tstart, y_C(tl%n0), imex, iatol, rtol, atol, &
                   iout, rout, ipar, rpar, ierr)
   if (ierr /= 0) then
      write(0,*) ' arkode_init: farkmalloc failed'
   endif
- print *, 'farkmalloc passed', ierr
-
-
-  !    ARKode options
-  print *, 'Setting ARKode options'
 
   !      Indicate that we will set time step sizes ourselves, and the step
   !      size to use on the first time step (disable adaptivity)
-  call farksetrin('FIXED_STEP', dt, ierr)
+  call farksetrin('FIXED_STEP', tstep, ierr)
   if (ierr /= 0) then
      write(0,*) ' arkode_init: farksetrin failed'
   endif
@@ -185,12 +213,6 @@ subroutine arkode_init(t0, dt, y_C, rtol, atol, iout, rout, ierr)
   !if (ierr /= 0) then
   !   write(0,*) ' arkode_init: farkspilssetprec failed'
   !endif
-
-  ! output ARKode solver parameters to screen
-  print *, '  '
-  call farkwriteparameters(ierr)
-
-  print *, 'Finished ARKode initialization'
 
   return
 end subroutine arkode_init
@@ -368,6 +390,7 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   !
   !  DSS is the averaging procedure for the active and inactive nodes
   !
+
   call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0_save, &
        1.d0, y%elem, hvcoord_ptr, hybrid_ptr, deriv_ptr, y%nets, y%nete, &
        .false., ci*eta_ave_w_save, 1.d0, 0.d0, 0.d0)

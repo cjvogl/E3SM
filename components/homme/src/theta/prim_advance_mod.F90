@@ -42,9 +42,10 @@ module prim_advance_mod
   type(hvcoord_t), pointer :: hvcoord_ptr
   type(hybrid_t), pointer :: hybrid_ptr
   type(derivative_t), pointer :: deriv_ptr
-  type(c_ptr) :: y_C, ynew_C ! set in model_init_mod
+  type(c_ptr) :: y_C(3)
+  logical :: arkode_initialized = .false.
   public :: dt_save, eta_ave_w_save, qn0_save, hvcoord_ptr, &
-            hybrid_ptr, deriv_ptr, y_C, ynew_C
+            hybrid_ptr, deriv_ptr
 
 
 contains
@@ -173,16 +174,6 @@ contains
        return
     endif
 #endif
-
-    if (tstep_type==8) then
-       ! set saved parameters for passing through ARKode interface
-       dt_save = dt
-       eta_ave_w_save = eta_ave_w_save
-       qn0_save = qn0
-       hvcoord_ptr => hvcoord
-       hybrid_ptr => hybrid
-       deriv_ptr => deriv
-    endif
 
   ! Start time stepping
 
@@ -341,11 +332,32 @@ contains
 !=========================================================================================
     else if (tstep_type==8) then ! use arkode
 
-       ! need to set current communicator
-       call SetHommeNVectorPar(hybrid%par)
+      ! Set NVector communicator
+      call SetHommeNVectorPar(hybrid%par)
 
-       ! need to copy y into ynew
-       call FNVExtScale(1.d0, y_C, ynew_C)
+      ! initialize ARKode interface if this is first subcycle step
+      if (.not. arkode_initialized) then
+        if (hybrid%par%masterproc) print *,"Initializing ARKode"
+        call arkode_init(elem, nets, nete, tl, y_C, ierr)
+        if (ierr /= 0) then
+          print *,  'Error in arkode_init, ierr = ', ierr, '; halting'
+          stop
+        end if
+        arkode_initialized = .true.
+        ! output ARKode solver parameters to screen
+        if (hybrid%par%masterproc) call farkwriteparameters(ierr)
+      end if
+
+      ! set saved parameters for passing through ARKode interface
+      dt_save = dt
+      eta_ave_w_save = eta_ave_w
+      qn0_save = qn0
+      hvcoord_ptr => hvcoord
+      hybrid_ptr => hybrid
+      deriv_ptr => deriv
+
+       ! need to copy y(n0) into y(np1)
+       call FNVExtScale(1.d0, y_C(n0), y_C(np1))
 
        ! notify ARKode of desired time step (only actually required if changing dt between calls)
        call farksetrin('FIXED_STEP', dt, ierr)
@@ -357,7 +369,8 @@ contains
        itask = 2          ! use 'one-step' mode
        tcur = 0.d0        ! don't have a way of determining current time yet
        tout = tcur + dt   ! not entirely relevant in one-step mode, so tcur=0.d0 is ok
-       call farkode(tout, tcur, ynew_C, itask, ierr)
+       call farkode(tout, tcur, y_C(np1), itask, ierr)
+
        if (ierr /= 0) then
           write(0,*) 'farkode failed, ierr = ', ierr
        endif

@@ -27,7 +27,6 @@ fi
 # Path to SUNDIALS
 export SUNDIALS=$HOME/local/sundials_${SYSTEM}_intel_opt
 
-
 # HOMME Settings
 if [[ $# -gt 1 ]]; then
   NP=$2
@@ -39,13 +38,23 @@ else
   NTRACERS=4
 fi
   
-# make build directory
-  rm -rf $HOMME_ROOT/build_${SYSTEM}
-  mkdir -p $HOMME_ROOT/build_${SYSTEM} || exit -1
-  cd $HOMME_ROOT/build_${SYSTEM}
+# Set build type ("new" or "update" with default being "update")
+if [[ $# -gt 4 ]]; then
+  BUILD=$5
+else
+  BUILD="update"
+fi
 
-# configure build
-cmake \
+# Delete and create build directory if necessary
+if [[ $BUILD == "new"* ]]; then
+  rm -rf $HOMME_ROOT/build_${SYSTEM}
+fi
+mkdir -p $HOMME_ROOT/build_${SYSTEM} || exit -1
+cd $HOMME_ROOT/build_${SYSTEM}
+
+# configure build (if necessary)
+if [[ $BUILD == "new" ]]; then
+  cmake \
     -C $HOMME_ROOT/cmake/machineFiles/lc.cmake \
     \
     -D PREQX_NP=$NP                  \
@@ -53,6 +62,7 @@ cmake \
     -D QSIZE_D=$NTRACERS             \
     \
     $HOMME_ROOT
+fi
 
 # build HOMME
 make -j$1 theta || exit -1
