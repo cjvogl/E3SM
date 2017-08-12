@@ -122,7 +122,7 @@ contains
     integer              , intent(in)            :: nete
     logical,               intent(in)            :: compute_diagnostics
 
-    real (kind=real_kind) ::  dt2, time, dt_vis, x
+    real (kind=real_kind) ::  dt2, dt_vis, x
     real (kind=real_kind) ::  itertol
     real (kind=real_kind) ::  statesave(nete-nets+1,np,np,nlev,6)
     real (kind=real_kind) ::  gamma,delta
@@ -133,8 +133,8 @@ contains
     integer :: ie,nm1,n0,np1,nstep,qsplit_stage,k, qn0
     integer :: n,i,j,maxiter
 
-    ! initializers for arkode
-    real*8 :: tend, tout, tcur
+    ! ARKode variables
+    real(kind=real_kind) :: tmp
     integer(C_INT) :: ierr, itask
 
     call t_startf('prim_advance_exp')
@@ -338,7 +338,7 @@ contains
       ! initialize ARKode interface if this is first subcycle step
       if (.not. arkode_initialized) then
         if (hybrid%par%masterproc) print *,"Initializing ARKode"
-        call arkode_init(elem, nets, nete, tl, y_C, ierr)
+        call arkode_init(elem, nets, nete, tl, .true., y_C, ierr)
         if (ierr /= 0) then
           print *,  'Error in arkode_init, ierr = ', ierr, '; halting'
           stop
@@ -346,6 +346,9 @@ contains
         arkode_initialized = .true.
         ! output ARKode solver parameters to screen
         if (hybrid%par%masterproc) call farkwriteparameters(ierr)
+      else
+        ! only reinitialize arkode to set new values of y_n
+        call arkode_init(elem, nets, nete, tl, .false., y_C, ierr)
       end if
 
       ! set saved parameters for passing through ARKode interface
@@ -356,10 +359,8 @@ contains
       hybrid_ptr => hybrid
       deriv_ptr => deriv
 
-       ! need to copy y(n0) into y(np1)
-       call FNVExtScale(1.d0, y_C(n0), y_C(np1))
-
-       ! notify ARKode of desired time step (only actually required if changing dt between calls)
+       ! notify ARKode of desired time step (only actually required here
+       ! if changing dt between calls)
        call farksetrin('FIXED_STEP', dt, ierr)
        if (ierr /= 0) then
           write(0,*) 'farksetrin failed, ierr = ', ierr
@@ -367,9 +368,7 @@ contains
 
        ! call ARKode to perform a single step
        itask = 2          ! use 'one-step' mode
-       tcur = 0.d0        ! don't have a way of determining current time yet
-       tout = tcur + dt   ! not entirely relevant in one-step mode, so tcur=0.d0 is ok
-       call farkode(tout, tcur, y_C(np1), itask, ierr)
+       call farkode(dt, tmp, y_C(np1), itask, ierr)
 
        if (ierr /= 0) then
           write(0,*) 'farkode failed, ierr = ', ierr

@@ -14,6 +14,7 @@ setenv OMP_NUM_THREADS 1
 set u_perturb = 1
 set rotate = 0
 #set tstep_type = 1 # RK2
+#set tstep_type = 5 # U35
 set tstep_type = 8 # ARKode
 
                   # number of elemnets:  6*ne*ne
@@ -43,9 +44,11 @@ set vfile_int     = "./cami-26.ascii"
 #  create a new namelist from original ne16 template:
 rm -f input.nl
 sed s/ne=.\*/ne=$ne/ jw_baroclinic.nl |\
+sed s/ndays.\*/ndays=0/ | \
 sed s/tstep_type.\*/tstep_type=$tstep_type/ | \
 sed s/tstep=.\*/tstep=$tstep/ | \
-sed s/rsplit=.\*/rsplit=1/ | \
+sed s/rsplit=.\*/rsplit=0/ | \
+sed s/theta_hydrostatic_mode=.\*/theta_hydrostatic_mode=.true./ | \
 sed s/nu=.\*/nu=$nu/ | \
 sed s/nu_div=.\*/nu_div=$nu/ | \
 sed s/nu_p=.\*/nu_p=$nu/ | \
@@ -65,5 +68,5 @@ sed s/output_varnames1=.\*/"output_varnames1='u','v','T'"/|\
 sed s/qsize.\*/"qsize = $qsize"/  > input.nl
 
 date
-srun -n 1 ./theta < input.nl
+srun -n 16 -p pdebug ./theta < input.nl
 date
