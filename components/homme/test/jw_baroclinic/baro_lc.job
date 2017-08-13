@@ -15,7 +15,8 @@ set u_perturb = 1
 set rotate = 0
 #set tstep_type = 1 # RK2
 #set tstep_type = 5 # U35
-set tstep_type = 8 # ARKode
+#set tstep_type = 10 # ARKode RK2
+set tstep_type = 11 # ARKode U35
 
                   # number of elemnets:  6*ne*ne
 set ne = 16        # horizontal resolution   4,16,30,60,120,240

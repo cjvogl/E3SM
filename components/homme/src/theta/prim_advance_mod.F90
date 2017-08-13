@@ -37,15 +37,13 @@ module prim_advance_mod
   real (kind=real_kind) :: eta_ave_w
 
   ! storage to enable ARKode interface
-  real (kind=real_kind) :: dt_save, eta_ave_w_save
-  integer :: qn0_save
   type(hvcoord_t), pointer :: hvcoord_ptr
   type(hybrid_t), pointer :: hybrid_ptr
   type(derivative_t), pointer :: deriv_ptr
   type(c_ptr) :: y_C(3)
   logical :: arkode_initialized = .false.
-  public :: dt_save, eta_ave_w_save, qn0_save, hvcoord_ptr, &
-            hybrid_ptr, deriv_ptr
+  integer, parameter :: max_stage_num = 10
+  public :: hvcoord_ptr, hybrid_ptr, deriv_ptr, max_stage_num
 
 
 contains
@@ -101,7 +99,6 @@ contains
                               qsplit, integration, hypervis_order, nu, dcmip16_mu, dcmip16_mu_s
     use edge_mod,       only: edgevpack, edgevunpack, initEdgeBuffer
     use edgetype_mod,   only: EdgeBuffer_t
-    use HommeNVector,   only: SetHommeNVectorPar
     use reduction_mod,  only: reductionbuffer_ordered_1d_t, parallelmax
     use time_mod,       only: timelevel_qdp
 
@@ -134,8 +131,10 @@ contains
     integer :: n,i,j,maxiter
 
     ! ARKode variables
-    real(kind=real_kind) :: tmp
-    integer(C_INT) :: ierr, itask
+    real (kind=real_kind) :: A(max_stage_num,max_stage_num), c(max_stage_num)
+    real (kind=real_kind) :: b(max_stage_num), bemb(max_stage_num), tmp
+    integer(C_INT) :: s, q, p
+    integer(C_INT) :: ierr, itask, imex
 
     call t_startf('prim_advance_exp')
     nm1   = tl%nm1
@@ -161,7 +160,7 @@ contains
 !   tstep_type=7  ARS232 ARK-IMEX method with 3 explicit stages and 2 implicit stages, 2nd order
 !                 accurate with stage order 1
 !
-!   tstep_type=8  Arkode with interfacing code
+!   tstep_type=10+  ARKode methods
 
 ! default weights for computing mean dynamics fluxes
     eta_ave_w = 1d0/qsplit
@@ -330,53 +329,62 @@ contains
 
       call t_stopf("ARS232_timestep")
 !=========================================================================================
-    else if (tstep_type==8) then ! use arkode
+    else if (tstep_type==10) then ! ARKode RK2
+      imex = 1 ! specify explicit (0-implicit, 1-explicit, 2-imex)
+      s = 2 ! 2 stage
+      q = 2 ! 2nd order
+      p = 0 ! no embedded order
+      A = 0.d0
+      b = 0.d0
+      bemb = 0.d0 ! no embedded method
+      c = 0.d0
+      A(2,1) = 0.5d0
+      b(2) = 1.d0
+      c(2) = 0.5d0
+    else if (tstep_type==11) then ! ARKode Ullrich 3rd-order, 5-stage
+      imex = 1 ! specify explicit (0-implicit, 1-explicit, 2-imex)
+      s = 5 ! 5 stage
+      q = 3 ! 3rd order
+      p = 0 ! no embedded order
+      A = 0.d0
+      b = 0.d0
+      bemb = 0.d0 ! no embedded method
+      c = 0.d0
+      A(2,1) = 0.2d0
+      A(3,2) = 0.2d0
+      A(4,3) = 1.d0/3.d0
+      A(5,4) = 2.d0/3.d0
+      b(1) = 0.25d0
+      b(5) = 0.75d0
+      c(2) = 0.2d0
+      c(3) = 0.2d0
+      c(4) = 1.d0/3.d0
+      c(5) = 2.d0/3.d0
+    else
+       call abortmp('ERROR: bad choice of tstep_type')
+    endif
 
-      ! Set NVector communicator
-      call SetHommeNVectorPar(hybrid%par)
 
-      ! initialize ARKode interface if this is first subcycle step
-      if (.not. arkode_initialized) then
-        if (hybrid%par%masterproc) print *,"Initializing ARKode"
-        call arkode_init(elem, nets, nete, tl, .true., y_C, ierr)
-        if (ierr /= 0) then
-          print *,  'Error in arkode_init, ierr = ', ierr, '; halting'
-          stop
-        end if
-        arkode_initialized = .true.
-        ! output ARKode solver parameters to screen
-        if (hybrid%par%masterproc) call farkwriteparameters(ierr)
-      else
-        ! only reinitialize arkode to set new values of y_n
-        call arkode_init(elem, nets, nete, tl, .false., y_C, ierr)
-      end if
+    if (tstep_type >= 10) then
 
-      ! set saved parameters for passing through ARKode interface
-      dt_save = dt
-      eta_ave_w_save = eta_ave_w
-      qn0_save = qn0
+      ! Set pointers needed for call to compute_andor_apply_rhs
       hvcoord_ptr => hvcoord
       hybrid_ptr => hybrid
       deriv_ptr => deriv
 
-       ! notify ARKode of desired time step (only actually required here
-       ! if changing dt between calls)
-       call farksetrin('FIXED_STEP', dt, ierr)
-       if (ierr /= 0) then
-          write(0,*) 'farksetrin failed, ierr = ', ierr
-       endif
+      ! initialize  or reinitialize ARKode interface
+      call arkode_init(elem, nets, nete, tl, hybrid%par, .not.arkode_initialized, &
+                              dt, eta_ave_w, qn0, imex, A, b, c, s, q, bemb, p, &
+                              y_C, ierr)
+      arkode_initialized = .true.
 
-       ! call ARKode to perform a single step
-       itask = 2          ! use 'one-step' mode
-       call farkode(dt, tmp, y_C(np1), itask, ierr)
-
-       if (ierr /= 0) then
-          write(0,*) 'farkode failed, ierr = ', ierr
-       endif
-
-    else
-       call abortmp('ERROR: bad choice of tstep_type')
-    endif
+      ! call ARKode to perform a single step
+      itask = 2          ! use 'one-step' mode
+      call farkode(dt, tmp, y_C(np1), itask, ierr)
+      if (ierr /= 0) then
+        call abortmp('farkode failed')
+      endif
+    end if
 
     ! ==============================================
     ! Time-split Horizontal diffusion: nu.del^2 or nu.del^4

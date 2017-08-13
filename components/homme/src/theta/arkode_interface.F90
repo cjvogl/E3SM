@@ -38,7 +38,9 @@
 
 
 
-subroutine arkode_init(elem, nets, nete, tl, allocate_memory, y_C, ierr)
+subroutine arkode_init(elem, nets, nete, tl, par, allocate_memory, &
+                        dt, eta_ave_w, qn0, imex, A, b, c, s, q, bembed, p, &
+                        y_C, ierr)
   !-----------------------------------------------------------------
   ! Description: arkode_init initializes the ARKode solver.
   !   Arguments:
@@ -52,7 +54,10 @@ subroutine arkode_init(elem, nets, nete, tl, allocate_memory, y_C, ierr)
   !-----------------------------------------------------------------
   !======= Inclusions ===========
   use element_mod,      only: element_t
-  use HommeNVector,     only: NVec_t, MakeHommeNVector
+  use HommeNVector,     only: NVec_t, MakeHommeNVector, SetHommeNVectorPar
+  use kinds,            only: real_kind
+  use parallel_mod,     only: parallel_t, abortmp
+  use prim_advance_mod, only: msn=>max_stage_num
   use time_mod,         only: TimeLevel_t
   use iso_c_binding
 
@@ -62,67 +67,24 @@ subroutine arkode_init(elem, nets, nete, tl, allocate_memory, y_C, ierr)
   ! calling variables
   type(element_t),   intent(in)  :: elem(nets:nete)
   type(TimeLevel_t), intent(in)  :: tl
-  integer,           intent(in)  :: nets, nete
+  type(parallel_t),  intent(in)  :: par
+  integer,           intent(in)  :: nets, nete, qn0
+  integer(C_INT),    intent(in)  :: imex, s, q, p
   logical,           intent(in)  :: allocate_memory
+  real(real_kind),   intent(in)  :: dt, eta_ave_w
+  real(real_kind),   intent(in)  :: A(msn,msn), b(msn), c(msn), bembed(msn)
   type(c_ptr),       intent(out) :: y_C(3)
   integer(C_INT),    intent(out) :: ierr
 
   ! local variables
   type(NVec_t), target :: y(3)
-  integer(C_INT)  :: idef, iatol, imex, precLR, gstype, maxl
-  real*8          :: rpar(1), lintol, tstart, rtol, atol, rout(40)
+  integer(C_INT)  :: idef, iatol, precLR, gstype, maxl
+  real(real_kind) :: A_C(s*s), rpar(2), lintol, tstart, rtol, atol, rout(40)
   integer(C_LONG) :: lidef, ipar(1), iout(40)
-  integer :: i
-
-  ! Butcher table parameters for HOMME/theta version of RK2
-  integer :: S_RK2 = 2
-  integer :: Q_RK2 = 2
-  integer :: P_RK2 = 0
-  real*8  :: C_RK2(2) = (/ 0.d0, 0.5d0 /)
-  real*8  :: B_RK2(2) = (/ 0.d0, 1.d0 /)
-  real*8  :: A_RK2(4) = (/ 0.d0, 0.d0, 0.5d0, 0.d0 /)
-
-  ! Butcher table parameters for Ullrich 3-5 method
-  integer :: S_U35 = 5
-  integer :: Q_U35 = 3
-  integer :: P_U35 = 0
-  real*8  :: C_U35(5) = (/   0.d0, 0.2d0, 0.2d0, 1.d0/3.d0, 2.d0/3.d0 /)
-  real*8  :: B_U35(5) = (/ 0.25d0,  0.d0,  0.d0,      0.d0,    0.75d0 /)
-  real*8  :: A_U35(25) = (/ 0.d0,  0.d0,      0.d0,      0.d0,   0.d0, &
-                           0.2d0,  0.d0,      0.d0,      0.d0,   0.d0, &
-                            0.d0, 0.2d0,      0.d0,      0.d0,   0.d0, &
-                            0.d0,  0.d0, 1.d0/3.d0,      0.d0,   0.d0, &
-                            0.d0,  0.d0,      0.d0, 2.d0/3.d0,   0.d0 /)
-  !  -!!$       Ullrich 3rd order 5 stage
-!  -!!$          s = 6;
-!  -!!$          q = 3;
-!  -!!$          A = zeros(s,s);
-!  -!!$          A(2,1) = 0.2;
-!  -!!$          A(3,2) = 0.2;
-!  -!!$          A(4,3) = 1/3;
-!  -!!$          A(5,4) = 2/3;
-!  -!!$          A(6,1) = 0.25;  A(6,5) = 0.75;
-!  -!!$          c = [0; 0.2; 0.2; 1/3; 2/3; 1];
-!  -!!$          b = [0.25, 0, 0, 0, 0.75, 0];
-
-
+  integer :: i, j
   !======= Internals ============
 
   ! *** Set ARKode parameters ***
-
-  ! Specify ERK Tables either using static definitions above or others defined here
-! #define s S_RK2
-! #define q Q_RK2
-! #define p P_RK2
-! #define A A_RK2
-! #define b B_RK2
-! #define c C_RK2
-#define s S_U35
-#define q Q_U35
-#define p P_U35
-#define A A_U35
-#define b B_U35
-#define c C_U35
 
   ! atol - absolute tolerance (for iterative solves)
   iatol = 1    ! specify type for atol: 1=scalar, 2=array
@@ -140,31 +102,42 @@ subroutine arkode_init(elem, nets, nete, tl, allocate_memory, y_C, ierr)
                ! are solved, and should rougly correspond with the desir
                ! number of digits
 
-  ! placeholders for optional farkmalloc outputs
+  ! *** End of ARKode parameters ***
+
+
+
+  ! store variables for farkefun and farkifun
+  rpar(1) = dt
+  rpar(2) = eta_ave_w
+  ipar(1) = qn0
+
+  ! flatten A to C array (row-major)
+  do i=1,s
+    do j = 1,s
+      A_C(s*(i-1)+j) = A(i,j)
+    end do
+  end do
+
+  ! Set NVector communicator
+  call SetHommeNVectorPar(par)
+
+  ! initialize error flag and placeholders for optional farmalloc outputs
+  ierr = 0
   iout = 0
   rout = 0.d0
 
   ! specify start time to be 0.0 so stage time can be easily computed below
   tstart = 0.d0
 
-  ! specify problem type: 0=implicit, 1=explicit, 2=imex
-  imex = 1
-
-  ! *** End of ARKode parameters ***
-
-
-  ! initialize error flag
-  ierr = 0
-
   if (allocate_memory) then
+    if (par%masterproc) print *,"Initializing ARKode"
     ! 'create' NVec_t objects that will correspond to the original 3 HOMME
     ! timelevels, assuming that tl%nm1, tl%n0, and tl%np1 are taken from the
     ! set {1,2,3}
     do i=1,3
       call MakeHommeNVector(elem, nets, nete, i, y(i), ierr)
       if (ierr /= 0) then
-        print *,  'Error in MakeHommeNVector, ierr = ', ierr, '; halting'
-        stop
+        call abortmp('Error in MakeHommeNVector')
       end if
       ! get C pointer
       y_C(i) = c_loc(y(i))
@@ -175,31 +148,42 @@ subroutine arkode_init(elem, nets, nete, tl, allocate_memory, y_C, ierr)
     idef = 4    ! flag specifying which SUNDIALS solver will be used (4=ARKode)
     call fnvextinit(idef, ierr)
     if (ierr /= 0) then
-       write(0,*) ' arkode_init: fnvextinit failed'
-    endif
+       call abortmp('arkode_init: fnvextinit failed')
+    end if
 
     !    ARKode dataspace
     call farkmalloc(tstart, y_C(tl%n0), imex, iatol, rtol, atol, &
                     iout, rout, ipar, rpar, ierr)
     if (ierr /= 0) then
-       write(0,*) ' arkode_init: farkmalloc failed'
-    endif
+       call abortmp('arkode_init: farkmalloc failed')
+    end if
 
     !     Set ERK Butcher table
-    call farkseterktable(s, q, p, c, A, b, b, ierr)
-    if (ierr /= 0) then
-       write(0,*) ' arkode_init: farkseterktables failed'
-    endif
+    if (imex == 1) then
+      call farkseterktable(s, q, p, c, A_C, b, bembed, ierr)
+      if (ierr /= 0) then
+         call abortmp('arkode_init: farkseterktables failed')
+      end if
+    end if
+
+    if (par%masterproc) call farkwriteparameters(ierr)
 
   else
 
     !     Set initial conditions (without allocating new memory)
     call farkreinit(tstart, y_C(tl%n0), imex, iatol, rtol, atol, ierr)
     if (ierr /= 0) then
-       write(0,*) ' arkode_init: farkreinit failed'
+       call abortmp('arkode_init: farkreinit failed')
     endif
 
   end if
+
+  !     Set ARKode time step
+  call farksetrin('FIXED_STEP', dt, ierr)
+  if (ierr /= 0) then
+     call abortmp('farksetrin failed')
+  endif
+
 
 
   !      Requested order of accuracy for ARK method (3,4,5 are supported).
@@ -265,10 +249,8 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   !       t - (dbl, input) current time
   !     y_C - (ptr) C pointer to NVec_t containing current solution
   !    fy_C - (ptr) C pointer to NVec_t to hold right-hand side function
-  !    ipar - (long int(*), input) integer user parameter data
-  !           (passed back here, unused)
-  !    rpar - (dbl(*), input) real user parameter data (passed here,
-  !           unused)
+  !    ipar - (long int(*), input) integer user parameter data (qn0)
+  !    rpar - (dbl(*), input) real user parameter data (dt, eta_ave_w)
   !    ierr - (int, output) return flag: 0=>success,
   !            1=>recoverable error, -1=>non-recoverable error
   !-----------------------------------------------------------------
@@ -282,8 +264,8 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   use derivative_mod,   only: derivative_t
   use hybvcoord_mod,    only: hvcoord_t
   use dimensions_mod,   only: np,nlev
-  use prim_advance_mod, only: compute_andor_apply_rhs, dt_save, eta_ave_w_save, &
-                              qn0_save, hvcoord_ptr, hybrid_ptr, deriv_ptr
+  use prim_advance_mod, only: compute_andor_apply_rhs, hvcoord_ptr, hybrid_ptr, &
+                              deriv_ptr
 
   !======= Declarations =========
   implicit none
@@ -293,17 +275,22 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   type(c_ptr),       intent(in), target :: y_C
   type(c_ptr),       intent(in), target :: fy_C
   integer(C_LONG),   intent(in)         :: ipar(1)
-  real*8,            intent(in)         :: rpar(1)
+  real*8,            intent(in)         :: rpar(2)
   integer(C_INT),    intent(out)        :: ierr
 
   ! local variables
   type(NVec_t), pointer :: y => NULL()
   type(NVec_t), pointer :: fy => NULL()
-  real (kind=real_kind) :: ci
+  real (kind=real_kind) :: dt, ci, eta_ave_w
 
-  integer :: ie, inlev, inpx, inpy
+  integer :: qn0, ie, inlev, inpx, inpy
 
   !======= Internals ============
+
+  ! extract parameters
+  dt = rpar(1)
+  eta_ave_w = rpar(2)
+  qn0 = ipar(1)
 
   ! set return value to success
   ierr = 0
@@ -312,8 +299,8 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   call c_f_pointer(y_C, y)
   call c_f_pointer(fy_C, fy)
 
-  ! determine 'stage time' from t and dt_save (assumes that t_n set to 0)
-  ci = t/dt_save
+  ! determine 'stage time' from t and dt (assumes that t_n set to 0)
+  ci = t/dt
 
   ! set return value to success
   ierr = 0
@@ -339,9 +326,9 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   !
 
   ! Essentially sets fi(t,y) to 0
-  call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0_save, &
+  call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
        1.d0, y%elem, hvcoord_ptr, hybrid_ptr, deriv_ptr, y%nets, y%nete, &
-       .false., ci*eta_ave_w_save, 0.d0, 0.d0, 0.d0)
+       .false., ci*eta_ave_w, 0.d0, 0.d0, 0.d0)
 
   return
 end subroutine farkifun
@@ -359,10 +346,8 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   !       t - (dbl, input) current time
   !     y_C - (ptr) C pointer to NVec_t containing current solution
   !    fy_C - (ptr) C pointer to NVec_t to hold right-hand side function
-  !    ipar - (long int(*), input) integer user parameter data
-  !           (passed back here, unused)
-  !    rpar - (dbl(*), input) real user parameter data (passed here,
-  !           unused)
+  !    ipar - (long int(*), input) integer user parameter data (qn0)
+  !    rpar - (dbl(*), input) real user parameter data (dt, eta_ave_w)
   !    ierr - (int, output) return flag: 0=>success,
   !            1=>recoverable error, -1=>non-recoverable error
   !-----------------------------------------------------------------
@@ -374,9 +359,8 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   use derivative_mod,   only: derivative_t
   use hybvcoord_mod,    only: hvcoord_t
   use dimensions_mod,   only: np,nlev
-  use parallel_mod, only: abortmp
-  use prim_advance_mod, only: compute_andor_apply_rhs, dt_save, eta_ave_w_save, &
-                              qn0_save, hvcoord_ptr, hybrid_ptr, deriv_ptr
+  use prim_advance_mod, only: compute_andor_apply_rhs, hvcoord_ptr, hybrid_ptr, &
+                              deriv_ptr
 
   !======= Declarations =========
   implicit none
@@ -386,17 +370,22 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   type(c_ptr),       intent(in), target :: y_C
   type(c_ptr),       intent(in), target :: fy_C
   integer(C_LONG),   intent(in)         :: ipar(1)
-  real*8,            intent(in)         :: rpar(1)
+  real*8,            intent(in)         :: rpar(2)
   integer(C_INT),    intent(out)        :: ierr
 
   ! local variables
   type(NVec_t), pointer :: y => NULL()
   type(NVec_t), pointer :: fy => NULL()
-  real (kind=real_kind) :: ci
+  real (kind=real_kind) :: dt, eta_ave_w, ci
 
-  integer :: ie, inlev, inpx, inpy
+  integer :: qn0, ie, inlev, inpx, inpy
 
   !======= Internals ============
+
+  ! extract parameters
+  dt = rpar(1)
+  eta_ave_w = rpar(2)
+  qn0 = ipar(1)
 
   ! set return value to success
   ierr = 0
@@ -405,8 +394,8 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   call c_f_pointer(y_C, y)
   call c_f_pointer(fy_C, fy)
 
-  ! determine 'stage time' from t and dt_save (assumes that t_n set to 0)
-  ci = t/dt_save
+  ! determine 'stage time' from t and dt (assumes that t_n set to 0)
+  ci = t/dt
 
   ! The function call to compute_andor_apply_rhs is as follows:
   !  compute_andor_apply_rhs(np1, nm1, n0, qn0, dt2, elem, hvcoord, hybrid, &
@@ -424,9 +413,9 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   !  DSS is the averaging procedure for the active and inactive nodes
   !
 
-  call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0_save, &
+  call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
        1.d0, y%elem, hvcoord_ptr, hybrid_ptr, deriv_ptr, y%nets, y%nete, &
-       .false., ci*eta_ave_w_save, 1.d0, 1.d0, 0.d0)
+       .false., ci*eta_ave_w, 1.d0, 1.d0, 0.d0)
 
   return
 end subroutine farkefun
