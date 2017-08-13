@@ -158,12 +158,29 @@ subroutine arkode_init(elem, nets, nete, tl, par, allocate_memory, &
        call abortmp('arkode_init: farkmalloc failed')
     end if
 
-    !     Set ERK Butcher table
-    if (imex == 1) then
+    !     Set Butcher table information
+    if (imex == 0) then
+      !     Set IRK Butcher table for implicit problems
+      !call farksetirktable(s, q, p, c, A_C, b, bembed, ierr)
+      !if (ierr /= 0) then
+      !  call abortmp('arkode_init: farksetirktable failed')
+      !end if
+      call abortmp('arkode_init: implicit problems not yet implemented')
+    else if (imex == 1) then
+      !     Set ERK Butcher table for explicit problems
       call farkseterktable(s, q, p, c, A_C, b, bembed, ierr)
       if (ierr /= 0) then
-         call abortmp('arkode_init: farkseterktables failed')
+        call abortmp('arkode_init: farkseterktable failed')
       end if
+    else if (imex == 2) then
+      !     Set ARK Butcher table for IMEX problems
+      !call farksetarktable(s, q, p, ci, ce, Ai_C, Ae_C, bi, be, b2i, b2e, ierr)
+      !if (ierr /= 0) then
+      !  call abortmp('arkode_init: farksetarktable failed')
+      !end if
+      call abortmp('arkode_init: IMEX problems not yet implemented')
+    else
+      call abortmp('arkode_init: invalid imex parameter value')
     end if
 
     if (par%masterproc) call farkwriteparameters(ierr)
@@ -183,18 +200,6 @@ subroutine arkode_init(elem, nets, nete, tl, par, allocate_memory, &
   if (ierr /= 0) then
      call abortmp('farksetrin failed')
   endif
-
-
-
-  !      Requested order of accuracy for ARK method (3,4,5 are supported).
-  !      Alternately, a user can supply a custom Butcher table pair to
-  !      define their ARK method, by calling FARKSETARKTABLES()
-!  lidef = 4
-!  call farksetiin('ORDER', lidef, ierr)
-!  if (ierr /= 0) then
-!     write(0,*) ' arkode_init: farksetiin failed'
-!  endif
-
 
   !      To indicate that the implicit problem is linear, make the following
   !      call.  The argument specifies whether the linearly implicit problem
