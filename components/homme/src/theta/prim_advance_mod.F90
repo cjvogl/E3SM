@@ -36,16 +36,6 @@ module prim_advance_mod
   real (kind=real_kind), allocatable :: ur_weights(:)
   real (kind=real_kind) :: eta_ave_w
 
-  ! storage to enable ARKode interface
-  type(hvcoord_t), pointer :: hvcoord_ptr
-  type(hybrid_t), pointer :: hybrid_ptr
-  type(derivative_t), pointer :: deriv_ptr
-  type(c_ptr) :: y_C(3)
-  logical :: arkode_initialized = .false.
-  integer, parameter :: max_stage_num = 10
-  public :: hvcoord_ptr, hybrid_ptr, deriv_ptr, max_stage_num
-
-
 contains
 
   subroutine prim_advance_init1(par, elem,integration)
@@ -94,6 +84,7 @@ contains
   !_____________________________________________________________________
   subroutine prim_advance_exp(elem, deriv, hvcoord, hybrid,dt, tl, nets, nete, compute_diagnostics)
 
+    use arkode_mod,     only: parameter_list, update_arkode, get_solution_ptr
     use bndry_mod,      only: bndry_exchangev
     use control_mod,    only: prescribed_wind, qsplit, tstep_type, rsplit, &
                               qsplit, integration, hypervis_order, nu, dcmip16_mu, dcmip16_mu_s
@@ -101,10 +92,10 @@ contains
     use edgetype_mod,   only: EdgeBuffer_t
     use reduction_mod,  only: reductionbuffer_ordered_1d_t, parallelmax
     use time_mod,       only: timelevel_qdp
+    use iso_c_binding
 
 #ifdef TRILINOS
     use prim_derived_type_mod ,only : derived_type, initialize
-    use, intrinsic :: iso_c_binding
 #endif
 
     implicit none
@@ -131,10 +122,10 @@ contains
     integer :: n,i,j,maxiter
 
     ! ARKode variables
-    real (kind=real_kind) :: A(max_stage_num,max_stage_num), c(max_stage_num)
-    real (kind=real_kind) :: b(max_stage_num), bemb(max_stage_num), tmp
-    integer(C_INT) :: s, q, p
-    integer(C_INT) :: ierr, itask, imex
+    type(parameter_list) :: arkode_parameters
+    type(c_ptr) :: ynp1
+    real(real_kind) :: tout, t
+    integer(C_INT) :: ierr, itask
 
     call t_startf('prim_advance_exp')
     nm1   = tl%nm1
@@ -330,36 +321,36 @@ contains
       call t_stopf("ARS232_timestep")
 !=========================================================================================
     else if (tstep_type==10) then ! ARKode RK2
-      imex = 1 ! specify explicit (0-implicit, 1-explicit, 2-imex)
-      s = 2 ! 2 stage
-      q = 2 ! 2nd order
-      p = 0 ! no embedded order
-      A = 0.d0
-      b = 0.d0
-      bemb = 0.d0 ! no embedded method
-      c = 0.d0
-      A(2,1) = 0.5d0
-      b(2) = 1.d0
-      c(2) = 0.5d0
+      arkode_parameters%imex = 1 ! explicit
+      arkode_parameters%s = 2 ! 2 stage
+      arkode_parameters%q = 2 ! 2nd order
+      arkode_parameters%p = 0 ! no embedded order
+      arkode_parameters%Ae = 0.d0 ! explicit Butcher table
+      arkode_parameters%be = 0.d0 ! explicit Butcher table
+      arkode_parameters%be2 = 0.d0 ! no embedded explicit method
+      arkode_parameters%ce = 0.d0 ! explicit Butcher table
+      arkode_parameters%Ae(2,1) = 0.5d0
+      arkode_parameters%be(2) = 1.d0
+      arkode_parameters%ce(2) = 0.5d0
     else if (tstep_type==11) then ! ARKode Ullrich 3rd-order, 5-stage
-      imex = 1 ! specify explicit (0-implicit, 1-explicit, 2-imex)
-      s = 5 ! 5 stage
-      q = 3 ! 3rd order
-      p = 0 ! no embedded order
-      A = 0.d0
-      b = 0.d0
-      bemb = 0.d0 ! no embedded method
-      c = 0.d0
-      A(2,1) = 0.2d0
-      A(3,2) = 0.2d0
-      A(4,3) = 1.d0/3.d0
-      A(5,4) = 2.d0/3.d0
-      b(1) = 0.25d0
-      b(5) = 0.75d0
-      c(2) = 0.2d0
-      c(3) = 0.2d0
-      c(4) = 1.d0/3.d0
-      c(5) = 2.d0/3.d0
+      arkode_parameters%imex = 1 ! explicit
+      arkode_parameters%s = 5 ! 5 stage
+      arkode_parameters%q = 3 ! 3rd order
+      arkode_parameters%p = 0 ! no embedded order
+      arkode_parameters%Ae = 0.d0 ! explicit Butcher table
+      arkode_parameters%be = 0.d0 ! explicit Butcher table
+      arkode_parameters%be2 = 0.d0 ! no embedded explicit method
+      arkode_parameters%ce = 0.d0 ! explicit Butcher table
+      arkode_parameters%Ae(2,1) = 0.2d0
+      arkode_parameters%Ae(3,2) = 0.2d0
+      arkode_parameters%Ae(4,3) = 1.d0/3.d0
+      arkode_parameters%Ae(5,4) = 2.d0/3.d0
+      arkode_parameters%be(1) = 0.25d0
+      arkode_parameters%be(5) = 0.75d0
+      arkode_parameters%ce(2) = 0.2d0
+      arkode_parameters%ce(3) = 0.2d0
+      arkode_parameters%ce(4) = 1.d0/3.d0
+      arkode_parameters%ce(5) = 2.d0/3.d0
     else
        call abortmp('ERROR: bad choice of tstep_type')
     endif
@@ -367,20 +358,15 @@ contains
 
     if (tstep_type >= 10) then
 
-      ! Set pointers needed for call to compute_andor_apply_rhs
-      hvcoord_ptr => hvcoord
-      hybrid_ptr => hybrid
-      deriv_ptr => deriv
-
-      ! initialize  or reinitialize ARKode interface
-      call arkode_init(elem, nets, nete, tl, hybrid%par, .not.arkode_initialized, &
-                              dt, eta_ave_w, qn0, imex, A, b, c, s, q, bemb, p, &
-                              y_C, ierr)
-      arkode_initialized = .true.
+      ! update ARKode solver
+      call update_arkode(elem, nets, nete, deriv, hvcoord, hybrid, &
+                               dt, eta_ave_w, n0, qn0, arkode_parameters)
 
       ! call ARKode to perform a single step
+      call get_solution_ptr(np1, ynp1)
+      tout = dt
       itask = 2          ! use 'one-step' mode
-      call farkode(dt, tmp, y_C(np1), itask, ierr)
+      call farkode(tout, t, ynp1, itask, ierr)
       if (ierr /= 0) then
         call abortmp('farkode failed')
       endif

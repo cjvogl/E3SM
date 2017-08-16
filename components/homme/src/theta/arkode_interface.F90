@@ -36,215 +36,6 @@
 ! Copyright 2017; all rights reserved
 !=================================================================
 
-
-
-subroutine arkode_init(elem, nets, nete, tl, par, allocate_memory, &
-                        dt, eta_ave_w, qn0, imex, A, b, c, s, q, bembed, p, &
-                        y_C, ierr)
-  !-----------------------------------------------------------------
-  ! Description: arkode_init initializes the ARKode solver.
-  !   Arguments:
-  !     elem - (obj*, input) element objects
-  !     nets - (int, input) starting index for elem array
-  !     nete - (int, input) ending index for elem array
-  !       tl - (obj, input) timelevel object
-  !      y_C - (ptr(3), output) C pointers to NVec_t template solution vectors
-  !     ierr - (int, output) return flag: 0=>success,
-  !             1=>recoverable error, -1=>non-recoverable error
-  !-----------------------------------------------------------------
-  !======= Inclusions ===========
-  use element_mod,      only: element_t
-  use HommeNVector,     only: NVec_t, MakeHommeNVector, SetHommeNVectorPar
-  use kinds,            only: real_kind
-  use parallel_mod,     only: parallel_t, abortmp
-  use prim_advance_mod, only: msn=>max_stage_num
-  use time_mod,         only: TimeLevel_t
-  use iso_c_binding
-
-  !======= Declarations =========
-  implicit none
-
-  ! calling variables
-  type(element_t),   intent(in)  :: elem(nets:nete)
-  type(TimeLevel_t), intent(in)  :: tl
-  type(parallel_t),  intent(in)  :: par
-  integer,           intent(in)  :: nets, nete, qn0
-  integer(C_INT),    intent(in)  :: imex, s, q, p
-  logical,           intent(in)  :: allocate_memory
-  real(real_kind),   intent(in)  :: dt, eta_ave_w
-  real(real_kind),   intent(in)  :: A(msn,msn), b(msn), c(msn), bembed(msn)
-  type(c_ptr),       intent(out) :: y_C(3)
-  integer(C_INT),    intent(out) :: ierr
-
-  ! local variables
-  type(NVec_t), target :: y(3)
-  integer(C_INT)  :: idef, iatol, precLR, gstype, maxl
-  real(real_kind) :: A_C(s*s), rpar(2), lintol, tstart, rtol, atol, rout(40)
-  integer(C_LONG) :: lidef, ipar(1), iout(40)
-  integer :: i, j
-  !======= Internals ============
-
-  ! *** Set ARKode parameters ***
-
-  ! atol - absolute tolerance (for iterative solves)
-  iatol = 1    ! specify type for atol: 1=scalar, 2=array
-  atol = 1d-1    ! do all solution components have unit magnitude, or coul
-               ! their units vary considerably?  If units can vary, then
-               ! a scalar-valued atol is a **bad** idea
-
-  ! rtol - relative tolerance (for iterative solves)
-  rtol = 1d-1    ! do you really only want one digit of accuracy?  When us
-               ! fixed time steps and an explicit method this input is u
-               ! but in all other cases it corresponds to how tightly th
-               ! are solved, and should rougly correspond with the desir
-               ! fixed time steps and an explicit method this input is u
-               ! but in all other cases it corresponds to how tightly th
-               ! are solved, and should rougly correspond with the desir
-               ! number of digits
-
-  ! *** End of ARKode parameters ***
-
-
-
-  ! store variables for farkefun and farkifun
-  rpar(1) = dt
-  rpar(2) = eta_ave_w
-  ipar(1) = qn0
-
-  ! flatten A to C array (row-major)
-  do i=1,s
-    do j = 1,s
-      A_C(s*(i-1)+j) = A(i,j)
-    end do
-  end do
-
-  ! Set NVector communicator
-  call SetHommeNVectorPar(par)
-
-  ! initialize error flag and placeholders for optional farmalloc outputs
-  ierr = 0
-  iout = 0
-  rout = 0.d0
-
-  ! specify start time to be 0.0 so stage time can be easily computed below
-  tstart = 0.d0
-
-  if (allocate_memory) then
-    if (par%masterproc) print *,"Initializing ARKode"
-    ! 'create' NVec_t objects that will correspond to the original 3 HOMME
-    ! timelevels, assuming that tl%nm1, tl%n0, and tl%np1 are taken from the
-    ! set {1,2,3}
-    do i=1,3
-      call MakeHommeNVector(elem, nets, nete, i, y(i), ierr)
-      if (ierr /= 0) then
-        call abortmp('Error in MakeHommeNVector')
-      end if
-      ! get C pointer
-      y_C(i) = c_loc(y(i))
-    end do
-
-    ! initialize ARKode data & operators
-    !    Nvector specs
-    idef = 4    ! flag specifying which SUNDIALS solver will be used (4=ARKode)
-    call fnvextinit(idef, ierr)
-    if (ierr /= 0) then
-       call abortmp('arkode_init: fnvextinit failed')
-    end if
-
-    !    ARKode dataspace
-    call farkmalloc(tstart, y_C(tl%n0), imex, iatol, rtol, atol, &
-                    iout, rout, ipar, rpar, ierr)
-    if (ierr /= 0) then
-       call abortmp('arkode_init: farkmalloc failed')
-    end if
-
-    !     Set Butcher table information
-    if (imex == 0) then
-      !     Set IRK Butcher table for implicit problems
-      !call farksetirktable(s, q, p, c, A_C, b, bembed, ierr)
-      !if (ierr /= 0) then
-      !  call abortmp('arkode_init: farksetirktable failed')
-      !end if
-      call abortmp('arkode_init: implicit problems not yet implemented')
-    else if (imex == 1) then
-      !     Set ERK Butcher table for explicit problems
-      call farkseterktable(s, q, p, c, A_C, b, bembed, ierr)
-      if (ierr /= 0) then
-        call abortmp('arkode_init: farkseterktable failed')
-      end if
-    else if (imex == 2) then
-      !     Set ARK Butcher table for IMEX problems
-      !call farksetarktable(s, q, p, ci, ce, Ai_C, Ae_C, bi, be, b2i, b2e, ierr)
-      !if (ierr /= 0) then
-      !  call abortmp('arkode_init: farksetarktable failed')
-      !end if
-      call abortmp('arkode_init: IMEX problems not yet implemented')
-    else
-      call abortmp('arkode_init: invalid imex parameter value')
-    end if
-
-    if (par%masterproc) call farkwriteparameters(ierr)
-
-  else
-
-    !     Set initial conditions (without allocating new memory)
-    call farkreinit(tstart, y_C(tl%n0), imex, iatol, rtol, atol, ierr)
-    if (ierr /= 0) then
-       call abortmp('arkode_init: farkreinit failed')
-    endif
-
-  end if
-
-  !     Set ARKode time step
-  call farksetrin('FIXED_STEP', dt, ierr)
-  if (ierr /= 0) then
-     call abortmp('farksetrin failed')
-  endif
-
-  !      To indicate that the implicit problem is linear, make the following
-  !      call.  The argument specifies whether the linearly implicit problem
-  !      changes as the problem evolves (1) or not (0)
-!  lidef = 0
-!  call farksetiin('LINEAR', lidef, ierr)
-!  if (ierr /= 0) then
-!     write(0,*) ' arkode_init: farksetiin failed'
-!  endif
-
-  !      Indicate use of the GMRES linear solver, the arguments indicate:
-  !      precLR -- type of preconditioning: 0=none, 1=left, 2=right, 3=left+right
-  !      gstype -- type of Gram-Schmidt orthogonalization: 1=modified, 2=classical
-  !      maxl -- maximum size of Krylov subspace (# of iterations/vectors)
-  !      lintol -- linear convergence tolerance factor (0 indicates default); this
-  !                example is very stiff so it requires tight linear solves
-!  precLR = 0
-!  gstype = 1
-!  maxl = 50
-!  lintol = 1.d-3
-!  call farkspgmr(precLR, gstype, maxl, lintol, ierr)
-!  if (ierr /= 0) then
-!     write(0,*) ' arkode_init: farkspgmr failed'
-!  endif
-
-  !      Indicate to use our own Jacobian-vector product routine (otherwise it
-  !      uses a finite-difference approximation)
-  !idef = 1
-  !call farkspilssetjac(idef, ierr)
-  !if (ierr /= 0) then
-  !   write(0,*) ' arkode_init: farkspilssetjac failed'
-  !endif
-
-  !      Indicate to use our own preconditioner setup/solve routines (otherwise
-  !      preconditioning is disabled)
-  !idef = 1
-  !call farkspilssetprec(idef, ierr)
-  !if (ierr /= 0) then
-  !   write(0,*) ' arkode_init: farkspilssetprec failed'
-  !endif
-
-  return
-end subroutine arkode_init
-!=================================================================
-
 subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   !-----------------------------------------------------------------
   ! Description: farkifun provides the implicit portion of the right
@@ -259,18 +50,17 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   !    ierr - (int, output) return flag: 0=>success,
   !            1=>recoverable error, -1=>non-recoverable error
   !-----------------------------------------------------------------
+
   !======= Inclusions ===========
-  use iso_c_binding
+  use arkode_mod,       only: get_RHS_vars
   use kinds,            only: real_kind
   use HommeNVector,     only: NVec_t
-  use element_mod,      only: element_t
   use hybrid_mod,       only: hybrid_t
-  use kinds,            only: real_kind
   use derivative_mod,   only: derivative_t
   use hybvcoord_mod,    only: hvcoord_t
   use dimensions_mod,   only: np,nlev
-  use prim_advance_mod, only: compute_andor_apply_rhs, hvcoord_ptr, hybrid_ptr, &
-                              deriv_ptr
+  use prim_advance_mod, only: compute_andor_apply_rhs
+  use iso_c_binding
 
   !======= Declarations =========
   implicit none
@@ -280,22 +70,33 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   type(c_ptr),       intent(in), target :: y_C
   type(c_ptr),       intent(in), target :: fy_C
   integer(C_LONG),   intent(in)         :: ipar(1)
-  real*8,            intent(in)         :: rpar(2)
+  real*8,            intent(in)         :: rpar(1)
   integer(C_INT),    intent(out)        :: ierr
 
   ! local variables
+  type(derivative_t)    :: deriv
+  type(hybrid_t)        :: hybrid
+  type(hvcoord_t)       :: hvcoord
   type(NVec_t), pointer :: y => NULL()
   type(NVec_t), pointer :: fy => NULL()
-  real (kind=real_kind) :: dt, ci, eta_ave_w
-
-  integer :: qn0, ie, inlev, inpx, inpy
+  real (real_kind)      :: dt, eta_ave_w, ci, scale1, scale2, scale3
+  integer               :: imex, qn0, ie, inlev, inpx, inpy
 
   !======= Internals ============
+  call get_RHS_vars(imex,qn0,dt,eta_ave_w,hvcoord,hybrid,deriv)
 
-  ! extract parameters
-  dt = rpar(1)
-  eta_ave_w = rpar(2)
-  qn0 = ipar(1)
+  ! set scale factors depending on whether using implicit, explicit, or IMEX
+  if (imex == 0) then
+    scale1 = 1.d0
+    scale2 = 1.d0
+  else if (imex == 1) then
+    scale1 = 0.d0
+    scale2 = 0.d0
+  else if (imex == 2) then
+    scale1 = 0.d0
+    scale2 = 1.d0
+  end if
+  scale3 = 0.d0
 
   ! set return value to success
   ierr = 0
@@ -332,15 +133,13 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
 
   ! Essentially sets fi(t,y) to 0
   call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
-       1.d0, y%elem, hvcoord_ptr, hybrid_ptr, deriv_ptr, y%nets, y%nete, &
-       .false., ci*eta_ave_w, 0.d0, 0.d0, 0.d0)
+       1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
+       .false., ci*eta_ave_w, scale1, scale2, scale3)
 
   return
 end subroutine farkifun
+
 !=================================================================
-
-
-
 
 subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   !-----------------------------------------------------------------
@@ -356,16 +155,17 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   !    ierr - (int, output) return flag: 0=>success,
   !            1=>recoverable error, -1=>non-recoverable error
   !-----------------------------------------------------------------
-  use iso_c_binding
+
+  !======= Inclusions ===========
+  use arkode_mod,       only: get_RHS_vars
   use kinds,            only: real_kind
   use HommeNVector,     only: NVec_t
-  use element_mod,      only: element_t
   use hybrid_mod,       only: hybrid_t
   use derivative_mod,   only: derivative_t
   use hybvcoord_mod,    only: hvcoord_t
   use dimensions_mod,   only: np,nlev
-  use prim_advance_mod, only: compute_andor_apply_rhs, hvcoord_ptr, hybrid_ptr, &
-                              deriv_ptr
+  use prim_advance_mod, only: compute_andor_apply_rhs
+  use iso_c_binding
 
   !======= Declarations =========
   implicit none
@@ -375,22 +175,33 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   type(c_ptr),       intent(in), target :: y_C
   type(c_ptr),       intent(in), target :: fy_C
   integer(C_LONG),   intent(in)         :: ipar(1)
-  real*8,            intent(in)         :: rpar(2)
+  real*8,            intent(in)         :: rpar(1)
   integer(C_INT),    intent(out)        :: ierr
 
   ! local variables
+  type(derivative_t)    :: deriv
+  type(hybrid_t)        :: hybrid
+  type(hvcoord_t)       :: hvcoord
   type(NVec_t), pointer :: y => NULL()
   type(NVec_t), pointer :: fy => NULL()
-  real (kind=real_kind) :: dt, eta_ave_w, ci
-
-  integer :: qn0, ie, inlev, inpx, inpy
+  real (real_kind)      :: dt, eta_ave_w, ci, scale1, scale2, scale3
+  integer               :: imex, qn0, ie, inlev, inpx, inpy
 
   !======= Internals ============
+  call get_RHS_vars(imex,qn0,dt,eta_ave_w,hvcoord,hybrid,deriv)
 
-  ! extract parameters
-  dt = rpar(1)
-  eta_ave_w = rpar(2)
-  qn0 = ipar(1)
+  ! set scale factors depending on whether using implicit, explicit, or IMEX
+  if (imex == 0) then
+    scale1 = 0.d0
+    scale2 = 0.d0
+  else if (imex == 1) then
+    scale1 = 1.d0
+    scale2 = 1.d0
+  else if (imex == 2) then
+    scale1 = 1.d0
+    scale2 = 0.d0
+  end if
+  scale3 = 0.d0
 
   ! set return value to success
   ierr = 0
@@ -419,14 +230,13 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   !
 
   call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
-       1.d0, y%elem, hvcoord_ptr, hybrid_ptr, deriv_ptr, y%nets, y%nete, &
-       .false., ci*eta_ave_w, 1.d0, 1.d0, 0.d0)
+       1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
+       .false., ci*eta_ave_w, scale1, scale2, scale3)
 
   return
 end subroutine farkefun
+
 !=================================================================
-
-
 
 subroutine farkdiags(iout, rout)
   !-----------------------------------------------------------------
