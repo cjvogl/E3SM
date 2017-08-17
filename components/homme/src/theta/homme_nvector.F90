@@ -97,10 +97,10 @@ subroutine FNVExtPrint(x_C)
   !-----------------------------------------------------------------------
   use HommeNVector,     only: NVec_t, par_ptr
   use dimensions_mod,   only: np, nlev
+  use MPI,              only: MPI_comm_rank
 
   use, intrinsic :: iso_c_binding
   implicit none
-#include <mpif.h>
   type(c_ptr) :: x_C
   type(NVec_t), pointer :: x => NULL()
 
@@ -700,10 +700,10 @@ subroutine FNVExtMaxNorm(x_C, cval)
   !-----------------------------------------------------------------------
   use HommeNVector,     only: NVec_t, par_ptr
   use dimensions_mod,   only: np, nlev
+  use MPI,              only: MPI_MAX
   use parallel_mod,     only: MPIreal_t
   use, intrinsic :: iso_c_binding
   implicit none
-#include <mpif.h>
   type(c_ptr),    intent(in)  :: x_C
   real(c_double), intent(out) :: cval
 
@@ -730,7 +730,6 @@ subroutine FNVExtMaxNorm(x_C, cval)
             abs(x%elem(ie)%state%w(inpx,inpy,inlev,x%tl_idx)), &
             abs(x%elem(ie)%state%phi(inpx,inpy,inlev,x%tl_idx)), &
             abs(x%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,x%tl_idx)), &
-            abs(x%elem(ie)%state%dp3d(inpx,inpy,inlev,x%tl_idx)), &
             abs(x%elem(ie)%state%dp3d(inpx,inpy,inlev,x%tl_idx)))
         end do ! inpx
       end do ! inpy
@@ -823,10 +822,10 @@ subroutine FNVExtMin(x_C, cval)
   !-----------------------------------------------------------------------
   use HommeNVector,     only: NVec_t, par_ptr
   use dimensions_mod,   only: np, nlev
+  use MPI,              only: MPI_MIN
   use parallel_mod,     only: MPIreal_t
   use, intrinsic :: iso_c_binding
   implicit none
-#include <mpif.h>
   type(c_ptr),    intent(in)  :: x_C
   real(c_double), intent(out) :: cval
 

@@ -325,32 +325,66 @@ contains
       arkode_parameters%s = 2 ! 2 stage
       arkode_parameters%q = 2 ! 2nd order
       arkode_parameters%p = 0 ! no embedded order
-      arkode_parameters%Ae = 0.d0 ! explicit Butcher table
-      arkode_parameters%be = 0.d0 ! explicit Butcher table
       arkode_parameters%be2 = 0.d0 ! no embedded explicit method
-      arkode_parameters%ce = 0.d0 ! explicit Butcher table
-      arkode_parameters%Ae(2,1) = 0.5d0
-      arkode_parameters%be(2) = 1.d0
-      arkode_parameters%ce(2) = 0.5d0
+      ! Explicit Butcher Table (matrix)
+      arkode_parameters%Ae(1,1:2) = (/  0.d0, 0.d0 /)
+      arkode_parameters%Ae(2,1:2) = (/ 0.5d0, 0.d0 /)
+      ! Explicit Butcher Table (vectors)
+      arkode_parameters%ce(1:2) = (/ 0.d0, 0.5d0 /)
+      arkode_parameters%be(1:2) = (/ 0.d0, 1.d0 /)
+
     else if (tstep_type==11) then ! ARKode Ullrich 3rd-order, 5-stage
       arkode_parameters%imex = 1 ! explicit
       arkode_parameters%s = 5 ! 5 stage
       arkode_parameters%q = 3 ! 3rd order
       arkode_parameters%p = 0 ! no embedded order
-      arkode_parameters%Ae = 0.d0 ! explicit Butcher table
-      arkode_parameters%be = 0.d0 ! explicit Butcher table
       arkode_parameters%be2 = 0.d0 ! no embedded explicit method
-      arkode_parameters%ce = 0.d0 ! explicit Butcher table
-      arkode_parameters%Ae(2,1) = 0.2d0
-      arkode_parameters%Ae(3,2) = 0.2d0
-      arkode_parameters%Ae(4,3) = 1.d0/3.d0
-      arkode_parameters%Ae(5,4) = 2.d0/3.d0
-      arkode_parameters%be(1) = 0.25d0
-      arkode_parameters%be(5) = 0.75d0
-      arkode_parameters%ce(2) = 0.2d0
-      arkode_parameters%ce(3) = 0.2d0
-      arkode_parameters%ce(4) = 1.d0/3.d0
-      arkode_parameters%ce(5) = 2.d0/3.d0
+      ! Explicit Butcher Table (matrix)
+      arkode_parameters%Ae(1,1:5) = (/  0.d0,  0.d0,      0.d0,      0.d0, 0.d0 /)
+      arkode_parameters%Ae(2,1:5) = (/ 0.2d0,  0.d0,      0.d0,      0.d0, 0.d0 /)
+      arkode_parameters%Ae(3,1:5) = (/  0.d0, 0.2d0,      0.d0,      0.d0, 0.d0 /)
+      arkode_parameters%Ae(4,1:5) = (/  0.d0,  0.d0, 1.d0/3.d0,      0.d0, 0.d0 /)
+      arkode_parameters%Ae(5,1:5) = (/  0.d0,  0.d0,      0.d0, 2.d0/3.d0, 0.d0 /)
+      ! Explicit Butcher Table (vectors)
+      arkode_parameters%ce(1:5) = (/ 0.d0, 0.2d0, 0.2d0, 1.d0/3.d0, 2.d0/3.d0 /)
+      arkode_parameters%be(1:5) = (/ 0.25d0, 0.d0, 0.d0, 0.d0, 0.75d0 /)
+
+    else if (tstep_type==12) then ! ARKode ARS232
+      arkode_parameters%imex = 2 ! imex
+      arkode_parameters%s = 3 ! 3 stage
+      arkode_parameters%q = 2 ! 2nd order
+      arkode_parameters%p = 0 ! no embedded order
+      arkode_parameters%be2 = 0.d0 ! no embedded explicit method
+      delta = -2.d0*sqrt(2.d0)/3.d0
+      gamma = 1.d0 - 1.d0/sqrt(2.d0)
+      ! Explicit Butcher Table (matrix)
+      arkode_parameters%Ae(1,1:3) = (/  0.d0,       0.d0, 0.d0 /)
+      arkode_parameters%Ae(2,1:3) = (/ gamma,       0.d0, 0.d0 /)
+      arkode_parameters%Ae(3,1:3) = (/ delta, 1.d0-delta, 0.d0 /)
+      ! Explicit Butcher Table (vectors)
+      arkode_parameters%ce(1:3) = (/ 0.d0, gamma, 1.d0 /)
+      arkode_parameters%be(1:3) = (/ 0.d0, 1.d0-gamma, gamma /)
+      ! Implicit Butcher Table (matrix)
+      arkode_parameters%Ai(1,1:3) = (/ 0.d0,       0.d0,  0.d0 /)
+      arkode_parameters%Ai(2,1:3) = (/ 0.d0,      gamma,  0.d0 /)
+      arkode_parameters%Ai(3,1:3) = (/ 0.d0, 1.d0-gamma, gamma /)
+      ! Implicit Butcher Table (vectors)
+      arkode_parameters%ci(1:3) = (/ 0.d0, gamma, 1.d0 /)
+      arkode_parameters%bi(1:3) = (/ 0.d0, 1.d0-gamma, gamma /)
+      ! GMRES Solver parameters
+      arkode_parameters%precLR = 0 ! no preconditioning
+      arkode_parameters%gstype = 1 ! classical Gram-Schmidt orthogonalization
+      arkode_parameters%lintol = 1.d0 ! arbitrarily set for now
+      ! Iteration tolerances
+      arkode_parameters%rtol = 1.d-1 ! arbitrarily set for now
+      arkode_parameters%iatol = 2 ! use array of absolute tolerance values
+      arkode_parameters%atol(1) = 1.d1*arkode_parameters%rtol ! assumes u ~ 1e1
+      arkode_parameters%atol(2) = 1.d1*arkode_parameters%rtol ! assumes v ~ 1e1
+      arkode_parameters%atol(3) = 1.d1*arkode_parameters%rtol ! assumes w ~ 1e1
+      arkode_parameters%atol(4) = 1.d5*arkode_parameters%rtol ! assumes phi ~ 1e5
+      arkode_parameters%atol(3) = 1.d8*arkode_parameters%rtol ! assumes theta_dp_cp ~ 1e8
+      arkode_parameters%atol(3) = 1.d0*arkode_parameters%rtol ! assumes dp3d ~ 1e0
+
     else
        call abortmp('ERROR: bad choice of tstep_type')
     endif

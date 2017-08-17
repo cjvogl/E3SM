@@ -131,7 +131,6 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   !  DSS is the averaging procedure for the active and inactive nodes
   !
 
-  ! Essentially sets fi(t,y) to 0
   call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
        1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
        .false., ci*eta_ave_w, scale1, scale2, scale3)

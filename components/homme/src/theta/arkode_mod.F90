@@ -4,6 +4,7 @@
 
 module arkode_mod
 
+  use element_state,  only: timelevels
   use derivative_mod, only: derivative_t
   use hybrid_mod,     only: hybrid_t
   use hybvcoord_mod,  only: hvcoord_t
@@ -15,8 +16,18 @@ module arkode_mod
   private
 
   integer, parameter :: max_stage_num = 10
+  integer, parameter :: freelevels = timelevels-30
+  ! Note that 30 is an estimate, but needs to be at least > 25
+  ! If a larger Krylov subspace is desired, timelevels should be
+  ! increased.
 
+  ! data type for passing ARKode parameters
   type :: parameter_list
+    ! *RK Method Information
+    integer         :: imex ! 0=implicit, 1=explicit, 2=imex
+    integer         :: s ! number of stages
+    integer         :: q ! method order
+    integer         :: p ! embedded method order
     ! Explicit Butcher Table
     real(real_kind) :: Ae(max_stage_num,max_stage_num)
     real(real_kind) :: be(max_stage_num)
@@ -27,11 +38,15 @@ module arkode_mod
     real(real_kind) :: bi(max_stage_num)
     real(real_kind) :: bi2(max_stage_num)
     real(real_kind) :: ci(max_stage_num)
-    ! Method information
-    integer         :: imex ! 0-implicit, 1-explicit, 2-imex
-    integer         :: s ! number of stages
-    integer         :: q ! method order
-    integer         :: p ! embedded method order
+    ! GMRES Linear Solver Info
+    integer         :: precLR ! preconditioning: 0=none, 1=left, 2=right, 3=left+right
+    integer         :: gstype ! Gram-Schmidt orthogonalization: 1=modified, 2=classical
+    integer         :: maxl = freelevels ! max size of Krylov subspace (# of iterations/vectors)
+    real(real_kind) :: lintol ! linear convergence tolerance factor (0 indicates default)
+    ! General Iteration Info
+    integer         :: iatol=1 ! indices of atol to use: 1=1, 2=all
+    real(real_kind) :: rtol ! relative tolerance for iteration convergence
+    real(real_kind) :: atol(6) ! absolute tolerances (u,v,w,phi,theta_dp_cp,dp3d)
   end type parameter_list
 
   public :: parameter_list, update_arkode, get_solution_ptr, get_RHS_vars
@@ -41,7 +56,7 @@ module arkode_mod
   type(hvcoord_t), pointer    :: hvcoord_ptr
   type(hybrid_t), pointer     :: hybrid_ptr
   type(derivative_t), pointer :: deriv_ptr
-  type(c_ptr)                 :: y_C(3)
+  type(c_ptr)                 :: y_C(3), atol_C
   real(real_kind)             :: dt_save
   real(real_kind)             :: eta_ave_w_save
   integer                     :: imex_save, qn0_save
@@ -148,18 +163,18 @@ contains
     implicit none
 
     ! calling variables
-    type(element_t),            intent(in) :: elem(nets:nete)
     type(derivative_t), target, intent(in) :: deriv
     type(hvcoord_t), target,    intent(in) :: hvcoord
     type(hybrid_t), target,     intent(in) :: hybrid
     type(parameter_list),       intent(in) :: arkode_parameters
     real(real_kind),            intent(in) :: dt, eta_ave_w
     integer,                    intent(in) :: nets, nete, n0, qn0
+    type(element_t),            intent(inout) :: elem(:)
 
     ! local variables
-    real(real_kind) :: atol, rtol, tstart
+    real(real_kind) :: tstart
     integer(C_INT)  :: ierr
-    integer         :: iatol
+    integer         :: i
 
     !======= Internals ============
     ! Set NVector communicator
@@ -167,13 +182,6 @@ contains
 
     ! specify start time to be 0.0 so stage time available in farkefun & farkifun
     tstart = 0.d0
-
-    ! set absolute tolerance (for iterative solves)
-    iatol = 1    ! specify type for atol: 1=scalar, 2=array
-    atol = 1d-1
-
-    ! set relative tolerance (for iterative solves)
-    rtol = 1d-1
 
     ! store variables for farkefun and farkifun
     dt_save = dt
@@ -186,11 +194,11 @@ contains
 
     ! Initialize or reinitialize ARKode
     if (.not.initialized) then
-      call initialize(elem, nets, nete, hybrid%par, n0, qn0, tstart, iatol, atol, &
-                            rtol, arkode_parameters)
+      call initialize(elem, nets, nete, hybrid%par, n0, qn0, tstart, &
+                      arkode_parameters)
       initialized = .true.
     else
-      call reinitialize(n0, tstart, iatol, rtol, atol, arkode_parameters)
+      call reinitialize(n0, tstart, arkode_parameters)
     end if
 
     ! Set ARKode time step
@@ -204,15 +212,12 @@ contains
 
   !=================================================================
 
-  subroutine reinitialize(n0, tstart, iatol, rtol, atol, arkode_parameters)
+  subroutine reinitialize(n0, tstart, arkode_parameters)
     !-----------------------------------------------------------------
     ! Description: resets internal ARKode solution without memory allocation
     !   Arguments:
     !                   n0 - (int, input) timelevel holding current solution
     !               tstart - (real, input) time to start ARKode solve at
-    !                iatol - (int, input) specifier for atol type
-    !                 atol - (real(:), input) scalar or array of abs tolerances
-    !                 rtol - (real(:), input) scalar or array of rel tolerances
     !    arkode_parameters - (parameter, input) arkode parameter object
     !-----------------------------------------------------------------
 
@@ -226,14 +231,20 @@ contains
 
     ! calling variables
     type(parameter_list),  intent(in)  :: arkode_parameters
-    integer,               intent(in)  :: n0, iatol
-    real(real_kind),       intent(in)  :: rtol, atol, tstart
+    integer,               intent(in)  :: n0
+    real(real_kind),       intent(in)  :: tstart
 
     ! local variables
     integer(C_INT)  :: ierr
 
     !======= Internals ============
-    call farkreinit(tstart, y_C(n0), arkode_parameters%imex, iatol, rtol, atol, ierr)
+    if (arkode_parameters%iatol == 1) then
+      call farkreinit(tstart, y_C(n0), arkode_parameters%imex, arkode_parameters%iatol, &
+                      arkode_parameters%rtol, arkode_parameters%atol(1), ierr)
+    else if (arkode_parameters%iatol == 2) then
+      call farkreinit(tstart, y_C(n0), arkode_parameters%imex, arkode_parameters%iatol, &
+                      arkode_parameters%rtol, atol_C, ierr)
+    end if
     if (ierr /= 0) then
       call abortmp('arkode_init: farkreinit failed')
     endif
@@ -243,8 +254,7 @@ contains
 
   !=================================================================
 
-  subroutine initialize(elem, nets, nete, par, n0, qn0, tstart, iatol, atol, &
-                        rtol, arkode_parameters)
+  subroutine initialize(elem, nets, nete, par, n0, qn0, tstart, arkode_parameters)
     !-----------------------------------------------------------------
     ! Description: allocates memory for and initializes ARKode
     !   Arguments:
@@ -255,9 +265,6 @@ contains
     !                   n0 - (int, input) timelevel holding current solution
     !                  qn0 - (int, input) timelevel for tracer mass
     !               tstart - (real, input) time to start ARKode solve at
-    !                iatol - (int, input) specifier for atol type
-    !                 atol - (real(:), input) scalar or array of abs tolerances
-    !                 rtol - (real(:), input) scalar or array of rel tolerances
     !    arkode_parameters - (parameter, input) object for arkode parameters
     !-----------------------------------------------------------------
 
@@ -272,14 +279,14 @@ contains
     implicit none
 
     ! calling variables
-    type(element_t),              intent(in) :: elem(nets:nete)
     type(parallel_t),             intent(in) :: par
     type(parameter_list), target, intent(in) :: arkode_parameters
-    real(real_kind),              intent(in) :: tstart, atol, rtol
-    integer,                      intent(in) :: nets, nete, n0, qn0, iatol
+    real(real_kind),              intent(in) :: tstart
+    integer,                      intent(in) :: nets, nete, n0, qn0
+    type(element_t),              intent(inout) :: elem(:)
 
     ! local variables
-    type(NVec_t), target          :: y(3)
+    type(NVec_t), target          :: y(3), z
     type(parameter_list), pointer :: ap
     real(real_kind)               :: rout(40), rpar(1)
     real(real_kind)               :: A_C1(arkode_parameters%s*arkode_parameters%s)
@@ -309,6 +316,26 @@ contains
       y_C(i) = c_loc(y(i))
     end do
 
+    if (ap%iatol == 2) then
+      ! ! set data in 4th timelevel to atol values and 'create' NVec_t object
+      ! ! NOTE: this is where one could implement spatially targetted convergence criteria
+      ! do i=nets,nete
+      !   elem(i)%state%v(:,:,1,:,4) = ap%atol(1)
+      !   elem(i)%state%v(:,:,2,:,4) = ap%atol(2)
+      !   elem(i)%state%w(:,:,:,4) = ap%atol(3)
+      !   elem(i)%state%phi(:,:,:,4) = ap%atol(4)
+      !   elem(i)%state%theta_dp_cp(:,:,:,4) = ap%atol(5)
+      !   elem(i)%state%dp3d(:,:,:,4) = ap%atol(6)
+      ! end do
+      ! call MakeHommeNVector(elem, nets, nete, i, z, ierr)
+      ! if (ierr /= 0) then
+      !   call abortmp('Error in MakeHommeNVector')
+      ! end if
+      ! ! get C pointer
+      ! atol_C = c_loc(z)
+      atol_C = y_C(n0)
+    end if
+
     ! initialize ARKode data & operators
     idef = 4  ! flag specifying which SUNDIALS solver will be used (4=ARKode)
     call fnvextinit(idef, ierr)
@@ -316,9 +343,14 @@ contains
        call abortmp('arkode_init: fnvextinit failed')
     end if
 
-    !    ARKode dataspace
-    call farkmalloc(tstart, y_C(n0), ap%imex, iatol, rtol, atol, &
-                    iout, rout, ipar, rpar, ierr)
+    ! ARKode dataspace
+    if (ap%iatol == 1) then
+      call farkmalloc(tstart, y_C(n0), ap%imex, ap%iatol, ap%rtol, ap%atol(1), &
+                      iout, rout, ipar, rpar, ierr)
+    else if (ap%iatol == 2) then
+      call farkmalloc(tstart, y_C(n0), ap%imex, ap%iatol, ap%rtol, atol_C, &
+                      iout, rout, ipar, rpar, ierr)
+    end if
     if (ierr /= 0) then
        call abortmp('arkode_init: farkmalloc failed')
     end if
@@ -370,47 +402,43 @@ contains
       call abortmp('arkode_init: invalid imex parameter value')
     end if
 
-    if (par%masterproc) call farkwriteparameters(ierr)
-
+    ! Set linear solve if implicit or imex problem
+    if (ap%imex == 0 .or. ap%imex == 2) then
     !      To indicate that the implicit problem is linear, make the following
     !      call.  The argument specifies whether the linearly implicit problem
     !      changes as the problem evolves (1) or not (0)
-  !  lidef = 0
+    !  lidef = 0
   !  call farksetiin('LINEAR', lidef, ierr)
   !  if (ierr /= 0) then
   !     write(0,*) ' arkode_init: farksetiin failed'
   !  endif
 
-    !      Indicate use of the GMRES linear solver, the arguments indicate:
-    !      precLR -- type of preconditioning: 0=none, 1=left, 2=right, 3=left+right
-    !      gstype -- type of Gram-Schmidt orthogonalization: 1=modified, 2=classical
-    !      maxl -- maximum size of Krylov subspace (# of iterations/vectors)
-    !      lintol -- linear convergence tolerance factor (0 indicates default); this
-    !                example is very stiff so it requires tight linear solves
-  !  precLR = 0
-  !  gstype = 1
-  !  maxl = 50
-  !  lintol = 1.d-3
-  !  call farkspgmr(precLR, gstype, maxl, lintol, ierr)
-  !  if (ierr /= 0) then
-  !     write(0,*) ' arkode_init: farkspgmr failed'
-  !  endif
+      ! indicate use of GMRES linear solver
+      call farkspgmr(ap%precLR, ap%gstype, ap%maxl, ap%lintol, ierr)
+      if (ierr /= 0) then
+        call abortmp('arkode_init: farkspgmr failed')
+      end if
 
-    !      Indicate to use our own Jacobian-vector product routine (otherwise it
-    !      uses a finite-difference approximation)
-    !idef = 1
-    !call farkspilssetjac(idef, ierr)
-    !if (ierr /= 0) then
-    !   write(0,*) ' arkode_init: farkspilssetjac failed'
-    !endif
+      !      Indicate to use our own Jacobian-vector product routine (otherwise it
+      !      uses a finite-difference approximation)
+      !idef = 1
+      !call farkspilssetjac(idef, ierr)
+      !if (ierr /= 0) then
+      !   write(0,*) ' arkode_init: farkspilssetjac failed'
+      !endif
 
-    !      Indicate to use our own preconditioner setup/solve routines (otherwise
-    !      preconditioning is disabled)
-    !idef = 1
-    !call farkspilssetprec(idef, ierr)
-    !if (ierr /= 0) then
-    !   write(0,*) ' arkode_init: farkspilssetprec failed'
-    !endif
+      !      Indicate to use our own preconditioner setup/solve routines (otherwise
+      !      preconditioning is disabled)
+      !idef = 1
+      !call farkspilssetprec(idef, ierr)
+      !if (ierr /= 0) then
+      !   write(0,*) ' arkode_init: farkspilssetprec failed'
+      !endif
+    end if
+
+    if (par%masterproc) call farkwriteparameters(ierr)
+
+
 
     return
   end subroutine initialize

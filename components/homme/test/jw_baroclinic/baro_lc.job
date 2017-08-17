@@ -16,7 +16,8 @@ set rotate = 0
 #set tstep_type = 1 # RK2
 #set tstep_type = 5 # U35
 #set tstep_type = 10 # ARKode RK2
-set tstep_type = 11 # ARKode U35
+#set tstep_type = 11 # ARKode U35
+set tstep_type = 12 # ARKode ARS232
 
                   # number of elemnets:  6*ne*ne
 set ne = 16        # horizontal resolution   4,16,30,60,120,240
@@ -29,7 +30,7 @@ set hypervis_scaling = 0
 set hypervis_subcycle=3
 
 if ( $ne == 16 ) then
-   set tstep=1
+   set tstep=0.1
    set nu=7e15
 endif
 
@@ -49,7 +50,7 @@ sed s/ndays.\*/ndays=0/ | \
 sed s/tstep_type.\*/tstep_type=$tstep_type/ | \
 sed s/tstep=.\*/tstep=$tstep/ | \
 sed s/rsplit=.\*/rsplit=0/ | \
-sed s/theta_hydrostatic_mode=.\*/theta_hydrostatic_mode=.true./ | \
+sed s/theta_hydrostatic_mode=.\*/theta_hydrostatic_mode=.false./ | \
 sed s/nu=.\*/nu=$nu/ | \
 sed s/nu_div=.\*/nu_div=$nu/ | \
 sed s/nu_p=.\*/nu_p=$nu/ | \
