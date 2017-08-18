@@ -317,23 +317,22 @@ contains
     end do
 
     if (ap%iatol == 2) then
-      ! ! set data in 4th timelevel to atol values and 'create' NVec_t object
-      ! ! NOTE: this is where one could implement spatially targetted convergence criteria
-      ! do i=nets,nete
-      !   elem(i)%state%v(:,:,1,:,4) = ap%atol(1)
-      !   elem(i)%state%v(:,:,2,:,4) = ap%atol(2)
-      !   elem(i)%state%w(:,:,:,4) = ap%atol(3)
-      !   elem(i)%state%phi(:,:,:,4) = ap%atol(4)
-      !   elem(i)%state%theta_dp_cp(:,:,:,4) = ap%atol(5)
-      !   elem(i)%state%dp3d(:,:,:,4) = ap%atol(6)
-      ! end do
-      ! call MakeHommeNVector(elem, nets, nete, i, z, ierr)
-      ! if (ierr /= 0) then
-      !   call abortmp('Error in MakeHommeNVector')
-      ! end if
-      ! ! get C pointer
-      ! atol_C = c_loc(z)
-      atol_C = y_C(n0)
+      ! set data in 4th timelevel to atol values and 'create' NVec_t object
+      ! NOTE: this is where one could implement spatially targetted convergence criteria
+      do i=nets,nete
+        elem(i)%state%v(:,:,1,:,4) = ap%atol(1)
+        elem(i)%state%v(:,:,2,:,4) = ap%atol(2)
+        elem(i)%state%w(:,:,:,4) = ap%atol(3)
+        elem(i)%state%phi(:,:,:,4) = ap%atol(4)
+        elem(i)%state%theta_dp_cp(:,:,:,4) = ap%atol(5)
+        elem(i)%state%dp3d(:,:,:,4) = ap%atol(6)
+      end do
+      call MakeHommeNVector(elem, nets, nete, 4, z, ierr)
+      if (ierr /= 0) then
+        call abortmp('Error in MakeHommeNVector')
+      end if
+      ! get C pointer
+      atol_C = c_loc(z)
     end if
 
     ! initialize ARKode data & operators
