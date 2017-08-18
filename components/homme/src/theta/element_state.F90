@@ -9,7 +9,7 @@ module element_state
 
   implicit none
   private
-  integer, public, parameter :: timelevels = 3
+  integer, public, parameter :: timelevels = 50
 
 ! =========== PRIMITIVE-EQUATION DATA-STRUCTURES =====================
 
@@ -45,7 +45,7 @@ module element_state
     real (kind=real_kind) :: dpdiss_biharmonic(np,np,nlev)            ! mean dp dissipation tendency, if nu_p>0
     real (kind=real_kind) :: dpdiss_ave(np,np,nlev)                   ! mean dp used to compute psdiss_tens
 
-    ! diagnostics 
+    ! diagnostics
     real (kind=real_kind) :: omega_p(np,np,nlev)                      ! vertical tendency (derived)
     real (kind=real_kind) :: eta_dot_dpdn(np,np,nlevp)                ! mean vertical flux from dynamics
     real (kind=real_kind) :: eta_dot_dpdn_prescribed(np,np,nlevp)     ! prescribed wind test cases
@@ -61,7 +61,7 @@ module element_state
     real (kind=real_kind) :: FQps(np,np)                   ! forcing of FQ on ps_v
 
   end type derived_state_t
-  
+
 
   !___________________________________________________________________
   type, public :: elem_accum_t
@@ -113,4 +113,4 @@ module element_state
 
 
 contains
-end module 
+end module
