@@ -125,8 +125,8 @@ subroutine FNVExtPrint(x_C)
             rank, ie, inpx, inpy, inlev, x%elem(ie)%state%v(inpx,inpy,2,inlev,x%tl_idx)
           print '("proc ",i2,",", " elem ",i4,",", " w(",i1,",",i1,",",i2,") = ",f15.5)', &
             rank, ie, inpx, inpy, inlev, x%elem(ie)%state%w(inpx,inpy,inlev,x%tl_idx)
-          print '("proc ",i2,",", " elem ",i4,",", " phi(",i1,",",i1,",",i2,") = ",f15.5)', &
-            rank, ie, inpx, inpy, inlev, x%elem(ie)%state%phi(inpx,inpy,inlev,x%tl_idx)
+          print '("proc ",i2,",", " elem ",i4,",", " phinh(",i1,",",i1,",",i2,") = ",f15.5)', &
+            rank, ie, inpx, inpy, inlev, x%elem(ie)%state%phinh(inpx,inpy,inlev,x%tl_idx)
           print '("proc ",i2,",", " elem ",i4,",", " theta_dp_cp(",i1,",",i1,",",i2,") = ",f15.5)', &
             rank, ie, inpx, inpy, inlev, x%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,x%tl_idx)
           print '("proc ",i2,",", " elem ",i4,",", " dp3d(",i1,",",i1,",",i2,") = ",f15.5,/)', &
@@ -258,9 +258,9 @@ subroutine FNVExtLinearSum(aval, x_C, bval, y_C, z_C)
           z%elem(ie)%state%w(inpx,inpy,inlev,z%tl_idx) = &
             aval * x%elem(ie)%state%w(inpx,inpy,inlev,x%tl_idx) + &
             bval * y%elem(ie)%state%w(inpx,inpy,inlev,y%tl_idx)
-          z%elem(ie)%state%phi(inpx,inpy,inlev,z%tl_idx) = &
-            aval * x%elem(ie)%state%phi(inpx,inpy,inlev,x%tl_idx) + &
-            bval * y%elem(ie)%state%phi(inpx,inpy,inlev,y%tl_idx)
+          z%elem(ie)%state%phinh(inpx,inpy,inlev,z%tl_idx) = &
+            aval * x%elem(ie)%state%phinh(inpx,inpy,inlev,x%tl_idx) + &
+            bval * y%elem(ie)%state%phinh(inpx,inpy,inlev,y%tl_idx)
           z%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,z%tl_idx) = &
             aval * x%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,x%tl_idx) + &
             bval * y%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,y%tl_idx)
@@ -301,7 +301,7 @@ subroutine FNVExtConst(cval, z_C)
   do ie=z%nets,z%nete
      z%elem(ie)%state%v(:,:,:,:,z%tl_idx) = cval
      z%elem(ie)%state%w(:,:,:,z%tl_idx) = cval
-     z%elem(ie)%state%phi(:,:,:,z%tl_idx) = cval
+     z%elem(ie)%state%phinh(:,:,:,z%tl_idx) = cval
      z%elem(ie)%state%theta_dp_cp(:,:,:,z%tl_idx) = cval
      z%elem(ie)%state%dp3d(:,:,:,z%tl_idx) = cval
   end do
@@ -351,9 +351,9 @@ subroutine FNVExtProd(x_C, y_C, z_C)
           z%elem(ie)%state%w(inpx,inpy,inlev,z%tl_idx) = &
             x%elem(ie)%state%w(inpx,inpy,inlev,x%tl_idx)* &
             y%elem(ie)%state%w(inpx,inpy,inlev,y%tl_idx)
-          z%elem(ie)%state%phi(inpx,inpy,inlev,z%tl_idx) = &
-            x%elem(ie)%state%phi(inpx,inpy,inlev,x%tl_idx)* &
-            y%elem(ie)%state%phi(inpx,inpy,inlev,y%tl_idx)
+          z%elem(ie)%state%phinh(inpx,inpy,inlev,z%tl_idx) = &
+            x%elem(ie)%state%phinh(inpx,inpy,inlev,x%tl_idx)* &
+            y%elem(ie)%state%phinh(inpx,inpy,inlev,y%tl_idx)
           z%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,z%tl_idx) = &
             x%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,x%tl_idx)* &
             y%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,y%tl_idx)
@@ -410,9 +410,9 @@ subroutine FNVExtDiv(x_C, y_C, z_C)
           z%elem(ie)%state%w(inpx,inpy,inlev,z%tl_idx) = &
             x%elem(ie)%state%w(inpx,inpy,inlev,x%tl_idx)/ &
             y%elem(ie)%state%w(inpx,inpy,inlev,y%tl_idx)
-          z%elem(ie)%state%phi(inpx,inpy,inlev,z%tl_idx) = &
-            x%elem(ie)%state%phi(inpx,inpy,inlev,x%tl_idx)/ &
-            y%elem(ie)%state%phi(inpx,inpy,inlev,y%tl_idx)
+          z%elem(ie)%state%phinh(inpx,inpy,inlev,z%tl_idx) = &
+            x%elem(ie)%state%phinh(inpx,inpy,inlev,x%tl_idx)/ &
+            y%elem(ie)%state%phinh(inpx,inpy,inlev,y%tl_idx)
           z%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,z%tl_idx) = &
             x%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,x%tl_idx)/ &
             y%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,y%tl_idx)
@@ -464,8 +464,8 @@ subroutine FNVExtScale(cval, x_C, z_C)
             cval * x%elem(ie)%state%v(inpx,inpy,2,inlev,x%tl_idx)
           z%elem(ie)%state%w(inpx,inpy,inlev,z%tl_idx) = &
             cval * x%elem(ie)%state%w(inpx,inpy,inlev,x%tl_idx)
-          z%elem(ie)%state%phi(inpx,inpy,inlev,z%tl_idx) = &
-            cval * x%elem(ie)%state%phi(inpx,inpy,inlev,x%tl_idx)
+          z%elem(ie)%state%phinh(inpx,inpy,inlev,z%tl_idx) = &
+            cval * x%elem(ie)%state%phinh(inpx,inpy,inlev,x%tl_idx)
           z%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,z%tl_idx) = &
             cval * x%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,x%tl_idx)
           z%elem(ie)%state%dp3d(inpx,inpy,inlev,z%tl_idx) = &
@@ -514,8 +514,8 @@ subroutine FNVExtAbs(x_C, z_C)
             abs(x%elem(ie)%state%v(inpx,inpy,2,inlev,x%tl_idx))
           z%elem(ie)%state%w(inpx,inpy,inlev,z%tl_idx) = &
             abs(x%elem(ie)%state%w(inpx,inpy,inlev,x%tl_idx))
-          z%elem(ie)%state%phi(inpx,inpy,inlev,z%tl_idx) = &
-            abs(x%elem(ie)%state%phi(inpx,inpy,inlev,x%tl_idx))
+          z%elem(ie)%state%phinh(inpx,inpy,inlev,z%tl_idx) = &
+            abs(x%elem(ie)%state%phinh(inpx,inpy,inlev,x%tl_idx))
           z%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,z%tl_idx) = &
             abs(x%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,x%tl_idx))
           z%elem(ie)%state%dp3d(inpx,inpy,inlev,z%tl_idx) = &
@@ -564,8 +564,8 @@ subroutine FNVExtInv(x_C, z_C)
             1.d0 / x%elem(ie)%state%v(inpx,inpy,2,inlev,x%tl_idx)
           z%elem(ie)%state%w(inpx,inpy,inlev,z%tl_idx) = &
             1.d0 / x%elem(ie)%state%w(inpx,inpy,inlev,x%tl_idx)
-          z%elem(ie)%state%phi(inpx,inpy,inlev,z%tl_idx) = &
-            1.d0 / x%elem(ie)%state%phi(inpx,inpy,inlev,x%tl_idx)
+          z%elem(ie)%state%phinh(inpx,inpy,inlev,z%tl_idx) = &
+            1.d0 / x%elem(ie)%state%phinh(inpx,inpy,inlev,x%tl_idx)
           z%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,z%tl_idx) = &
             1.d0 / x%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,x%tl_idx)
           z%elem(ie)%state%dp3d(inpx,inpy,inlev,z%tl_idx) = &
@@ -614,8 +614,8 @@ subroutine FNVExtAddConst(cval, x_C, z_C)
             x%elem(ie)%state%v(inpx,inpy,2,inlev,x%tl_idx) + cval
           z%elem(ie)%state%w(inpx,inpy,inlev,z%tl_idx) = &
             x%elem(ie)%state%w(inpx,inpy,inlev,x%tl_idx) + cval
-          z%elem(ie)%state%phi(inpx,inpy,inlev,z%tl_idx) = &
-            x%elem(ie)%state%phi(inpx,inpy,inlev,x%tl_idx) + cval
+          z%elem(ie)%state%phinh(inpx,inpy,inlev,z%tl_idx) = &
+            x%elem(ie)%state%phinh(inpx,inpy,inlev,x%tl_idx) + cval
           z%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,z%tl_idx) = &
             x%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,x%tl_idx) + cval
           z%elem(ie)%state%dp3d(inpx,inpy,inlev,z%tl_idx) = &
@@ -671,8 +671,8 @@ subroutine FNVExtDotProd(x_C, y_C, cval)
               y%elem(ie)%state%v(inpx,inpy,2,inlev,y%tl_idx) + &
             x%elem(ie)%state%w(inpx,inpy,inlev,x%tl_idx)* &
               y%elem(ie)%state%w(inpx,inpy,inlev,y%tl_idx) + &
-            x%elem(ie)%state%phi(inpx,inpy,inlev,x%tl_idx)* &
-              y%elem(ie)%state%phi(inpx,inpy,inlev,y%tl_idx) + &
+            x%elem(ie)%state%phinh(inpx,inpy,inlev,x%tl_idx)* &
+              y%elem(ie)%state%phinh(inpx,inpy,inlev,y%tl_idx) + &
             x%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,x%tl_idx)* &
               y%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,y%tl_idx) + &
             x%elem(ie)%state%dp3d(inpx,inpy,inlev,x%tl_idx)* &
@@ -728,7 +728,7 @@ subroutine FNVExtMaxNorm(x_C, cval)
             abs(x%elem(ie)%state%v(inpx,inpy,1,inlev,x%tl_idx)), &
             abs(x%elem(ie)%state%v(inpx,inpy,2,inlev,x%tl_idx)), &
             abs(x%elem(ie)%state%w(inpx,inpy,inlev,x%tl_idx)), &
-            abs(x%elem(ie)%state%phi(inpx,inpy,inlev,x%tl_idx)), &
+            abs(x%elem(ie)%state%phinh(inpx,inpy,inlev,x%tl_idx)), &
             abs(x%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,x%tl_idx)), &
             abs(x%elem(ie)%state%dp3d(inpx,inpy,inlev,x%tl_idx)))
         end do ! inpx
@@ -791,8 +791,8 @@ subroutine FNVExtWrmsNorm(x_C, w_C, cval)
                 w%elem(ie)%state%v(inpx,inpy,2,inlev,w%tl_idx))**2 + &
               (x%elem(ie)%state%w(inpx,inpy,inlev,x%tl_idx)* &
                 w%elem(ie)%state%w(inpx,inpy,inlev,w%tl_idx))**2 + &
-              (x%elem(ie)%state%phi(inpx,inpy,inlev,x%tl_idx)* &
-                w%elem(ie)%state%phi(inpx,inpy,inlev,w%tl_idx))**2 + &
+              (x%elem(ie)%state%phinh(inpx,inpy,inlev,x%tl_idx)* &
+                w%elem(ie)%state%phinh(inpx,inpy,inlev,w%tl_idx))**2 + &
               (x%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,x%tl_idx)* &
                 w%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,w%tl_idx))**2 + &
               (x%elem(ie)%state%dp3d(inpx,inpy,inlev,x%tl_idx)* &
@@ -850,7 +850,7 @@ subroutine FNVExtMin(x_C, cval)
             abs(x%elem(ie)%state%v(inpx,inpy,1,inlev,x%tl_idx)), &
             abs(x%elem(ie)%state%v(inpx,inpy,2,inlev,x%tl_idx)), &
             abs(x%elem(ie)%state%w(inpx,inpy,inlev,x%tl_idx)), &
-            abs(x%elem(ie)%state%phi(inpx,inpy,inlev,x%tl_idx)), &
+            abs(x%elem(ie)%state%phinh(inpx,inpy,inlev,x%tl_idx)), &
             abs(x%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,x%tl_idx)), &
             abs(x%elem(ie)%state%dp3d(inpx,inpy,inlev,x%tl_idx)))
         end do ! inpx

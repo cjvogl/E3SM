@@ -60,8 +60,8 @@ contains
 
   subroutine prim_advance_init1(par, elem,integration)
         
-    type (parallel_t) :: par
     implicit none
+    type (parallel_t) :: par
     type (element_t), intent(inout), target   :: elem(:)
     character(len=*)    , intent(in) :: integration
     integer :: i
@@ -106,6 +106,7 @@ contains
   subroutine prim_advance_exp(elem, deriv, hvcoord, hybrid,dt, tl,  nets, nete, compute_diagnostics)
 
     use arkode_mod,     only: parameter_list, update_arkode, get_solution_ptr
+    use iso_c_binding
     implicit none
 
     type (element_t),      intent(inout), target :: elem(:)
@@ -525,7 +526,7 @@ contains
       arkode_parameters%atol(1) = 1.d1*arkode_parameters%rtol ! assumes u ~ 1e1
       arkode_parameters%atol(2) = 1.d1*arkode_parameters%rtol ! assumes v ~ 1e1
       arkode_parameters%atol(3) = 1.d1*arkode_parameters%rtol ! assumes w ~ 1e1
-      arkode_parameters%atol(4) = 1.d5*arkode_parameters%rtol ! assumes phi ~ 1e5
+      arkode_parameters%atol(4) = 1.d5*arkode_parameters%rtol ! assumes phinh ~ 1e5
       arkode_parameters%atol(3) = 1.d8*arkode_parameters%rtol ! assumes theta_dp_cp ~ 1e8
       arkode_parameters%atol(3) = 1.d0*arkode_parameters%rtol ! assumes dp3d ~ 1e0
 

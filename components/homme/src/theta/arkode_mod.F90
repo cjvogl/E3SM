@@ -46,7 +46,7 @@ module arkode_mod
     ! General Iteration Info
     integer         :: iatol=1 ! indices of atol to use: 1=1, 2=all
     real(real_kind) :: rtol ! relative tolerance for iteration convergence
-    real(real_kind) :: atol(6) ! absolute tolerances (u,v,w,phi,theta_dp_cp,dp3d)
+    real(real_kind) :: atol(6) ! absolute tolerances (u,v,w,phinh,theta_dp_cp,dp3d)
   end type parameter_list
 
   public :: parameter_list, update_arkode, get_solution_ptr, get_RHS_vars
@@ -323,7 +323,7 @@ contains
         elem(i)%state%v(:,:,1,:,4) = ap%atol(1)
         elem(i)%state%v(:,:,2,:,4) = ap%atol(2)
         elem(i)%state%w(:,:,:,4) = ap%atol(3)
-        elem(i)%state%phi(:,:,:,4) = ap%atol(4)
+        elem(i)%state%phinh(:,:,:,4) = ap%atol(4)
         elem(i)%state%theta_dp_cp(:,:,:,4) = ap%atol(5)
         elem(i)%state%dp3d(:,:,:,4) = ap%atol(6)
       end do
