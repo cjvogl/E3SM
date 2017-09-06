@@ -3,6 +3,13 @@
 # Path to HOMME
 export HOMME_ROOT=$HOME/workspace/acme/components/homme
 
+# Set build type ("new", "test", or "update" with default being "update")
+if [[ $# -gt 4 ]]; then
+  BUILD=$5
+else
+  BUILD="update"
+fi
+
 # machine specific settings (compilers, libraries, etc.)
 if [[ $HOSTNAME == "cab"* ]]; then
   SYSTEM=cab
@@ -13,19 +20,27 @@ if [[ $HOSTNAME == "cab"* ]]; then
   use hdf5-intel-parallel-mvapich2-1.10.0
   use netcdf-intel-4.3.3.1
   use netcdf-fortran-intel-4.4.2
+  export SUNDIALS=$HOME/local/sundials_cab_intel_opt
 elif [[ $HOSTNAME == "quartz"* ]]; then
   SYSTEM=quartz
   module purge
   module load cmake
-  module load intel/16.0.3
-  module load mvapich2/2.2
-  module load hdf5-parallel/1.8.17
-  export NETCDF=$HOME/local/netcdf-c-4.3.3.1_quartz_intel_opt
-  export HDF5=/usr/tce/packages/hdf5/hdf5-parallel-1.8.17-intel16.0.3-mvapich22.2
+  if [[ $BUILD == "test" ]]; then
+    module load gcc/6.1.0
+    module load openmpi/2.0.0
+    export NETCDF=$HOME/local/netcdf-c4.3.3.1_f4.4.2_quartz_gnu_opt
+    export HDF5=$HOME/local/hdf5-1.10.1_quartz_gnu_opt
+    export SUNDIALS=$HOME/local/sundials_quartz_gnu_opt
+  else
+    module load intel/16.0.3
+    module load mvapich2/2.2
+    module load hdf5-parallel/1.8.17
+    export NETCDF=$HOME/local/netcdf-c4.3.3.1_f4.4.2_quartz_intel_opt
+    export HDF5=/usr/tce/packages/hdf5/hdf5-parallel-1.8.17-intel16.0.3-mvapich22.2
+    export SUNDIALS=$HOME/local/sundials_quartz_intel_opt
+  fi
 fi
 
-# Path to SUNDIALS
-export SUNDIALS=$HOME/local/sundials_${SYSTEM}_intel_opt
 
 # HOMME Settings
 if [[ $# -gt 1 ]]; then
@@ -37,23 +52,16 @@ else
   NLEVELS=26
   NTRACERS=4
 fi
-  
-# Set build type ("new" or "update" with default being "update")
-if [[ $# -gt 4 ]]; then
-  BUILD=$5
-else
-  BUILD="update"
-fi
 
 # Delete and create build directory if necessary
-if [[ $BUILD == "new"* ]]; then
+if [[ $BUILD != "update" ]]; then
   rm -rf $HOMME_ROOT/build_${SYSTEM}
 fi
 mkdir -p $HOMME_ROOT/build_${SYSTEM} || exit -1
 cd $HOMME_ROOT/build_${SYSTEM}
 
 # configure build (if necessary)
-if [[ $BUILD == "new" ]]; then
+if [[ $BUILD != "update" ]]; then
   cmake \
     -C $HOMME_ROOT/cmake/machineFiles/lc.cmake \
     \

@@ -11,7 +11,7 @@ else
   exit -1
 fi
 
-./cmake_homme_lc.sh 8 4 26 4 $1
+./cmake_homme_lc.sh 8 4 26 4 $1 $2
 
 if [[ $? == 0 ]]; then
   mkdir -p $WORKDIR

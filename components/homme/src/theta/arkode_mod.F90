@@ -6,6 +6,7 @@ module arkode_mod
 
   use element_state,  only: timelevels
   use derivative_mod, only: derivative_t
+  use HommeNVector,   only: NVec_t
   use hybrid_mod,     only: hybrid_t
   use hybvcoord_mod,  only: hvcoord_t
   use kinds,          only: real_kind
@@ -56,6 +57,7 @@ module arkode_mod
   type(hvcoord_t), pointer    :: hvcoord_ptr
   type(hybrid_t), pointer     :: hybrid_ptr
   type(derivative_t), pointer :: deriv_ptr
+  type(NVec_t), target        :: y_F(3), atol_F
   type(c_ptr)                 :: y_C(3), atol_C
   real(real_kind)             :: dt_save
   real(real_kind)             :: eta_ave_w_save
@@ -286,7 +288,6 @@ contains
     type(element_t),              intent(inout) :: elem(:)
 
     ! local variables
-    type(NVec_t), target          :: y(3), z
     type(parameter_list), pointer :: ap
     real(real_kind)               :: rout(40), rpar(1)
     real(real_kind)               :: A_C1(arkode_parameters%s*arkode_parameters%s)
@@ -308,12 +309,12 @@ contains
     ! timelevels, assuming that tl%nm1, tl%n0, and tl%np1 are taken from the
     ! set {1,2,3}
     do i=1,3
-      call MakeHommeNVector(elem, nets, nete, i, y(i), ierr)
+      call MakeHommeNVector(elem, nets, nete, i, y_F(i), ierr)
       if (ierr /= 0) then
         call abortmp('Error in MakeHommeNVector')
       end if
       ! get C pointer
-      y_C(i) = c_loc(y(i))
+      y_C(i) = c_loc(y_F(i))
     end do
 
     if (ap%iatol == 2) then
@@ -327,12 +328,12 @@ contains
         elem(i)%state%theta_dp_cp(:,:,:,4) = ap%atol(5)
         elem(i)%state%dp3d(:,:,:,4) = ap%atol(6)
       end do
-      call MakeHommeNVector(elem, nets, nete, 4, z, ierr)
+      call MakeHommeNVector(elem, nets, nete, 4, atol_F, ierr)
       if (ierr /= 0) then
         call abortmp('Error in MakeHommeNVector')
       end if
       ! get C pointer
-      atol_C = c_loc(z)
+      atol_C = c_loc(atol_F)
     end if
 
     ! initialize ARKode data & operators
