@@ -22,6 +22,9 @@ module arkode_mod
   ! If a larger Krylov subspace is desired, timelevels should be
   ! increased.
 
+  ! list of Butcher table name constants
+  integer, parameter :: RK2 = 1
+
   ! data type for passing ARKode parameters
   type :: parameter_list
     ! *RK Method Information
@@ -444,5 +447,54 @@ contains
   end subroutine initialize
 
   !=================================================================
+
+  subroutine set_Butcher_tables(arkode_parameters, table_name)
+    !-----------------------------------------------------------------
+    ! Description: sets Butcher tables for ARKode solver
+    !   Arguments:
+    !    arkode_parameters - (parameter, in/output) object for arkode parameters
+    !           table_name - (integer, input) constant identifying table name
+    !-----------------------------------------------------------------
+
+    !======= Inclusions ===========
+    use parallel_mod,     only: abortmp
+
+    !======= Declarations =========
+    implicit none
+
+    ! calling variables
+    type(parameter_list), target, intent(inout) :: arkode_parameters
+    integer,                      intent(in)    :: table_name
+
+    ! local variables
+    type(parameter_list), pointer :: ap
+
+    !======= Internals ============
+    ap => arkode_parameters
+
+    select case (table_name)
+      case (RK2)
+        ap%imex = 1 ! explicit
+        ap%s = 2 ! 2 stage
+        ap%q = 2 ! 2nd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedded explicit method
+        ! Explicit Butcher Table (matrix)
+        ap%Ae(1,1:2) = (/  0.d0, 0.d0 /)
+        ap%Ae(2,1:2) = (/ 0.5d0, 0.d0 /)
+        ! Explicit Butcher Table (vectors)
+        ap%ce(1:2) = (/ 0.d0, 0.5d0 /)
+        ap%be(1:2) = (/ 0.d0, 1.d0 /)
+
+      case default
+        call abortmp('Unknown ARKode Butcher table name')
+    end select
+
+
+
+
+  end subroutine set_Butcher_tables
+  !=================================================================
+
 
 end module arkode_mod

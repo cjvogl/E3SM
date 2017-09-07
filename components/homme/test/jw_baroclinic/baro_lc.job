@@ -17,7 +17,8 @@ set rotate = 0
 #set tstep_type = 5 # U35
 #set tstep_type = 10 # ARKode RK2
 #set tstep_type = 11 # ARKode U35
-set tstep_type = 12 # ARKode ARS232
+#set tstep_type = 12 # ARKode ARS232
+set tstep_type = 13 # ARKode ARK453
 
                   # number of elemnets:  6*ne*ne
 set ne = 16        # horizontal resolution   4,16,30,60,120,240

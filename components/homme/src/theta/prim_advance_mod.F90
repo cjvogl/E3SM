@@ -13,7 +13,7 @@ module prim_advance_mod
     integration, nu, nu_div, nu_p, nu_s, nu_top, prescribed_wind, qsplit, rsplit, test_case,&
     theta_hydrostatic_mode, tstep_type, use_moisture, use_cpstar
   use derivative_mod,     only: derivative_t, divergence_sphere, gradient_sphere, laplace_sphere_wk,&
-    laplace_z, vorticity_sphere, vlaplace_sphere_wk 
+    laplace_z, vorticity_sphere, vlaplace_sphere_wk
   use derivative_mod,     only: subcell_div_fluxes, subcell_dss_fluxes
   use dimensions_mod,     only: max_corner_elem, nelemd, nlev, nlevp, np, qsize
   use edge_mod,           only: edgeDGVunpack, edgevpack, edgevunpack, initEdgeBuffer
@@ -28,7 +28,7 @@ module prim_advance_mod
   use kinds,              only: iulog, real_kind
   use perf_mod,           only: t_adj_detailf, t_barrierf, t_startf, t_stopf ! _EXTERNAL
   use parallel_mod,       only: abortmp, global_shared_buf, global_shared_sum, iam, parallel_t
-  use physical_constants, only: Cp, cp, cpwater_vapor, g, kappa, Rgas, Rwater_vapor, p0 
+  use physical_constants, only: Cp, cp, cpwater_vapor, g, kappa, Rgas, Rwater_vapor, p0
   use physics_mod,        only: virtual_specific_heat, virtual_temperature
   use prim_si_mod,        only: preq_vertadv_upwind, preq_vertadv_v, preq_hydrostatic_v2, preq_omega_ps
   use reduction_mod,      only: parallelmax, reductionbuffer_ordered_1d_t
@@ -40,7 +40,7 @@ module prim_advance_mod
     use prim_derived_type_mod ,only : derived_type, initialize
     use, intrinsic :: iso_c_binding
 #endif
- 
+
   implicit none
   private
   save
@@ -59,7 +59,7 @@ contains
 
 
   subroutine prim_advance_init1(par, elem,integration)
-        
+
     implicit none
     type (parallel_t) :: par
     type (element_t), intent(inout), target   :: elem(:)
@@ -105,7 +105,8 @@ contains
   !_____________________________________________________________________
   subroutine prim_advance_exp(elem, deriv, hvcoord, hybrid,dt, tl,  nets, nete, compute_diagnostics)
 
-    use arkode_mod,     only: parameter_list, update_arkode, get_solution_ptr
+    use arkode_mod,     only: parameter_list, update_arkode, get_solution_ptr, &
+                              RK2
     use iso_c_binding
     implicit none
 
@@ -132,7 +133,7 @@ contains
 
     integer :: ie,nm1,n0,np1,nstep,qsplit_stage,k, qn0
     integer :: n,i,j,maxiter
- 
+
 
     ! ARKode variables
     type(parameter_list) :: arkode_parameters
@@ -263,7 +264,7 @@ contains
        ! u5 = (5*u1/4 - u0/4) + 3dt/4 RHS(u4)
        call compute_andor_apply_rhs(np1,nm1,np1,qn0,3*dt/4,elem,hvcoord,hybrid,&
             deriv,nets,nete,.false.,3*eta_ave_w/4,1.d0,0.d0,1.d0)
- 
+
       maxiter=4
       itertol=1e-8
       call compute_stage_value_dirk(np1,n0,qn0,dt,elem,hvcoord,hybrid,&
@@ -286,7 +287,7 @@ contains
 
       ! form un0+dt*gamma*n(g1) and store at n0
       call elemstate_add(elem,statesave,nets,nete,1,n0,np1,n0,gamma,1.d0,0.d0)
-                             
+
       maxiter=10
       itertol=1e-15
       ! solve g2 = un0 + dt*gamma*n(g1)+dt*gamma*s(g2) for g2 and save at nm1
@@ -315,7 +316,7 @@ contains
 
       ! form un0+dt*(1-gamma)*(n(g2)+s(g2)) at nm1
       call elemstate_add(elem,statesave,nets,nete,3,nm1,np1,nm1,1.d0-gamma,1.d0-gamma,1.d0)
-                       
+
       maxiter=10
       itertol=1e-15
       !	solve g3 = (un0+dt*delta*n(g1))+dt*(1-delta)*n(g2)+dt*(1-gamma)*s(g2)+dt*gamma*s(g3)
@@ -329,8 +330,8 @@ contains
 
      ! form unp1 = un0+dt*(1-gamma)*(n(g2)+s(g2))+dt*gamma*(n(g3)+s(g3))
       call compute_andor_apply_rhs(np1,nm1,np1,qn0,gamma*dt,elem,hvcoord,hybrid,&
-        deriv,nets,nete,.false.,gamma*eta_ave_w,1.d0,1.d0,1.d0)     
-            
+        deriv,nets,nete,.false.,gamma*eta_ave_w,1.d0,1.d0,1.d0)
+
       call state_read(elem,statesave,n0,nets,nete)
       call t_stopf("ARS232_timestep")
 !======================================================================================================
@@ -384,7 +385,7 @@ contains
 !===========================================================================================
     elseif (tstep_type==9)  then ! SSP3 332
       call t_startf("SSP3332_timestep")
-       
+
       gamma=1.d0-1.d0/sqrt(2.d0)
       call state_save(elem,statesave0,nm1,nets,nete)
       call state_save(elem,statesave,n0,nets,nete)
@@ -397,7 +398,7 @@ contains
       !   print *, 'num iters  ', maxiter
 
       ! === end of stage 1 ===
-   
+
       ! solve for dt*s(g1) and store at nm1 and statesave3
       call elemstate_add(elem,statesave,nets,nete,1,nm1,np1,n0,1.d0/gamma,-1.d0/gamma,1.d0)
       call state_save(elem,statesave3,nm1,nets,nete)
@@ -425,7 +426,7 @@ contains
       ! compute dt*n(g2) and store at np1
       call compute_andor_apply_rhs(np1,np1,np1,qn0,dt,elem,hvcoord,hybrid,&
         deriv,nets,nete,.false.,eta_ave_w,1.d0,0.d0,0.d0)
-    
+
      ! put xn+dt*0.25*n(g2) at n0
      call elemstate_add(elem,statesave,nets,nete,2,n0,np1,np1,0.25d0,1.d0,1.d0)
 
@@ -466,18 +467,7 @@ contains
 
 !=========================================================================================
     else if (tstep_type==10) then ! ARKode RK2
-      arkode_parameters%imex = 1 ! explicit
-      arkode_parameters%s = 2 ! 2 stage
-      arkode_parameters%q = 2 ! 2nd order
-      arkode_parameters%p = 0 ! no embedded order
-      arkode_parameters%be2 = 0.d0 ! no embedded explicit method
-      ! Explicit Butcher Table (matrix)
-      arkode_parameters%Ae(1,1:2) = (/  0.d0, 0.d0 /)
-      arkode_parameters%Ae(2,1:2) = (/ 0.5d0, 0.d0 /)
-      ! Explicit Butcher Table (vectors)
-      arkode_parameters%ce(1:2) = (/ 0.d0, 0.5d0 /)
-      arkode_parameters%be(1:2) = (/ 0.d0, 1.d0 /)
-
+        call set_Butcher_tables(arkode_parameters, RK2)
     else if (tstep_type==11) then ! ARKode Ullrich 3rd-order, 5-stage
       arkode_parameters%imex = 1 ! explicit
       arkode_parameters%s = 5 ! 5 stage
@@ -502,13 +492,6 @@ contains
       arkode_parameters%be2 = 0.d0 ! no embedded explicit method
       delta = -2.d0*sqrt(2.d0)/3.d0
       gamma = 1.d0 - 1.d0/sqrt(2.d0)
-      ! Explicit Butcher Table (matrix)
-      arkode_parameters%Ae(1,1:3) = (/  0.d0,       0.d0, 0.d0 /)
-      arkode_parameters%Ae(2,1:3) = (/ gamma,       0.d0, 0.d0 /)
-      arkode_parameters%Ae(3,1:3) = (/ delta, 1.d0-delta, 0.d0 /)
-      ! Explicit Butcher Table (vectors)
-      arkode_parameters%ce(1:3) = (/ 0.d0, gamma, 1.d0 /)
-      arkode_parameters%be(1:3) = (/ 0.d0, 1.d0-gamma, gamma /)
       ! Implicit Butcher Table (matrix)
       arkode_parameters%Ai(1,1:3) = (/ 0.d0,       0.d0,  0.d0 /)
       arkode_parameters%Ai(2,1:3) = (/ 0.d0,      gamma,  0.d0 /)
@@ -516,6 +499,13 @@ contains
       ! Implicit Butcher Table (vectors)
       arkode_parameters%ci(1:3) = (/ 0.d0, gamma, 1.d0 /)
       arkode_parameters%bi(1:3) = (/ 0.d0, 1.d0-gamma, gamma /)
+      ! Explicit Butcher Table (matrix)
+      arkode_parameters%Ae(1,1:3) = (/  0.d0,       0.d0, 0.d0 /)
+      arkode_parameters%Ae(2,1:3) = (/ gamma,       0.d0, 0.d0 /)
+      arkode_parameters%Ae(3,1:3) = (/ delta, 1.d0-delta, 0.d0 /)
+      ! Explicit Butcher Table (vectors)
+      arkode_parameters%ce(1:3) = (/ 0.d0, gamma, 1.d0 /)
+      arkode_parameters%be(1:3) = (/ 0.d0, 1.d0-gamma, gamma /)
       ! GMRES Solver parameters
       arkode_parameters%precLR = 0 ! no preconditioning
       arkode_parameters%gstype = 1 ! classical Gram-Schmidt orthogonalization
@@ -529,6 +519,63 @@ contains
       arkode_parameters%atol(4) = 1.d5*arkode_parameters%rtol ! assumes phinh ~ 1e5
       arkode_parameters%atol(3) = 1.d8*arkode_parameters%rtol ! assumes theta_dp_cp ~ 1e8
       arkode_parameters%atol(3) = 1.d0*arkode_parameters%rtol ! assumes dp3d ~ 1e0
+
+    else if (tstep_type==13) then ! ARKode Candidate ARK453 Method
+      arkode_parameters%imex = 2 ! imex
+      arkode_parameters%s = 5 ! 5 stage
+      arkode_parameters%q = 3 ! 3rd order
+      arkode_parameters%p = 0 ! no embedded order
+      arkode_parameters%be2 = 0.d0 ! no embedded explicit method
+      ! Implicit Butcher Table (matrix)
+      arkode_parameters%Ai(1,1:5) = (/ 0.d0, 0.d0, 0.d0, 0.d0, 0.d0 /)
+      arkode_parameters%Ai(2,1:5) = (/ -0.22284985318525410d0, 0.32591194130117247d0, &
+                                      0.d0, 0.d0, 0.d0 /)
+      arkode_parameters%Ai(3,1:5) = (/ -0.46801347074080545d0, 0.86349284225716961d0, &
+                                      0.32591194130117247d0, 0.d0, 0.d0 /)
+      arkode_parameters%Ai(4,1:5) = (/ -0.46509906651927421d0, 0.81063103116959553d0, &
+                                      0.61036726756832357d0, 0.32591194130117247d0, &
+                                      0.d0 /)
+      arkode_parameters%Ai(5,1:5) = (/ 0.87795339639076675d0, -0.72692641526151547d0, &
+                                      0.75204137157372720d0, -0.22898029400415088d0, &
+                                      0.32591194130117247d0 /)
+      ! Implicit Butcher Table (vectors)
+      arkode_parameters%ci(1:5) = (/ 0.d0, 0.1030620881159184d0, &
+                                    0.72139131281753662d0, 1.28181117351981733d0, &
+                                    1.d0 /)
+      arkode_parameters%bi(1:5) = (/ 0.87795339639076672d0, -0.72692641526151549d0, &
+                                    0.7520413715737272d0, -0.22898029400415090d0, &
+                                    0.32591194130117246d0 /)
+      ! Explicit Butcher Table (matrix)
+      arkode_parameters%Ae(1,1:5) = (/ 0.d0, 0.d0,  0.d0, 0.d0, 0.d0 /)
+      arkode_parameters%Ae(2,1:5) = (/ 0.10306208811591838d0, 0.d0, 0.d0, 0.d0, 0.d0 /)
+      arkode_parameters%Ae(3,1:5) = (/ -0.94124866143519894d0, 1.6626399742527356d0, &
+                                      0.d0, 0.d0, 0.d0 /)
+      arkode_parameters%Ae(4,1:5) = (/ -1.3670975201437765d0, 1.3815852911016873d0, &
+                                      1.2673234025619065d0, 0.d0, 0.d0 /)
+      arkode_parameters%Ae(5,1:5) = (/ -0.81287582068772448d0, 0.81223739060505738d0, &
+                                      0.90644429603699305d0, 0.094194134045674111d0, &
+                                      0.d0 /)
+      ! Explicit Butcher Table (vectors)
+      arkode_parameters%ce(1:5) = (/ 0.d0, 0.1030620881159184d0, &
+                                    0.72139131281753662d0, 1.28181117351981733d0, &
+                                    1.d0 /)
+      arkode_parameters%be(1:5) = (/ 0.87795339639076672d0, -0.72692641526151549d0, &
+                                    0.7520413715737272d0, -0.22898029400415090d0, &
+                                    0.32591194130117246d0 /)
+      ! GMRES Solver parameters
+      arkode_parameters%precLR = 0 ! no preconditioning
+      arkode_parameters%gstype = 1 ! classical Gram-Schmidt orthogonalization
+      arkode_parameters%lintol = 1.d0 ! arbitrarily set for now
+      ! Iteration tolerances
+      arkode_parameters%rtol = 1.d-1 ! arbitrarily set for now
+      arkode_parameters%iatol = 2 ! use array of absolute tolerance values
+      arkode_parameters%atol(1) = 1.d1*arkode_parameters%rtol ! assumes u ~ 1e1
+      arkode_parameters%atol(2) = 1.d1*arkode_parameters%rtol ! assumes v ~ 1e1
+      arkode_parameters%atol(3) = 1.d1*arkode_parameters%rtol ! assumes w ~ 1e1
+      arkode_parameters%atol(4) = 1.d5*arkode_parameters%rtol ! assumes phinh ~ 1e5
+      arkode_parameters%atol(3) = 1.d8*arkode_parameters%rtol ! assumes theta_dp_cp ~ 1e8
+      arkode_parameters%atol(3) = 1.d0*arkode_parameters%rtol ! assumes dp3d ~ 1e0
+
 
     else
        call abortmp('ERROR: bad choice of tstep_type')
@@ -1068,7 +1115,7 @@ contains
              laplace_sphere_wk(elem(ie)%state%w(:,:,k,nt),deriv,elem(ie),var_coef=.false.) )
 
         stens(:,:,k,4,ie) = (stens(:,:,k,4,ie)*elem(ie)%spheremp(:,:) + &
-             laplace_sphere_wk(elem(ie)%state%phinh(:,:,k,nt),deriv,elem(ie),var_coef=.false.) ) 
+             laplace_sphere_wk(elem(ie)%state%phinh(:,:,k,nt),deriv,elem(ie),var_coef=.false.) )
 
      enddo
 
@@ -1104,7 +1151,7 @@ contains
 
         elem(ie)%state%w(:,:,k,nt)=elem(ie)%state%w(:,:,k,nt) &
              +mu_s*dt*stens(:,:,k,3,ie)*elem(ie)%rspheremp(:,:)
-        
+
         elem(ie)%state%phinh(:,:,k,nt)=elem(ie)%state%phinh(:,:,k,nt) &
              +mu_s*dt*stens(:,:,k,4,ie)*elem(ie)%rspheremp(:,:)
 
@@ -1180,8 +1227,8 @@ contains
 
   real (kind=real_kind) :: grad_kappastar(np,np,2,nlev)
 
-  real (kind=real_kind) :: v_gradw(np,np,nlev)     
-  real (kind=real_kind) :: v_gradtheta(np,np,nlev)     
+  real (kind=real_kind) :: v_gradw(np,np,nlev)
+  real (kind=real_kind) :: v_gradtheta(np,np,nlev)
   real (kind=real_kind) :: v_theta(np,np,2,nlev)
   real (kind=real_kind) :: div_v_theta(np,np,nlev)
   real (kind=real_kind) :: v_gradphi(np,np,nlev)
@@ -1488,7 +1535,7 @@ contains
 
                !  Form IEvert1
                   elem(ie)%accum%IEvert1(i,j)=elem(ie)%accum%IEvert1(i,j)      &
-                  -exner(i,j,k)*s_vadv(i,j,k,3)                        
+                  -exner(i,j,k)*s_vadv(i,j,k,3)
                !  Form IEvert2
                   elem(ie)%accum%IEvert2(i,j)=elem(ie)%accum%IEvert2(i,j)      &
                   +dpnh(i,j,k)*s_vadv(i,j,k,2)
@@ -1544,7 +1591,7 @@ contains
           + dt2*stens(:,:,k,1))
         elem(ie)%state%theta_dp_cp(:,:,k,np1) = elem(ie)%spheremp(:,:)*(scale3 * elem(ie)%state%theta_dp_cp(:,:,k,nm1) &
           + dt2*stens(:,:,k,3))
-        elem(ie)%state%phinh(:,:,k,np1)   = elem(ie)%spheremp(:,:)*(scale3 * elem(ie)%state%phinh(:,:,k,nm1) & 
+        elem(ie)%state%phinh(:,:,k,np1)   = elem(ie)%spheremp(:,:)*(scale3 * elem(ie)%state%phinh(:,:,k,nm1) &
           + dt2*stens(:,:,k,2))
 
         elem(ie)%state%dp3d(:,:,k,np1) = &
