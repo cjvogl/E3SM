@@ -1,6 +1,28 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+!#define ARK232_ARK 1
+!#define ARK324_ARK 2
+!#define ARK436_ARK 3
+#define ARK453_ARK 4
+!#define ARK548_ARK 5
+!#define ARS222_ARK 6
+#define ARS232_ARK 7
+!#define ARS233_ARK 8
+!#define ARS343_ARK 9
+!#define ARS443_ARK 10
+#define RK2_ARK 11
+!#define SSP2_222_ARK 12
+!#define SSP2_332a_ARK 13
+!#define SSP2_332b_ARK 14
+!#define SSP2_332lpm1_ARK 15
+!#define SSP2_332lpm2_ARK 16
+!#define SSP2_332lpum_ARK 17
+!#define SSP2_332lspum_ARK 18
+!#define SSP3_332_ARK 19
+!#define SSP3_333_ARK 20
+!#define SSP3_433_ARK 21
+#define U35_ARK 22
 
 module arkode_mod
 
@@ -22,8 +44,14 @@ module arkode_mod
   ! If a larger Krylov subspace is desired, timelevels should be
   ! increased.
 
-  ! list of Butcher table name constants
-  integer, parameter :: RK2 = 1
+  ! data type for passing ARKode Butcher table names
+  type :: table_list
+    integer :: ARK453 = ARK453_ARK
+    integer :: ARS232 = ARS232_ARK
+    integer :: RK2    = RK2_ARK
+    integer :: U35    = U35_ARK
+  end type table_list
+
 
   ! data type for passing ARKode parameters
   type :: parameter_list
@@ -54,6 +82,7 @@ module arkode_mod
   end type parameter_list
 
   public :: parameter_list, update_arkode, get_solution_ptr, get_RHS_vars
+  public :: table_list, set_Butcher_tables
 
   save
 
@@ -457,6 +486,7 @@ contains
     !-----------------------------------------------------------------
 
     !======= Inclusions ===========
+    use kinds,            only: real_kind
     use parallel_mod,     only: abortmp
 
     !======= Declarations =========
@@ -468,12 +498,14 @@ contains
 
     ! local variables
     type(parameter_list), pointer :: ap
+    real(real_kind) :: delta, gamma
 
     !======= Internals ============
     ap => arkode_parameters
 
     select case (table_name)
-      case (RK2)
+
+    case (RK2_ARK) ! TESTED: compared against HOMME version
         ap%imex = 1 ! explicit
         ap%s = 2 ! 2 stage
         ap%q = 2 ! 2nd order
@@ -485,6 +517,88 @@ contains
         ! Explicit Butcher Table (vectors)
         ap%ce(1:2) = (/ 0.d0, 0.5d0 /)
         ap%be(1:2) = (/ 0.d0, 1.d0 /)
+
+      case (U35_ARK) ! TESTED: compared against HOMME version
+        ap%imex = 1 ! explicit
+        ap%s = 5 ! 5 stage
+        ap%q = 3 ! 3rd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedded explicit method
+        ! Explicit Butcher Table (matrix)
+        ap%Ae(1,1:5) = (/  0.d0,  0.d0,      0.d0,      0.d0, 0.d0 /)
+        ap%Ae(2,1:5) = (/ 0.2d0,  0.d0,      0.d0,      0.d0, 0.d0 /)
+        ap%Ae(3,1:5) = (/  0.d0, 0.2d0,      0.d0,      0.d0, 0.d0 /)
+        ap%Ae(4,1:5) = (/  0.d0,  0.d0, 1.d0/3.d0,      0.d0, 0.d0 /)
+        ap%Ae(5,1:5) = (/  0.d0,  0.d0,      0.d0, 2.d0/3.d0, 0.d0 /)
+        ! Explicit Butcher Table (vectors)
+        ap%ce(1:5) = (/ 0.d0, 0.2d0, 0.2d0, 1.d0/3.d0, 2.d0/3.d0 /)
+        ap%be(1:5) = (/ 0.25d0, 0.d0, 0.d0, 0.d0, 0.75d0 /)
+
+      case (ARS232_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 3 ! 3 stage
+        ap%q = 2 ! 2nd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedded explicit method
+        delta = -2.d0*sqrt(2.d0)/3.d0
+        gamma = 1.d0 - 1.d0/sqrt(2.d0)
+        ! Implicit Butcher Table (matrix)
+        ap%Ai(1,1:3) = (/ 0.d0,       0.d0,  0.d0 /)
+        ap%Ai(2,1:3) = (/ 0.d0,      gamma,  0.d0 /)
+        ap%Ai(3,1:3) = (/ 0.d0, 1.d0-gamma, gamma /)
+        ! Implicit Butcher Table (vectors)
+        ap%ci(1:3) = (/ 0.d0, gamma, 1.d0 /)
+        ap%bi(1:3) = (/ 0.d0, 1.d0-gamma, gamma /)
+        ! Explicit Butcher Table (matrix)
+        ap%Ae(1,1:3) = (/  0.d0,       0.d0, 0.d0 /)
+        ap%Ae(2,1:3) = (/ gamma,       0.d0, 0.d0 /)
+        ap%Ae(3,1:3) = (/ delta, 1.d0-delta, 0.d0 /)
+        ! Explicit Butcher Table (vectors)
+        ap%ce(1:3) = (/ 0.d0, gamma, 1.d0 /)
+        ap%be(1:3) = (/ 0.d0, 1.d0-gamma, gamma /)
+
+      case (ARK453_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 5 ! 5 stage
+        ap%q = 3 ! 3rd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedded explicit method
+        ! Implicit Butcher Table (matrix)
+        ap%Ai(1,1:5) = (/ 0.d0, 0.d0, 0.d0, 0.d0, 0.d0 /)
+        ap%Ai(2,1:5) = (/ -0.22284985318525410d0, 0.32591194130117247d0, &
+                            0.d0, 0.d0, 0.d0 /)
+        ap%Ai(3,1:5) = (/ -0.46801347074080545d0, 0.86349284225716961d0, &
+                            0.32591194130117247d0, 0.d0, 0.d0 /)
+        ap%Ai(4,1:5) = (/ -0.46509906651927421d0, 0.81063103116959553d0, &
+                            0.61036726756832357d0, 0.32591194130117247d0, &
+                            0.d0 /)
+        ap%Ai(5,1:5) = (/ 0.87795339639076675d0, -0.72692641526151547d0, &
+                            0.75204137157372720d0, -0.22898029400415088d0, &
+                            0.32591194130117247d0 /)
+        ! Implicit Butcher Table (vectors)
+        ap%ci(1:5) = (/ 0.d0, 0.1030620881159184d0, &
+                          0.72139131281753662d0, 1.28181117351981733d0, &
+                          1.d0 /)
+        ap%bi(1:5) = (/ 0.87795339639076672d0, -0.72692641526151549d0, &
+                          0.7520413715737272d0, -0.22898029400415090d0, &
+                          0.32591194130117246d0 /)
+        ! Explicit Butcher Table (matrix)
+        ap%Ae(1,1:5) = (/ 0.d0, 0.d0,  0.d0, 0.d0, 0.d0 /)
+        ap%Ae(2,1:5) = (/ 0.10306208811591838d0, 0.d0, 0.d0, 0.d0, 0.d0 /)
+        ap%Ae(3,1:5) = (/ -0.94124866143519894d0, 1.6626399742527356d0, &
+                            0.d0, 0.d0, 0.d0 /)
+        ap%Ae(4,1:5) = (/ -1.3670975201437765d0, 1.3815852911016873d0, &
+                            1.2673234025619065d0, 0.d0, 0.d0 /)
+        ap%Ae(5,1:5) = (/ -0.81287582068772448d0, 0.81223739060505738d0, &
+                            0.90644429603699305d0, 0.094194134045674111d0, &
+                            0.d0 /)
+        ! Explicit Butcher Table (vectors)
+        ap%ce(1:5) = (/ 0.d0, 0.1030620881159184d0, &
+                          0.72139131281753662d0, 1.28181117351981733d0, &
+                          1.d0 /)
+        ap%be(1:5) = (/ 0.87795339639076672d0, -0.72692641526151549d0, &
+                          0.7520413715737272d0, -0.22898029400415090d0, &
+                          0.32591194130117246d0 /)
 
       case default
         call abortmp('Unknown ARKode Butcher table name')
