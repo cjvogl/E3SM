@@ -473,44 +473,54 @@ contains
     else if (tstep_type==11) then ! ARKode Ullrich 3rd-order, 5-stage
       call set_Butcher_tables(arkode_parameters, arkode_tables%U35)
 
-    else if (tstep_type==12) then ! ARKode ARS232
+    else if (tstep_type==12) then ! ARKode Ascher 2nd/2nd/2nd-order, 3-stage
       call set_Butcher_tables(arkode_parameters, arkode_tables%ARS232)
-      ! GMRES Solver parameters
-      arkode_parameters%precLR = 0 ! no preconditioning
-      arkode_parameters%gstype = 1 ! classical Gram-Schmidt orthogonalization
-      arkode_parameters%lintol = 1.d0 ! arbitrarily set for now
-      ! Iteration tolerances
-      arkode_parameters%rtol = 1.d-1 ! arbitrarily set for now
-      arkode_parameters%iatol = 2 ! use array of absolute tolerance values
-      arkode_parameters%atol(1) = 1.d1*arkode_parameters%rtol ! assumes u ~ 1e1
-      arkode_parameters%atol(2) = 1.d1*arkode_parameters%rtol ! assumes v ~ 1e1
-      arkode_parameters%atol(3) = 1.d1*arkode_parameters%rtol ! assumes w ~ 1e1
-      arkode_parameters%atol(4) = 1.d5*arkode_parameters%rtol ! assumes phinh ~ 1e5
-      arkode_parameters%atol(3) = 1.d8*arkode_parameters%rtol ! assumes theta_dp_cp ~ 1e8
-      arkode_parameters%atol(3) = 1.d0*arkode_parameters%rtol ! assumes dp3d ~ 1e0
 
     else if (tstep_type==13) then ! ARKode Candidate ARK453 Method
       call set_Butcher_tables(arkode_parameters, arkode_tables%ARK453)
-      ! GMRES Solver parameters
-      arkode_parameters%precLR = 0 ! no preconditioning
-      arkode_parameters%gstype = 1 ! classical Gram-Schmidt orthogonalization
-      arkode_parameters%lintol = 1.d0 ! arbitrarily set for now
-      ! Iteration tolerances
-      arkode_parameters%rtol = 1.d-1 ! arbitrarily set for now
-      arkode_parameters%iatol = 2 ! use array of absolute tolerance values
-      arkode_parameters%atol(1) = 1.d1*arkode_parameters%rtol ! assumes u ~ 1e1
-      arkode_parameters%atol(2) = 1.d1*arkode_parameters%rtol ! assumes v ~ 1e1
-      arkode_parameters%atol(3) = 1.d1*arkode_parameters%rtol ! assumes w ~ 1e1
-      arkode_parameters%atol(4) = 1.d5*arkode_parameters%rtol ! assumes phinh ~ 1e5
-      arkode_parameters%atol(3) = 1.d8*arkode_parameters%rtol ! assumes theta_dp_cp ~ 1e8
-      arkode_parameters%atol(3) = 1.d0*arkode_parameters%rtol ! assumes dp3d ~ 1e0
+
+    else if (tstep_type==14) then ! ARKode Ascher 2nd/2nd/2nd-order, 3-stage
+      call set_Butcher_tables(arkode_parameters, arkode_tables%ARS222)
+
+    else if (tstep_type==15) then ! ARKode Ascher 3rd/4th/3rd-order, 3-stage
+      call set_Butcher_tables(arkode_parameters, arkode_tables%ARS233)
+
+    else if (tstep_type==15) then ! ARKode Ascher 3rd/3rd/3rd-order, 4-stage
+      call set_Butcher_tables(arkode_parameters, arkode_tables%ARS343)
+
+    else if (tstep_type==16) then ! ARKode Ascher 3rd/3rd/3rd-order, 5-stage
+      call set_Butcher_tables(arkode_parameters, arkode_tables%ARS443)
+
+    else if (tstep_type==17) then ! ARKode Kennedy 3rd/3rd/3rd-order, 4-stage
+      call set_Butcher_tables(arkode_parameters, arkode_tables%ARK324)
+
+    else if (tstep_type==18) then ! ARKode Kennedy 4th/4th/4th-order, 6-stage
+      call set_Butcher_tables(arkode_parameters, arkode_tables%ARK436)
+
 
     else
        call abortmp('ERROR: bad choice of tstep_type')
     endif
 
-
+    ! Use ARKode to advance solution
     if (tstep_type >= 10) then
+
+      ! If implicit solves are involved, set corresponding parameters
+      if (arkode_parameters%imex /= 1) then
+        ! GMRES Solver parameters
+        arkode_parameters%precLR = 0 ! no preconditioning
+        arkode_parameters%gstype = 1 ! classical Gram-Schmidt orthogonalization
+        arkode_parameters%lintol = 1.d0 ! arbitrarily set for now
+        ! Iteration tolerances
+        arkode_parameters%rtol = 1.d-1 ! arbitrarily set for now
+        arkode_parameters%iatol = 2 ! use array of absolute tolerance values
+        arkode_parameters%atol(1) = 1.d1*arkode_parameters%rtol ! assumes u ~ 1e1
+        arkode_parameters%atol(2) = 1.d1*arkode_parameters%rtol ! assumes v ~ 1e1
+        arkode_parameters%atol(3) = 1.d1*arkode_parameters%rtol ! assumes w ~ 1e1
+        arkode_parameters%atol(4) = 1.d5*arkode_parameters%rtol ! assumes phinh ~ 1e5
+        arkode_parameters%atol(3) = 1.d8*arkode_parameters%rtol ! assumes theta_dp_cp ~ 1e8
+        arkode_parameters%atol(3) = 1.d0*arkode_parameters%rtol ! assumes dp3d ~ 1e0
+      end if
 
       ! update ARKode solver
       call update_arkode(elem, nets, nete, deriv, hvcoord, hybrid, &
