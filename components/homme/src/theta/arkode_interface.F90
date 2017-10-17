@@ -131,9 +131,15 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   !  DSS is the averaging procedure for the active and inactive nodes
   !
 
+! use this call if using the first splitting
+!  call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
+!       1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
+!       .false., ci*eta_ave_w, scale1, scale2, scale3)
+! use this call if using the second splitting
   call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
        1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
-       .false., ci*eta_ave_w, scale1, scale2, scale3)
+       .false., ci*eta_ave_w, scale1, scale2, scale3,1.d0)
+
 
   return
 end subroutine farkifun
@@ -228,9 +234,15 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   !  DSS is the averaging procedure for the active and inactive nodes
   !
 
+! use this call if using the first splitting
+!  call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
+!       1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
+!       .false., ci*eta_ave_w, scale1, scale2, scale3)
+! use this call if using the second splitting
   call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
        1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
-       .false., ci*eta_ave_w, scale1, scale2, scale3)
+       .false., ci*eta_ave_w, scale1, scale2, scale3,0.d0)
+
 
   return
 end subroutine farkefun
