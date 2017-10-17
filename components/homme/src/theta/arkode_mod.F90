@@ -12,17 +12,7 @@
 #define ARS343_ARK 9
 #define ARS443_ARK 10
 #define RK2_ARK 11
-!#define SSP2_222_ARK 12
-!#define SSP2_332a_ARK 13
-!#define SSP2_332b_ARK 14
-!#define SSP2_332lpm1_ARK 15
-!#define SSP2_332lpm2_ARK 16
-!#define SSP2_332lpum_ARK 17
-!#define SSP2_332lspum_ARK 18
-!#define SSP3_332_ARK 19
-!#define SSP3_333_ARK 20
-!#define SSP3_433_ARK 21
-#define U35_ARK 22
+#define U35_ARK 12
 
 module arkode_mod
 
