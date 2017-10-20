@@ -78,7 +78,7 @@ module arkode_mod
   end type parameter_list
 
   public :: parameter_list, update_arkode, get_solution_ptr, get_RHS_vars
-  public :: table_list, set_Butcher_tables
+  public :: max_stage_num, table_list, set_Butcher_tables
 
   save
 
@@ -87,6 +87,8 @@ module arkode_mod
   type(derivative_t), pointer :: deriv_ptr
   type(NVec_t), target        :: y_F(3), atol_F
   type(c_ptr)                 :: y_C(3), atol_C
+  real(real_kind)             :: be_save(max_stage_num), ce_save(max_stage_num)
+  real(real_kind)             :: bi_save(max_stage_num), ci_save(max_stage_num)
   real(real_kind)             :: dt_save
   real(real_kind)             :: eta_ave_w_save
   integer                     :: imex_save, qn0_save
@@ -121,13 +123,18 @@ contains
 
   !=================================================================
 
-  subroutine get_RHS_vars(imex, qn0, dt, eta_ave_w, hvcoord, hybrid, deriv)
+  subroutine get_RHS_vars(imex, qn0, dt, eta_ave_w, hvcoord, hybrid, deriv, &
+                          be, ce, bi, ci)
     !-----------------------------------------------------------------
     ! Description: sets variables and objects needed to compute RHS
     !   Arguments:
     !     hvcoord - (obj*, output) hvcoord object pointer
     !      hybrid - (obj*, output) hybrid object pointer
     !       deriv - (obj*, output) deriv object pointer
+    !          be - (real*, output) array of explicit b values
+    !          ce - (real*, output) array of explicit c values
+    !          bi - (real*, output) array of implicit b values
+    !          ci - (real*, output) array of implicit c values
     !-----------------------------------------------------------------
 
     !======= Inclusions ===========
@@ -144,6 +151,8 @@ contains
     type(hybrid_t),     intent(out) :: hybrid
     type(derivative_t), intent(out) :: deriv
     integer,            intent(out) :: imex, qn0
+    real(real_kind),    intent(out) :: be(max_stage_num), ce(max_stage_num)
+    real(real_kind),    intent(out) :: bi(max_stage_num), ci(max_stage_num)
     real(real_kind),    intent(out) :: dt, eta_ave_w
 
     !======= Internals ============
@@ -154,6 +163,10 @@ contains
     hvcoord = hvcoord_ptr
     hybrid = hybrid_ptr
     deriv = deriv_ptr
+    be = be_save
+    ce = ce_save
+    bi = bi_save
+    ci = ci_save
 
     return
   end subroutine get_RHS_vars
@@ -217,6 +230,10 @@ contains
     dt_save = dt
     eta_ave_w_save = eta_ave_w
     imex_save = arkode_parameters%imex
+    be_save = arkode_parameters%be
+    ce_save = arkode_parameters%ce
+    bi_save = arkode_parameters%bi
+    ci_save = arkode_parameters%ci
     qn0_save = qn0
     hybrid_ptr => hybrid
     deriv_ptr => deriv

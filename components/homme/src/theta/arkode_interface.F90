@@ -52,14 +52,14 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   !-----------------------------------------------------------------
 
   !======= Inclusions ===========
-  use arkode_mod,       only: get_RHS_vars
+  use arkode_mod,       only: max_stage_num, get_RHS_vars
   use kinds,            only: real_kind
   use HommeNVector,     only: NVec_t
   use hybrid_mod,       only: hybrid_t
   use derivative_mod,   only: derivative_t
   use hybvcoord_mod,    only: hvcoord_t
-  use dimensions_mod,   only: np,nlev
   use prim_advance_mod, only: compute_andor_apply_rhs
+  use parallel_mod,     only: abortmp
   use iso_c_binding
 
   !======= Declarations =========
@@ -79,11 +79,13 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   type(hvcoord_t)       :: hvcoord
   type(NVec_t), pointer :: y => NULL()
   type(NVec_t), pointer :: fy => NULL()
-  real (real_kind)      :: dt, eta_ave_w, ci, scale1, scale2, scale3
-  integer               :: imex, qn0, ie, inlev, inpx, inpy
+  real(real_kind)       :: be(max_stage_num), ce(max_stage_num)
+  real(real_kind)       :: bi(max_stage_num), ci(max_stage_num)
+  real (real_kind)      :: dt, eta_ave_w, bval, cval, scale1, scale2, scale3
+  integer               :: imex, qn0, k
 
   !======= Internals ============
-  call get_RHS_vars(imex,qn0,dt,eta_ave_w,hvcoord,hybrid,deriv)
+  call get_RHS_vars(imex,qn0,dt,eta_ave_w,hvcoord,hybrid,deriv,be,ce,bi,ci)
 
   ! set scale factors depending on whether using implicit, explicit, or IMEX
   if (imex == 0) then
@@ -105,8 +107,20 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   call c_f_pointer(y_C, y)
   call c_f_pointer(fy_C, fy)
 
-  ! determine 'stage time' from t and dt (assumes that t_n set to 0)
-  ci = t/dt
+  ! obtain b value for current 'stage time' from t and dt
+  ! (assumes that t_n set to 0 and that all stage time values are unique)
+  bval = -1.d0
+  cval = t/dt
+  do k=1,max_stage_num
+    if (abs(ci(k) - cval) < 1.d-12) then
+      bval = bi(k)
+      exit
+    end if
+  end do
+
+  if (bval == -1.d0) then
+    call abortmp('Cannot determine b-vector value in farkifun (arkode_interface.F90)')
+  end if
 
   ! set return value to success
   ierr = 0
@@ -132,13 +146,13 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   !
 
 ! use this call if using the first splitting
-!  call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
-!       1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
-!       .false., ci*eta_ave_w, scale1, scale2, scale3)
-! use this call if using the second splitting
   call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
        1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
-       .false., ci*eta_ave_w, scale1, scale2, scale3,1.d0)
+       .false., bval*eta_ave_w, scale1, scale2, scale3)
+! use this call if using the second splitting
+!  call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
+!       1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
+!       .false., bval*eta_ave_w, scale1, scale2, scale3,1.d0)
 
 
   return
@@ -162,14 +176,14 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   !-----------------------------------------------------------------
 
   !======= Inclusions ===========
-  use arkode_mod,       only: get_RHS_vars
+  use arkode_mod,       only: max_stage_num, get_RHS_vars
   use kinds,            only: real_kind
   use HommeNVector,     only: NVec_t
   use hybrid_mod,       only: hybrid_t
   use derivative_mod,   only: derivative_t
   use hybvcoord_mod,    only: hvcoord_t
-  use dimensions_mod,   only: np,nlev
   use prim_advance_mod, only: compute_andor_apply_rhs
+  use parallel_mod,     only: abortmp
   use iso_c_binding
 
   !======= Declarations =========
@@ -189,11 +203,13 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   type(hvcoord_t)       :: hvcoord
   type(NVec_t), pointer :: y => NULL()
   type(NVec_t), pointer :: fy => NULL()
-  real (real_kind)      :: dt, eta_ave_w, ci, scale1, scale2, scale3
-  integer               :: imex, qn0, ie, inlev, inpx, inpy
+  real(real_kind)       :: be(max_stage_num), ce(max_stage_num)
+  real(real_kind)       :: bi(max_stage_num), ci(max_stage_num)
+  real(real_kind)       :: dt, eta_ave_w, bval, cval, scale1, scale2, scale3
+  integer               :: imex, qn0, k
 
   !======= Internals ============
-  call get_RHS_vars(imex,qn0,dt,eta_ave_w,hvcoord,hybrid,deriv)
+  call get_RHS_vars(imex,qn0,dt,eta_ave_w,hvcoord,hybrid,deriv,be,ce,bi,ci)
 
   ! set scale factors depending on whether using implicit, explicit, or IMEX
   if (imex == 0) then
@@ -215,8 +231,20 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   call c_f_pointer(y_C, y)
   call c_f_pointer(fy_C, fy)
 
-  ! determine 'stage time' from t and dt (assumes that t_n set to 0)
-  ci = t/dt
+  ! obtain b value for current 'stage time' from t and dt
+  ! (assumes that t_n set to 0 and that all stage time values are unique)
+  bval = -1.d0
+  cval = t/dt
+  do k=1,max_stage_num
+    if (abs(ce(k) - cval) < 1.d-12) then
+      bval = be(k)
+      exit
+    end if
+  end do
+
+  if (bval == -1.d0) then
+    call abortmp('Cannot determine b-vector value in farkefun (arkode_interface.F90)')
+  end if
 
   ! The function call to compute_andor_apply_rhs is as follows:
   !  compute_andor_apply_rhs(np1, nm1, n0, qn0, dt2, elem, hvcoord, hybrid, &
@@ -235,17 +263,80 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   !
 
 ! use this call if using the first splitting
-!  call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
-!       1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
-!       .false., ci*eta_ave_w, scale1, scale2, scale3)
-! use this call if using the second splitting
   call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
        1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
-       .false., ci*eta_ave_w, scale1, scale2, scale3,0.d0)
+       .false., bval*eta_ave_w, scale1, scale2, scale3)
+! use this call if using the second splitting
+!  call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
+!       1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
+!       .false., bval*eta_ave_w, scale1, scale2, scale3,0.d0)
 
 
   return
 end subroutine farkefun
+
+!=================================================================
+
+subroutine farkewt(y_C, ewt_C, ipar, rpar, ierr)
+  !-----------------------------------------------------------------
+  ! Description: farkewt sets the weight vector used in the WRMS norm
+  !
+  !  Arguments:
+  !       y_C - (ptr, input) C Pointer to NVec_t containing state variables
+  !     ewt_C - (ptr) C pointer to NVec_t to hold error weight vector
+  !      ipar - (long int(*), input) integer user parameter data
+  !             (passed back here, unused)
+  !      rpar - (dbl(*), input) real user parameter data (passed here,
+  !             unused)
+  !      ierr - (int, output) return flag: 0=>success, otherwise error
+  !-----------------------------------------------------------------
+  !======= Inclusions ===========
+  use dimensions_mod, only: np, nlev
+  use kinds,          only: real_kind
+  use HommeNVector,   only: NVec_t
+  use iso_c_binding
+
+  !======= Declarations =========
+  implicit none
+
+  ! calling variables
+  type(c_ptr),     intent(in),  target :: y_C
+  type(c_ptr),     intent(out), target :: ewt_C
+  integer(C_LONG), intent(in)          :: ipar(1)
+  real*8,          intent(in)          :: rpar(1)
+  integer(C_INT),  intent(out)         :: ierr
+
+  ! local variables
+  type(NVec_t), pointer :: y => NULL()
+  type(NVec_t), pointer :: ewt => NULL()
+  integer               :: ie, inlev, inpx, inpy
+
+  !=======Internals ============
+
+  ! dereference pointers for NVec_t objects
+  call c_f_pointer(y_C, y)
+  call c_f_pointer(ewt_C, ewt)
+
+  ! set error weight vector values
+  do ie=y%nets,y%nete
+    do inlev=1,nlev
+      do inpy=1,np
+        do inpx=1,np
+!          ewt%elem(ie)%state%v(inpx,inpy,1,inlev,ewt%tl_idx) = ???
+!          ewt%elem(ie)%state%v(inpx,inpy,2,inlev,ewt%tl_idx) = ???
+!          ewt%elem(ie)%state%w(inpx,inpy,inlev,ewt%tl_idx) = ???
+!          ewt%elem(ie)%state%phinh(inpx,inpy,inlev,ewt%tl_idx) = ???
+!          ewt%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,ewt%tl_idx) = ???
+!          ewt%elem(ie)%state%dp3d(inpx,inpy,inlev,ewt%tl_idx) = ???
+        end do ! inpx
+      end do ! inpy
+    end do ! inlev
+  end do ! ie
+
+! set return value
+ierr = 1
+
+end subroutine farkewt
 
 !=================================================================
 
