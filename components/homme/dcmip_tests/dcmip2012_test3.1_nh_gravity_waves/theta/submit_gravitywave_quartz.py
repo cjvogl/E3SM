@@ -16,8 +16,9 @@ if (len(sys.argv) < 2):
 paramDict = {
   'tsteptype':'5',
   'tstep':'1.0',
-  'nmax':'1200',
-  'ne':'27'
+  'nmax':'600',
+  'ne':'27',
+  'hvorder':2
 }
 
 # Parse command line arguments and parameter dictionary
@@ -63,7 +64,7 @@ integration            = "explicit"
 theta_hydrostatic_mode = .false.
 nu                     = 5.0e8
 nu_p                   = 5.0e8
-hypervis_order         = 2
+hypervis_order         = %s
 hypervis_subcycle      = 1
 rearth                 = 50969.76
 omega                  = 0.0
@@ -88,7 +89,7 @@ interp_nlon            = 256
 profile_outpe_num      = 100
 profile_single_file	   = .true.
 /""" % (paramDict['ne'], paramDict['nmax'], paramDict['tstep'],
-        paramDict['tsteptype'],suffix,output_frequency)
+        paramDict['tsteptype'],paramDict['hvorder'],suffix,output_frequency)
 os.system("echo '%s' > input_%s.nl" % (namelist, suffix))
 
 # Create job script
