@@ -136,7 +136,7 @@ N_Vector N_VNewEmpty_EXT()
 
   /* Initialize content structure members */
   content->data     = NULL;
-  content->own_data = FALSE;
+  content->own_data = SUNFALSE;
 
   /* Attach content and ops to generic N_Vector */
   v->content = content;
@@ -160,7 +160,7 @@ N_Vector N_VMake_EXT(void* v_data)
 
   /* Attach data if it is non-NULL */
   if ( v_data != NULL ) {
-    NV_OWN_DATA_EXT(v) = FALSE;
+    NV_OWN_DATA_EXT(v) = SUNFALSE;
     NV_DATA_EXT(v)     = v_data;
   }
 
@@ -247,7 +247,7 @@ N_Vector N_VCloneEmpty_EXT(N_Vector w)
   if (content == NULL) { free(ops); free(v); return(NULL); }
 
   /* Initialize content structure members */
-  content->own_data = FALSE;
+  content->own_data = SUNFALSE;
   content->data     = NULL;
 
   /* Attach content and ops */
@@ -285,7 +285,7 @@ N_Vector N_VClone_EXT(N_Vector w)
   if(vdata == NULL) { N_VDestroy_EXT(v); return(NULL); }
 
   /* Attach data */
-  NV_OWN_DATA_EXT(v) = TRUE;
+  NV_OWN_DATA_EXT(v) = SUNTRUE;
   NV_DATA_EXT(v)     = vdata;
   
   return(v);
@@ -297,7 +297,7 @@ N_Vector N_VClone_EXT(N_Vector w)
 void N_VDestroy_EXT(N_Vector v)
 {
   void *vdata = NULL;
-  if ( (NV_OWN_DATA_EXT(v) == TRUE) && (NV_DATA_EXT(v) != NULL) ) {
+  if ( (NV_OWN_DATA_EXT(v) == SUNTRUE) && (NV_DATA_EXT(v) != NULL) ) {
     vdata = NV_DATA_EXT(v);
     FNVEXT_DESTROY(vdata);
     NV_DATA_EXT(v) = NULL;
@@ -634,8 +634,8 @@ void N_VCompare_EXT(realtype c, N_Vector x, N_Vector z)
 
 /* N_VInvTest_EXT (or nvinvtest) computes z[i] = 1/x[i] 
    with a test for x[i] == 0 before inverting x[i].  This routine 
-   returns TRUE if all components of x are nonzero (successful 
-   inversion) and returns FALSE otherwise. */
+   returns SUNTRUE if all components of x are nonzero (successful 
+   inversion) and returns SUNFALSE otherwise. */
 booleantype N_VInvTest_EXT(N_Vector x, N_Vector z)
 {
   /* extract data array handles from N_Vectors */
@@ -648,14 +648,14 @@ booleantype N_VInvTest_EXT(N_Vector x, N_Vector z)
   /* call fortran routine to do operation */
   FNVEXT_INVTEST(xd, zd, &testval);
 
-  if (testval == ZERO)  return(TRUE);
-  else  return(FALSE);
+  if (testval == ZERO)  return(SUNTRUE);
+  else  return(SUNFALSE);
 }
 
 
 
-/* N_VConstrMask_EXT (or nvconstrmask) returns a boolean FALSE 
-   if any element fails the constraint test, and TRUE if all passed.  The 
+/* N_VConstrMask_EXT (or nvconstrmask) returns a boolean SUNFALSE 
+   if any element fails the constraint test, and SUNTRUE if all passed.  The 
    constraint test is as follows: 
          if c[i] =  2.0, then x[i] must be >  0.0
          if c[i] =  1.0, then x[i] must be >= 0.0
@@ -678,8 +678,8 @@ booleantype N_VConstrMask_EXT(N_Vector c, N_Vector x, N_Vector m)
   /* call fortran routine to do operation */
   FNVEXT_CONSTRMASK(cd, xd, md, &testval);
 
-  if (testval == ZERO)  return(TRUE);
-  else  return(FALSE);
+  if (testval == ZERO)  return(SUNTRUE);
+  else  return(SUNFALSE);
 }
 
 

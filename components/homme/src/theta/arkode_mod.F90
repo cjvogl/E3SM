@@ -76,7 +76,8 @@ module arkode_mod
     real(real_kind) :: bi(max_stage_num)
     real(real_kind) :: bi2(max_stage_num)
     real(real_kind) :: ci(max_stage_num)
-    ! GMRES Linear Solver Info
+    ! Linear Solver Info (flag for columnwise/GMRES, GMRES parameters)
+    logical         :: useColumnSolver
     integer         :: precLR ! preconditioning: 0=none, 1=left, 2=right, 3=left+right
     integer         :: gstype ! Gram-Schmidt orthogonalization: 1=modified, 2=classical
     integer         :: maxl = freelevels ! max size of Krylov subspace (# of iterations/vectors)
@@ -451,28 +452,56 @@ contains
   !     write(0,*) ' arkode_init: farksetiin failed'
   !  endif
 
-      ! indicate use of GMRES linear solver
-      call farkspgmr(ap%precLR, ap%gstype, ap%maxl, ap%lintol, ierr)
-      if (ierr /= 0) then
-        call abortmp('arkode_init: farkspgmr failed')
-      end if
 
-      !      Indicate to use our own Jacobian-vector product routine (otherwise it
-      !      uses a finite-difference approximation)
-      !idef = 1
-      !call farkspilssetjac(idef, ierr)
-      !if (ierr /= 0) then
-      !   write(0,*) ' arkode_init: farkspilssetjac failed'
-      !endif
+      if (ap%useColumnSolver) then
 
-      !      Indicate to use our own preconditioner setup/solve routines (otherwise
-      !      preconditioning is disabled)
-      !idef = 1
-      !call farkspilssetprec(idef, ierr)
-      !if (ierr /= 0) then
-      !   write(0,*) ' arkode_init: farkspilssetprec failed'
-      !endif
-    end if
+        !---- or to instead use the HOMME columnwise direct solver ----!
+        call FColumnSolInit(ierr)
+        if (ierr /= 0) then
+          call abortmp('arkode_init: FColumnSolInit failed')
+        end if
+
+      else
+
+        ! indicate use of GMRES linear solver (and set options)
+        call FSunSPGMRInit(4, ap%precLR, ap%maxl, ierr)
+        if (ierr /= 0) then
+          call abortmp('arkode_init: FSunSPGMRInit failed')
+        end if
+        call FSunSPGMRSetGSType(4, ap%gstype, ierr)
+        if (ierr /= 0) then
+          call abortmp('arkode_init: FSunSPGMRSetGSType failed')
+        end if
+        call FARKSpilsInit(ierr)
+        if (ierr /= 0) then
+          call abortmp('arkode_init: FARKSpilsInit failed')
+        end if
+        call FARKSpilsSetEpsLin(ap%lintol, ierr)
+        if (ierr /= 0) then
+          call abortmp('arkode_init: FARKSpilsSetEpsLin failed')
+        end if
+
+        !      Indicate to use our own preconditioner setup/solve routines (otherwise
+        !      preconditioning is disabled)
+        if (ap%precLR /= 0) then
+          idef = 1
+          call farkspilssetprec(idef, ierr)
+          if (ierr /= 0) then
+            write(0,*) ' arkode_init: farkspilssetprec failed'
+          endif
+        endif
+
+        !      Indicate to use our own Jacobian-vector product routine (otherwise it
+        !      uses a finite-difference approximation)
+        !idef = 1
+        !call farkspilssetjac(idef, ierr)
+        !if (ierr /= 0) then
+        !   write(0,*) ' arkode_init: farkspilssetjac failed'
+        !endif
+
+      endif
+
+    endif
 
     if (par%masterproc) call farkwriteparameters(ierr)
 

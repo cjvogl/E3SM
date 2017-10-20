@@ -507,7 +507,8 @@ contains
 
       ! If implicit solves are involved, set corresponding parameters
       if (arkode_parameters%imex /= 1) then
-        ! GMRES Solver parameters
+        ! linear solver parameters
+        arkode_parameters%useColumnSolver = .false. ! use GMRES (optimally, this could be changed at runtime)
         arkode_parameters%precLR = 0 ! no preconditioning
         arkode_parameters%gstype = 1 ! classical Gram-Schmidt orthogonalization
         arkode_parameters%lintol = 1.d0 ! arbitrarily set for now
