@@ -465,7 +465,6 @@ contains
       call state_read(elem,statesave,n0,nets,nete)
 
       call t_stopf("SSP3332_timestep")
-
 !=========================================================================================
     else if (tstep_type==10) then ! ARKode RK2
       call set_Butcher_tables(arkode_parameters, arkode_tables%RK2)
@@ -485,16 +484,16 @@ contains
     else if (tstep_type==15) then ! ARKode Ascher 3rd/4th/3rd-order, 3-stage
       call set_Butcher_tables(arkode_parameters, arkode_tables%ARS233)
 
-    else if (tstep_type==15) then ! ARKode Ascher 3rd/3rd/3rd-order, 4-stage
+    else if (tstep_type==16) then ! ARKode Ascher 3rd/3rd/3rd-order, 4-stage
       call set_Butcher_tables(arkode_parameters, arkode_tables%ARS343)
 
-    else if (tstep_type==16) then ! ARKode Ascher 3rd/3rd/3rd-order, 5-stage
+    else if (tstep_type==17) then ! ARKode Ascher 3rd/3rd/3rd-order, 5-stage
       call set_Butcher_tables(arkode_parameters, arkode_tables%ARS443)
 
-    else if (tstep_type==17) then ! ARKode Kennedy 3rd/3rd/3rd-order, 4-stage
+    else if (tstep_type==18) then ! ARKode Kennedy 3rd/3rd/3rd-order, 4-stage
       call set_Butcher_tables(arkode_parameters, arkode_tables%ARK324)
 
-    else if (tstep_type==18) then ! ARKode Kennedy 4th/4th/4th-order, 6-stage
+    else if (tstep_type==19) then ! ARKode Kennedy 4th/4th/4th-order, 6-stage
       call set_Butcher_tables(arkode_parameters, arkode_tables%ARK436)
 
 
@@ -511,16 +510,16 @@ contains
         arkode_parameters%useColumnSolver = .false. ! use GMRES (optimally, this could be changed at runtime)
         arkode_parameters%precLR = 0 ! no preconditioning
         arkode_parameters%gstype = 1 ! classical Gram-Schmidt orthogonalization
-        arkode_parameters%lintol = 1.d0 ! arbitrarily set for now
-        ! Iteration tolerances
-        arkode_parameters%rtol = 1.d-1 ! arbitrarily set for now
+        arkode_parameters%lintol = 0.05d0 ! multiplies NLCOV_COEF in linear conv. criteria
+        ! Iteration tolerances (appear in WRMS array as rtol*|u_i| + atol_i
+        arkode_parameters%rtol = 1.d-4
         arkode_parameters%iatol = 2 ! use array of absolute tolerance values
-        arkode_parameters%atol(1) = 1.d1*arkode_parameters%rtol ! assumes u ~ 1e1
-        arkode_parameters%atol(2) = 1.d1*arkode_parameters%rtol ! assumes v ~ 1e1
-        arkode_parameters%atol(3) = 1.d1*arkode_parameters%rtol ! assumes w ~ 1e1
-        arkode_parameters%atol(4) = 1.d5*arkode_parameters%rtol ! assumes phinh ~ 1e5
-        arkode_parameters%atol(3) = 1.d8*arkode_parameters%rtol ! assumes theta_dp_cp ~ 1e8
-        arkode_parameters%atol(3) = 1.d0*arkode_parameters%rtol ! assumes dp3d ~ 1e0
+        arkode_parameters%atol(1) = 1.d-4 !1.d1*arkode_parameters%rtol ! assumes u ~ 1e1
+        arkode_parameters%atol(2) = 1.d-4 !1.d1*arkode_parameters%rtol ! assumes v ~ 1e1
+        arkode_parameters%atol(3) = 1.d-4 !1.d1*arkode_parameters%rtol ! assumes w ~ 1e1
+        arkode_parameters%atol(4) = 1.d-4 !1.d5*arkode_parameters%rtol ! assumes phinh ~ 1e5
+        arkode_parameters%atol(5) = 1.d-4 !1.d8*arkode_parameters%rtol ! assumes theta_dp_cp ~ 1e8
+        arkode_parameters%atol(6) = 1.d-4 !1.d0*arkode_parameters%rtol ! assumes dp3d ~ 1e0
       end if
 
       ! update ARKode solver
@@ -896,9 +895,12 @@ contains
 
            elem(ie)%state%w(:,:,k,nt)=elem(ie)%state%w(:,:,k,nt) &
                 +stens(:,:,k,3,ie)
+
            elem(ie)%state%phinh(:,:,k,nt)=elem(ie)%state%phinh(:,:,k,nt) &
                 +stens(:,:,k,4,ie)
         enddo
+
+
         ! apply heating after updating sate.  using updated v gives better results in PREQX model
         !
         ! d(IE)/dt =  exner * d(Theta)/dt + phi d(dp3d)/dt   (Theta = dp3d*cp*theta)
@@ -932,6 +934,7 @@ contains
               heating(:,:,k)= (elem(ie)%state%v(:,:,1,k,nt)*vtens(:,:,1,k,ie) + &
                    elem(ie)%state%v(:,:,2,k,nt)*vtens(:,:,2,k,ie) ) / &
                    (exner(:,:,k)*Cp)
+
            else
               heating(:,:,k)= (elem(ie)%state%v(:,:,1,k,nt)*vtens(:,:,1,k,ie) + &
                    elem(ie)%state%v(:,:,2,k,nt)*vtens(:,:,2,k,ie)  +&
@@ -1118,11 +1121,13 @@ contains
 !============================ stiff and or non-stiff ============================================
 
  subroutine compute_andor_apply_rhs(np1,nm1,n0,qn0,dt2,elem,hvcoord,hybrid,&
-       deriv,nets,nete,compute_diagnostics,eta_ave_w,scale1,scale2,scale3)
+       deriv,nets,nete,compute_diagnostics,eta_ave_w,scale1,scale2,scale3,scale4)
   ! ===================================
   ! compute the RHS, accumulate into u(np1) and apply DSS
   !
   !   u(np1) = scale3*u(nm1) + dt2*DSS[ nonstiffRHS(u(n0))*scale1 + stiffRHS(un0)*scale2 ]
+  !
+  !   scale 4 is used to experiment with different splittings.
   !
   ! This subroutine was orgininally called to compute a leapfrog timestep
   ! but by adjusting np1,nm1,n0 and dt2, many other timesteps can be
@@ -1142,6 +1147,7 @@ contains
   type (derivative_t),  intent(in) :: deriv
 
   real (kind=real_kind) :: eta_ave_w,scale1,scale2,scale3  ! weighting for eta_dot_dpdn mean flux, scale of unm1
+  real (kind=real_kind),optional :: scale4
 
   ! local
   real (kind=real_kind), pointer, dimension(:,:,:) :: phi
@@ -1184,15 +1190,20 @@ contains
   real (kind=real_kind) ::  temp(np,np,nlev)
   real (kind=real_kind), dimension(np,np) :: sdot_sum ! temporary field
   real (kind=real_kind), dimension(np,np,2) :: vtemp  ! generic gradient storage
-  real (kind=real_kind) ::  v1,v2,w,d_eta_dot_dpdn_dn
+  real (kind=real_kind) ::  v1,v2,w,d_eta_dot_dpdn_dn,sdotscale
   integer :: i,j,k,kptr,ie
 
   real (kind=real_kind), dimension(np,np) :: ps_v
   real (kind=real_kind), dimension(np,np,nlev) :: p, vgrad_p
   real (kind=real_kind), dimension(np,np,2,nlev) :: grad_p
 
-
   call t_startf('compute_andor_apply_rhs')
+
+  if (present(scale4)) then
+    sdotscale = 1.d0
+  else
+    sdotscale=scale1
+  endif
 
   do ie=nets,nete
      dp3d  => elem(ie)%state%dp3d(:,:,:,n0)
@@ -1358,21 +1369,21 @@ contains
         vtemp(:,:,:)   = gradient_sphere(elem(ie)%state%w(:,:,k,n0),deriv,elem(ie)%Dinv)
         v_gradw(:,:,k) = elem(ie)%state%v(:,:,1,k,n0)*vtemp(:,:,1) &
              +elem(ie)%state%v(:,:,2,k,n0)*vtemp(:,:,2)
-        stens(:,:,k,1) = (-s_vadv(:,:,k,1) - v_gradw(:,:,k))*scale1 - scale2*g*(1-dpnh_dp(:,:,k) )
+        stens(:,:,k,1) = -s_vadv(:,:,k,1)*sdotscale - v_gradw(:,:,k)*scale1 - scale2*g*(1-dpnh_dp(:,:,k) )
         v_theta(:,:,1,k) = elem(ie)%state%v(:,:,1,k,n0)*               &
           elem(ie)%state%theta_dp_cp(:,:,k,n0)
         v_theta(:,:,2,k) =                                             &
           elem(ie)%state%v(:,:,2,k,n0)                                 &
           *elem(ie)%state%theta_dp_cp(:,:,k,n0)
         div_v_theta(:,:,k)=divergence_sphere(v_theta(:,:,:,k),deriv,elem(ie))
-        stens(:,:,k,3)=(-s_vadv(:,:,k,3)-div_v_theta(:,:,k))*scale1
+        stens(:,:,k,3)=-s_vadv(:,:,k,3)*sdotscale-div_v_theta(:,:,k)*scale1
 
         gradphi(:,:,:,k) = gradient_sphere(phi(:,:,k),deriv,elem(ie)%Dinv)
 
         v_gradphi(:,:,k) = elem(ie)%state%v(:,:,1,k,n0)*gradphi(:,:,1,k) &
              +elem(ie)%state%v(:,:,2,k,n0)*gradphi(:,:,2,k)
         ! use of s_vadv(:,:,k,2) here is correct since this corresponds to etadot d(phi)/deta
-        stens(:,:,k,2) =  (-s_vadv(:,:,k,2) - v_gradphi(:,:,k))*scale1 + scale2*g*elem(ie)%state%w(:,:,k,n0)
+        stens(:,:,k,2) =  -s_vadv(:,:,k,2)*sdotscale - v_gradphi(:,:,k)*scale1 + scale2*g*elem(ie)%state%w(:,:,k,n0)
 
         KE(:,:,k) = ( elem(ie)%state%v(:,:,1,k,n0)**2 + elem(ie)%state%v(:,:,2,k,n0)**2)/2
         gradKE(:,:,:,k) = gradient_sphere(KE(:,:,k),deriv,elem(ie)%Dinv)
@@ -1535,7 +1546,7 @@ contains
 
         elem(ie)%state%dp3d(:,:,k,np1) = &
              elem(ie)%spheremp(:,:) * (scale3 * elem(ie)%state%dp3d(:,:,k,nm1) - &
-             scale1*dt2 * (divdp(:,:,k) + eta_dot_dpdn(:,:,k+1)-eta_dot_dpdn(:,:,k)))
+             dt2 * (scale1*divdp(:,:,k) + sdotscale*(eta_dot_dpdn(:,:,k+1)-eta_dot_dpdn(:,:,k))))
      enddo
 
 
