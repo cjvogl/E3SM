@@ -23,5 +23,9 @@ else
 fi
 
 for n in ${!TSTEP[*]}; do
-  ./submit_gravitywave.py ./theta tsteptype $1 tstep ${TSTEP[$n]} nmax ${NMAX[$n]}
+  if [[ $2 == "-noHV" ]]; then
+    ./submit_gravitywave.py ./theta tsteptype $1 tstep ${TSTEP[$n]} nmax ${NMAX[$n]} nu 0.0
+  else
+    ./submit_gravitywave.py ./theta tsteptype $1 tstep ${TSTEP[$n]} nmax ${NMAX[$n]}
+  fi
 done

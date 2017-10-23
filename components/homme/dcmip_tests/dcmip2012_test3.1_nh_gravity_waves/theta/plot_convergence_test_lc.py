@@ -4,12 +4,12 @@ from netCDF4 import Dataset
 import numpy as np
 
 methodDict = {'U35-ref': 5,
-              'U35': 11,
+              #'U35': 11,
               'ARS232-ref': 7,
               'ARS232': 12,
               'DBM453': 13,
               'ARS222': 14,
-              'ARS233': 15,
+              #'ARS233': 15,
               'ARS343': 16}
 #              'ARS443': 17}
 
