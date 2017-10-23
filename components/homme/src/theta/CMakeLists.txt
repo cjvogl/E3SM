@@ -43,6 +43,8 @@ SET(THETA_SRCS_F90
 SET(THETA_SRCS_C
   ${SRC_DIR}/nvector_external.h
   ${SRC_DIR}/nvector_external.c
+  ${SRC_DIR}/column_linsol.h
+  ${SRC_DIR}/column_linsol.c
 )
 
 SET(THETHAH_SRCS_C
