@@ -112,20 +112,8 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   call c_f_pointer(y_C, y)
   call c_f_pointer(fy_C, fy)
 
-  ! obtain b value for current 'stage time' from t and dt
-  ! (assumes that t_n set to 0 and that all stage time values are unique)
-  bval = -1.d0
-  cval = t/dt
-  do k=1,max_stage_num
-    if (abs(ci(k) - cval) < 1.d-12) then
-      bval = bi(k)
-      exit
-    end if
-  end do
-
-  if (bval == -1.d0) then
-    call abortmp('Cannot determine b-vector value in farkifun (arkode_interface.F90)')
-  end if
+  ! TODO: obtain b value for current 'stage number'
+  bval = 0.d0
 
   ! The function call to compute_andor_apply_rhs is as follows:
   !  compute_andor_apply_rhs(np1, nm1, n0, qn0, dt2, elem, hvcoord, hybrid, &
@@ -229,20 +217,8 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   call c_f_pointer(y_C, y)
   call c_f_pointer(fy_C, fy)
 
-  ! obtain b value for current 'stage time' from t and dt
-  ! (assumes that t_n set to 0 and that all stage time values are unique)
-  bval = -1.d0
-  cval = t/dt
-  do k=1,max_stage_num
-    if (abs(ce(k) - cval) < 1.d-12) then
-      bval = be(k)
-      exit
-    end if
-  end do
-
-  if (bval == -1.d0) then
-    call abortmp('Cannot determine b-vector value in farkefun (arkode_interface.F90)')
-  end if
+  ! TODO: obtain b value for current 'stage number'
+  bval = 0.d0
 
   ! The function call to compute_andor_apply_rhs is as follows:
   !  compute_andor_apply_rhs(np1, nm1, n0, qn0, dt2, elem, hvcoord, hybrid, &
