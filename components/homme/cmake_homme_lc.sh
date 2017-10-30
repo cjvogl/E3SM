@@ -30,14 +30,14 @@ elif [[ $HOSTNAME == "quartz"* ]]; then
     module load openmpi/2.0.0
     export NETCDF=$HOME/local/netcdf-c4.3.3.1_f4.4.2_quartz_gnu_opt
     export HDF5=$HOME/local/hdf5-1.10.1_quartz_gnu_opt
-    export SUNDIALS=$HOME/local/sundials-3.0.0_quartz_gnu_opt
+    export SUNDIALS=$HOME/local/sundials-2.7.0_quartz_gnu_opt
   else
     module load intel/16.0.3
     module load mvapich2/2.2
     module load hdf5-parallel/1.8.17
     export NETCDF=$HOME/local/netcdf-c4.3.3.1_f4.4.2_quartz_intel_opt
     export HDF5=/usr/tce/packages/hdf5/hdf5-parallel-1.8.17-intel16.0.3-mvapich22.2
-    export SUNDIALS=$HOME/local/sundials-3.0.0_quartz_intel_opt
+    export SUNDIALS=$HOME/local/sundials-2.7.0_quartz_intel_opt
   fi
 fi
 

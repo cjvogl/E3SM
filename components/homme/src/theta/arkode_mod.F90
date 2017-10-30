@@ -29,7 +29,7 @@ module arkode_mod
   private
 
   integer, parameter :: max_stage_num = 10
-  integer, parameter :: freelevels = timelevels-60
+  integer, parameter :: freelevels = timelevels-30
   ! Note that 30 is an estimate, but needs to be at least > 25
   ! If a larger Krylov subspace is desired, timelevels should be
   ! increased.
@@ -233,7 +233,7 @@ contains
 
     ! local variables
     real(real_kind) :: tstart
-    integer(C_INT)  :: ierr
+    integer(C_INT)  :: iflag, ierr
     integer         :: i
 
     !======= Internals ============
@@ -247,6 +247,7 @@ contains
     dt_save = dt
     eta_ave_w_save = eta_ave_w
     imex_save = arkode_parameters%imex
+    rtol_save = arkode_parameters%rtol
     qn0_save = qn0
     hybrid_ptr => hybrid
     deriv_ptr => deriv
@@ -266,6 +267,14 @@ contains
     if (ierr /= 0) then
       call abortmp('farksetrin failed')
     endif
+
+    ! Specify user-defined error weight vector function
+    ! (will use current solution)
+    iflag = 1
+    call farkewtset(iflag, ierr)
+    if (ierr /= 0) then
+       call abortmp('arkode_init: farkewtset failed')
+    end if
 
     return
   end subroutine update_arkode
@@ -346,7 +355,7 @@ contains
     real(real_kind)               :: rout(40), rpar(1)
     real(real_kind)               :: A_C1(arkode_parameters%s*arkode_parameters%s)
     real(real_kind)               :: A_C2(arkode_parameters%s*arkode_parameters%s)
-    integer(C_INT)                :: idef, iflag, iatol, ierr
+    integer(C_INT)                :: idef, iatol, ierr
     integer(C_LONG)               :: iout(40), ipar(1)
     integer                       :: i, j
 
@@ -451,13 +460,6 @@ contains
       call abortmp('arkode_init: invalid imex parameter value')
     end if
 
-    ! ! Specify user-defined error weight vector function
-    ! iflag = 1
-    ! call farkewtset(iflag, ierr)
-    ! if (ierr /= 0) then
-    !    call abortmp('arkode_init: farkewtset failed')
-    ! end if
-
     ! Set linear solve if implicit or imex problem
     if (ap%imex == 0 .or. ap%imex == 2) then
     !      To indicate that the implicit problem is linear, make the following
@@ -481,22 +483,29 @@ contains
       else
 
         ! indicate use of GMRES linear solver (and set options)
-        call FSunSPGMRInit(4, ap%precLR, ap%maxl, ierr)
+        call farkspgmr(ap%precLR, ap%gstype, ap%maxl, ap%lintol, ierr)
         if (ierr /= 0) then
-          call abortmp('arkode_init: FSunSPGMRInit failed')
+          call abortmp('arkode_init: farkspgmr failed')
         end if
-        call FSunSPGMRSetGSType(4, ap%gstype, ierr)
-        if (ierr /= 0) then
-          call abortmp('arkode_init: FSunSPGMRSetGSType failed')
-        end if
-        call FARKSpilsInit(ierr)
-        if (ierr /= 0) then
-          call abortmp('arkode_init: FARKSpilsInit failed')
-        end if
-        call FARKSpilsSetEpsLin(ap%lintol, ierr)
-        if (ierr /= 0) then
-          call abortmp('arkode_init: FARKSpilsSetEpsLin failed')
-        end if
+
+
+
+        ! call FSunSPGMRInit(4, ap%precLR, ap%maxl, ierr)
+        ! if (ierr /= 0) then
+        !   call abortmp('arkode_init: FSunSPGMRInit failed')
+        ! end if
+        ! call FSunSPGMRSetGSType(4, ap%gstype, ierr)
+        ! if (ierr /= 0) then
+        !   call abortmp('arkode_init: FSunSPGMRSetGSType failed')
+        ! end if
+        ! call FARKSpilsInit(ierr)
+        ! if (ierr /= 0) then
+        !   call abortmp('arkode_init: FARKSpilsInit failed')
+        ! end if
+        ! call FARKSpilsSetEpsLin(ap%lintol, ierr)
+        ! if (ierr /= 0) then
+        !   call abortmp('arkode_init: FARKSpilsSetEpsLin failed')
+        ! end if
 
         !      Indicate to use our own preconditioner setup/solve routines (otherwise
         !      preconditioning is disabled)
