@@ -3,14 +3,14 @@ import matplotlib.pyplot as pyplot
 from netCDF4 import Dataset
 import numpy as np
 
-noHV = True
+noHV = False
 
 methodDict = {'U35-ref': 5,
-                  'U35': 11,
-                  'ARS232-ref': 7,
-                  'ARS232': 12,
-                  'DBM453': 13,
-                  'ARS222': 14}
+              #    'U35': 11,
+               #   'ARS232-ref': 7,
+                  'ARS232': 12}
+                #  'DBM453': 13,
+                 # 'ARS222': 14}
                   #'ARS233': 15,
                   #'ARS343': 16,
                   #'ARS443': 17,
@@ -31,7 +31,7 @@ else:
                     % (tsteptypeRef,dtRef,nmaxRef)
 print 'Reading reference solution from ' + directory
 data = Dataset(directory)
-Tref = data['u'][:]
+Tref = data['T'][:]
 Tref = Tref[10,:,:,:]
 shape = np.shape(Tref)
 numElements = shape[0]*shape[1]*shape[2]
@@ -49,16 +49,14 @@ for method in methodDict.keys():
     if ((noHV and "nu0.0" in fileName) or (not noHV and "nu0.0" not in fileName)):
       words = fileName.split('_')
       dt = words[1].replace('tstep','')
-      if (float(dt) > dtRef+1e-12):
+      if (float(dt) > 0.03125+1e-12): #dtRef+1e-12):
         dtList.append(float(dt))
         directory = './output_'+fileName.replace('.out','')
         print 'Reading solution in ' + directory
         data = Dataset(directory+'/dcmip2012_test31.nc')
-        T = data['u'][:]
+        T = data['T'][:]
         solutionDict[dt] = T[10,:,:,:]
   # Compute errors from reference solution
-  if (dtRef in dtList):
-      dtList.remove(dtRef)
   L2error = {}
   LIerror = {}
   for dt in dtList:
