@@ -268,13 +268,13 @@ contains
       call abortmp('farksetrin failed')
     endif
 
-    ! Specify user-defined error weight vector function
-    ! (will use current solution)
-    iflag = 1
-    call farkewtset(iflag, ierr)
-    if (ierr /= 0) then
-       call abortmp('arkode_init: farkewtset failed')
-    end if
+    ! ! Specify user-defined error weight vector function
+    ! ! (will use current solution)
+    ! iflag = 1
+    ! call farkewtset(iflag, ierr)
+    ! if (ierr /= 0) then
+    !    call abortmp('arkode_init: farkewtset failed')
+    ! end if
 
     return
   end subroutine update_arkode
@@ -299,17 +299,32 @@ contains
     implicit none
 
     ! calling variables
-    type(parameter_list),  intent(in)  :: arkode_parameters
-    integer,               intent(in)  :: n0
-    real(real_kind),       intent(in)  :: tstart
+    type(parameter_list), target, intent(in)  :: arkode_parameters
+    integer,                      intent(in)  :: n0
+    real(real_kind),              intent(in)  :: tstart
 
     ! local variables
-    integer(C_INT)  :: iatol, ierr
+    type(parameter_list), pointer :: ap
+    integer(C_INT)                :: iatol, ierr
+    integer                       :: ie
 
     !======= Internals ============
+    ap => arkode_parameters
+
+    ! update rtol and atol
+    rtol_save = ap%rtol
+    do ie=atol_F%nets,atol_F%nete
+      atol_F%elem(ie)%state%v(:,:,1,:,atol_F%tl_idx) = ap%atol(1)
+      atol_F%elem(ie)%state%v(:,:,2,:,atol_F%tl_idx) = ap%atol(2)
+      atol_F%elem(ie)%state%w(:,:,:,atol_F%tl_idx) = ap%atol(3)
+      atol_F%elem(ie)%state%phinh(:,:,:,atol_F%tl_idx) = ap%atol(4)
+      atol_F%elem(ie)%state%theta_dp_cp(:,:,:,atol_F%tl_idx) = ap%atol(5)
+      atol_F%elem(ie)%state%dp3d(:,:,:,atol_F%tl_idx) = ap%atol(6)
+    end do
+
+    ! reinitialize ARKode with current solution and tolerances
     iatol = 2
-    call farkreinit(tstart, y_C(n0), arkode_parameters%imex, iatol, &
-                    arkode_parameters%rtol, atol_C, ierr)
+    call farkreinit(tstart, y_C(n0), ap%imex, iatol, ap%rtol, atol_C, ierr)
     if (ierr /= 0) then
       call abortmp('arkode_init: farkreinit failed')
     endif
