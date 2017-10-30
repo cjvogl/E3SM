@@ -513,7 +513,6 @@ contains
         arkode_parameters%lintol = 0.05d0 ! multiplies NLCOV_COEF in linear conv. criteria
         ! Iteration tolerances (appear in WRMS array as rtol*|u_i| + atol_i
         arkode_parameters%rtol = 1.d-4
-        arkode_parameters%iatol = 2 ! use array of absolute tolerance values
         arkode_parameters%atol(1) = 1.d-4 !1.d1*arkode_parameters%rtol ! assumes u ~ 1e1
         arkode_parameters%atol(2) = 1.d-4 !1.d1*arkode_parameters%rtol ! assumes v ~ 1e1
         arkode_parameters%atol(3) = 1.d-4 !1.d1*arkode_parameters%rtol ! assumes w ~ 1e1

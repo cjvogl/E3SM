@@ -21,7 +21,7 @@
 !
 ! The following user-supplied subroutines are optional within
 ! the ARKode Fortran interface:
-!    FColumnSolSolve -- routine to perform a Fortran-supplied, 
+!    FColumnSolSolve -- routine to perform a Fortran-supplied,
 !                       columnwise linear solver
 !    farkjtsetup -- prepares for Jacobian-vector products, J*v,
 !                   where J(u) is the Jacobian of farkifun
@@ -50,8 +50,8 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   !       t - (dbl, input) current time
   !     y_C - (ptr) C pointer to NVec_t containing current solution
   !    fy_C - (ptr) C pointer to NVec_t to hold right-hand side function
-  !    ipar - (long int(*), input) integer user parameter data (qn0)
-  !    rpar - (dbl(*), input) real user parameter data (dt, eta_ave_w)
+  !    ipar - (long int(*), input) integer user parameter data (unused here)
+  !    rpar - (dbl(*), input) real user parameter data (unused here)
   !    ierr - (int, output) return flag: 0=>success,
   !            1=>recoverable error, -1=>non-recoverable error
   !-----------------------------------------------------------------
@@ -84,13 +84,11 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   type(hvcoord_t)       :: hvcoord
   type(NVec_t), pointer :: y => NULL()
   type(NVec_t), pointer :: fy => NULL()
-  real(real_kind)       :: be(max_stage_num), ce(max_stage_num)
-  real(real_kind)       :: bi(max_stage_num), ci(max_stage_num)
   real (real_kind)      :: dt, eta_ave_w, bval, cval, scale1, scale2, scale3
-  integer               :: imex, qn0, k
+  integer               :: imex, qn0
 
   !======= Internals ============
-  call get_RHS_vars(imex,qn0,dt,eta_ave_w,hvcoord,hybrid,deriv,be,ce,bi,ci)
+  call get_RHS_vars(imex,qn0,dt,eta_ave_w,hvcoord,hybrid,deriv)
 
   ! set scale factors depending on whether using implicit, explicit, or IMEX
   if (imex == 0) then
@@ -155,8 +153,8 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   !       t - (dbl, input) current time
   !     y_C - (ptr) C pointer to NVec_t containing current solution
   !    fy_C - (ptr) C pointer to NVec_t to hold right-hand side function
-  !    ipar - (long int(*), input) integer user parameter data (qn0)
-  !    rpar - (dbl(*), input) real user parameter data (dt, eta_ave_w)
+  !    ipar - (long int(*), input) integer user parameter data (unused here)
+  !    rpar - (dbl(*), input) real user parameter data (unused here)
   !    ierr - (int, output) return flag: 0=>success,
   !            1=>recoverable error, -1=>non-recoverable error
   !-----------------------------------------------------------------
@@ -189,13 +187,11 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   type(hvcoord_t)       :: hvcoord
   type(NVec_t), pointer :: y => NULL()
   type(NVec_t), pointer :: fy => NULL()
-  real(real_kind)       :: be(max_stage_num), ce(max_stage_num)
-  real(real_kind)       :: bi(max_stage_num), ci(max_stage_num)
   real(real_kind)       :: dt, eta_ave_w, bval, cval, scale1, scale2, scale3
-  integer               :: imex, qn0, k
+  integer               :: imex, qn0
 
   !======= Internals ============
-  call get_RHS_vars(imex,qn0,dt,eta_ave_w,hvcoord,hybrid,deriv,be,ce,bi,ci)
+  call get_RHS_vars(imex,qn0,dt,eta_ave_w,hvcoord,hybrid,deriv)
 
   ! set scale factors depending on whether using implicit, explicit, or IMEX
   if (imex == 0) then
@@ -251,66 +247,93 @@ end subroutine farkefun
 
 !=================================================================
 
-subroutine farkewt(y_C, ewt_C, ipar, rpar, ierr)
-  !-----------------------------------------------------------------
-  ! Description: farkewt sets the weight vector used in the WRMS norm
-  !
-  !  Arguments:
-  !       y_C - (ptr, input) C Pointer to NVec_t containing state variables
-  !     ewt_C - (ptr) C pointer to NVec_t to hold error weight vector
-  !      ipar - (long int(*), input) integer user parameter data
-  !             (passed back here, unused)
-  !      rpar - (dbl(*), input) real user parameter data (passed here,
-  !             unused)
-  !      ierr - (int, output) return flag: 0=>success, otherwise error
-  !-----------------------------------------------------------------
-  !======= Inclusions ===========
-  use dimensions_mod, only: np, nlev
-  use kinds,          only: real_kind
-  use HommeNVector,   only: NVec_t
-  use iso_c_binding
-
-  !======= Declarations =========
-  implicit none
-
-  ! calling variables
-  type(c_ptr),     intent(in),  target :: y_C
-  type(c_ptr),     intent(out), target :: ewt_C
-  integer(C_LONG), intent(in)          :: ipar(1)
-  real*8,          intent(in)          :: rpar(1)
-  integer(C_INT),  intent(out)         :: ierr
-
-  ! local variables
-  type(NVec_t), pointer :: y => NULL()
-  type(NVec_t), pointer :: ewt => NULL()
-  integer               :: ie, inlev, inpx, inpy
-
-  !=======Internals ============
-
-  ! dereference pointers for NVec_t objects
-  call c_f_pointer(y_C, y)
-  call c_f_pointer(ewt_C, ewt)
-
-  ! set error weight vector values
-  do ie=y%nets,y%nete
-    do inlev=1,nlev
-      do inpy=1,np
-        do inpx=1,np
-!          ewt%elem(ie)%state%v(inpx,inpy,1,inlev,ewt%tl_idx) = ???
-!          ewt%elem(ie)%state%v(inpx,inpy,2,inlev,ewt%tl_idx) = ???
-!          ewt%elem(ie)%state%w(inpx,inpy,inlev,ewt%tl_idx) = ???
-!          ewt%elem(ie)%state%phinh(inpx,inpy,inlev,ewt%tl_idx) = ???
-!          ewt%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,ewt%tl_idx) = ???
-!          ewt%elem(ie)%state%dp3d(inpx,inpy,inlev,ewt%tl_idx) = ???
-        end do ! inpx
-      end do ! inpy
-    end do ! inlev
-  end do ! ie
-
-! set return value
-ierr = 1
-
-end subroutine farkewt
+! subroutine farkewt(y_C, ewt_C, ipar, rpar, ierr)
+!   !-----------------------------------------------------------------
+!   ! Description: farkewt sets the weight vector used in the WRMS norm
+!   !
+!   !  Arguments:
+!   !       y_C - (ptr, input) C Pointer to NVec_t containing state variables
+!   !     ewt_C - (ptr) C pointer to NVec_t to hold error weight vector
+!   !      ipar - (long int(*), input) integer user parameter data
+!   !             (passed back here, unused)
+!   !      rpar - (dbl(*), input) real user parameter data (passed here,
+!   !             unused)
+!   !      ierr - (int, output) return flag: 0=>success, otherwise error
+!   !-----------------------------------------------------------------
+!   !======= Inclusions ===========
+!   use arkode_mod,    only: get_EWT_vars
+!   use dimensions_mod, only: np, nlev
+!   use kinds,          only: real_kind
+!   use HommeNVector,   only: NVec_t
+!   use iso_c_binding
+!
+!   !======= Declarations =========
+!   implicit none
+!
+!   ! calling variables
+!   type(c_ptr),     intent(in),  target :: y_C
+!   type(c_ptr),     intent(inout), target :: ewt_C
+!   integer(C_LONG), intent(in)          :: ipar(1)
+!   real*8,          intent(in)          :: rpar(1)
+!   integer(C_INT),  intent(out)         :: ierr
+!
+!   ! local variables
+!   type(NVec_t), pointer :: y => NULL()
+!   type(NVec_t), pointer :: ewt => NULL()
+!   type(NVec_t)          :: atol
+!   real(real_kind)       :: rtol
+!   integer               :: ie, inlev, inpx, inpy
+!
+!   !=======Internals ============
+!
+!   ! initialize ierr to "error" value (later set to success)
+!   ierr = 1
+!
+!   ! obtain variables from arkode module for error weight vector
+!   call get_EWT_vars(atol, rtol)
+!
+!   ! dereference pointers for NVec_t objects
+!   call c_f_pointer(y_C, y)
+!   call c_f_pointer(ewt_C, ewt)
+!
+!   ! set error weight vector values
+!   do ie=y%nets,y%nete
+!     do inlev=1,nlev
+!       do inpy=1,np
+!         do inpx=1,np
+!           ewt%elem(ie)%state%v(inpx,inpy,1,inlev,ewt%tl_idx) = &
+!             1.d0 / &!sqrt(y%elem(ie)%state%dp3d(inpx,inpy,inlev,y%tl_idx)) / &
+!             ( rtol*abs(y%elem(ie)%state%v(inpx,inpy,1,inlev,y%tl_idx)) + &
+!                     atol%elem(ie)%state%v(inpx,inpy,1,inlev,atol%tl_idx) )
+!           ewt%elem(ie)%state%v(inpx,inpy,2,inlev,ewt%tl_idx) = &
+!             1.d0 / &!sqrt(y%elem(ie)%state%dp3d(inpx,inpy,inlev,y%tl_idx)) / &
+!             ( rtol*abs(y%elem(ie)%state%v(inpx,inpy,2,inlev,y%tl_idx)) + &
+!                     atol%elem(ie)%state%v(inpx,inpy,2,inlev,atol%tl_idx) )
+!           ewt%elem(ie)%state%w(inpx,inpy,inlev,ewt%tl_idx) = &
+!             1.d0 / &!sqrt(y%elem(ie)%state%dp3d(inpx,inpy,inlev,y%tl_idx)) / &
+!             ( rtol*abs(y%elem(ie)%state%w(inpx,inpy,inlev,y%tl_idx)) + &
+!                     atol%elem(ie)%state%w(inpx,inpy,inlev,atol%tl_idx) )
+!           ewt%elem(ie)%state%phinh(inpx,inpy,inlev,ewt%tl_idx) = &
+!             1.d0 / &!sqrt(y%elem(ie)%state%dp3d(inpx,inpy,inlev,y%tl_idx)) / &
+!             ( rtol*abs(y%elem(ie)%state%phinh(inpx,inpy,inlev,y%tl_idx)) + &
+!                     atol%elem(ie)%state%phinh(inpx,inpy,inlev,atol%tl_idx) )
+!           ewt%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,ewt%tl_idx) = &
+!             1.d0 / &!sqrt(y%elem(ie)%state%dp3d(inpx,inpy,inlev,y%tl_idx)) / &
+!             ( rtol*abs(y%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,y%tl_idx)) + &
+!                     atol%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,atol%tl_idx) )
+!           ewt%elem(ie)%state%dp3d(inpx,inpy,inlev,ewt%tl_idx) = &
+!             1.d0 / &!sqrt(y%elem(ie)%state%dp3d(inpx,inpy,inlev,y%tl_idx)) / &
+!             ( rtol*abs(y%elem(ie)%state%dp3d(inpx,inpy,inlev,y%tl_idx)) + &
+!                     atol%elem(ie)%state%dp3d(inpx,inpy,inlev,atol%tl_idx) )
+!         end do ! inpx
+!       end do ! inpy
+!     end do ! inlev
+!   end do ! ie
+!
+! ! set return value to "success"
+! ierr = 0
+!
+! end subroutine farkewt
 
 !=================================================================
 
@@ -382,17 +405,17 @@ end subroutine farkdiags
 subroutine FColumnSolSolve(b_C, t, y_C, fy_C, ierr)
   !-----------------------------------------------------------------
   ! Description: FColumnSolSolve is the routine called by ARKode to
-  !     perform the linear solve at the state defined by (t,y_C), 
-  !     where b_C stores the right-hand side vector on input, and 
-  !     the solution vector on output.  The current implicit RHS 
+  !     perform the linear solve at the state defined by (t,y_C),
+  !     where b_C stores the right-hand side vector on input, and
+  !     the solution vector on output.  The current implicit RHS
   !     vector fy_C is supplied if useful.
   !
   ! Arguments:
-  !     b_C - (ptr, in/out) C pointer to NVec_t containing linear 
+  !     b_C - (ptr, in/out) C pointer to NVec_t containing linear
   !            system RHS on input, and solution on output
   !       t - (dbl, input) current time
   !     y_C - (ptr) C pointer to NVec_t containing current state
-  !    fy_C - (ptr) C pointer to NVec_t containing current 
+  !    fy_C - (ptr) C pointer to NVec_t containing current
   !            right-hand side vector
   !    ierr - (int, output) return flag: 0=>success,
   !            1=>recoverable error, -1=>non-recoverable error
@@ -532,7 +555,7 @@ end subroutine farkjtimes
 
 subroutine farkjtsetup(t, y_C, fy_C, h, ipar, rpar, ierr)
   !-----------------------------------------------------------------
-  ! Description: farkjtsetup performs any preparations for 
+  ! Description: farkjtsetup performs any preparations for
   !    subsequent calls to farkjtimes.
   !
   !  Arguments:

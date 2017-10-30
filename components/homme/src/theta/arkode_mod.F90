@@ -29,7 +29,7 @@ module arkode_mod
   private
 
   integer, parameter :: max_stage_num = 10
-  integer, parameter :: freelevels = timelevels-30
+  integer, parameter :: freelevels = timelevels-60
   ! Note that 30 is an estimate, but needs to be at least > 25
   ! If a larger Krylov subspace is desired, timelevels should be
   ! increased.
@@ -73,26 +73,23 @@ module arkode_mod
     integer         :: maxl = freelevels ! max size of Krylov subspace (# of iterations/vectors)
     real(real_kind) :: lintol ! linear convergence tolerance factor (0 indicates default)
     ! General Iteration Info
-    integer         :: iatol=1 ! indices of atol to use: 1=1, 2=all
     real(real_kind) :: rtol ! relative tolerance for iteration convergence
     real(real_kind) :: atol(6) ! absolute tolerances (u,v,w,phinh,theta_dp_cp,dp3d)
   end type parameter_list
 
   public :: parameter_list, update_arkode, get_solution_ptr, get_RHS_vars
-  public :: max_stage_num, table_list, set_Butcher_tables
+  public :: max_stage_num, table_list, set_Butcher_tables, get_EWT_vars
 
   save
 
-  type(hvcoord_t), pointer    :: hvcoord_ptr
-  type(hybrid_t), pointer     :: hybrid_ptr
-  type(derivative_t), pointer :: deriv_ptr
-  type(NVec_t), target        :: y_F(3), atol_F
-  type(c_ptr)                 :: y_C(3), atol_C
-  real(real_kind)             :: be_save(max_stage_num), ce_save(max_stage_num)
-  real(real_kind)             :: bi_save(max_stage_num), ci_save(max_stage_num)
-  real(real_kind)             :: dt_save
-  real(real_kind)             :: eta_ave_w_save
-  integer                     :: imex_save, qn0_save
+  type(hvcoord_t), pointer      :: hvcoord_ptr
+  type(hybrid_t), pointer       :: hybrid_ptr
+  type(derivative_t), pointer   :: deriv_ptr
+  type(parameter_list), pointer :: param_ptr
+  type(NVec_t), target          :: y_F(3), atol_F
+  type(c_ptr)                   :: y_C(3), atol_C
+  real(real_kind)               :: dt_save, eta_ave_w_save, rtol_save
+  integer                       :: imex_save, qn0_save
 
   logical :: initialized = .false.
 
@@ -124,18 +121,13 @@ contains
 
   !=================================================================
 
-  subroutine get_RHS_vars(imex, qn0, dt, eta_ave_w, hvcoord, hybrid, deriv, &
-                          be, ce, bi, ci)
+  subroutine get_RHS_vars(imex, qn0, dt, eta_ave_w, hvcoord, hybrid, deriv)
     !-----------------------------------------------------------------
     ! Description: sets variables and objects needed to compute RHS
     !   Arguments:
     !     hvcoord - (obj*, output) hvcoord object pointer
     !      hybrid - (obj*, output) hybrid object pointer
     !       deriv - (obj*, output) deriv object pointer
-    !          be - (real*, output) array of explicit b values
-    !          ce - (real*, output) array of explicit c values
-    !          bi - (real*, output) array of implicit b values
-    !          ci - (real*, output) array of implicit c values
     !-----------------------------------------------------------------
 
     !======= Inclusions ===========
@@ -152,8 +144,6 @@ contains
     type(hybrid_t),     intent(out) :: hybrid
     type(derivative_t), intent(out) :: deriv
     integer,            intent(out) :: imex, qn0
-    real(real_kind),    intent(out) :: be(max_stage_num), ce(max_stage_num)
-    real(real_kind),    intent(out) :: bi(max_stage_num), ci(max_stage_num)
     real(real_kind),    intent(out) :: dt, eta_ave_w
 
     !======= Internals ============
@@ -164,15 +154,41 @@ contains
     hvcoord = hvcoord_ptr
     hybrid = hybrid_ptr
     deriv = deriv_ptr
-    be = be_save
-    ce = ce_save
-    bi = bi_save
-    ci = ci_save
 
     return
   end subroutine get_RHS_vars
 
   !=================================================================
+
+  subroutine get_EWT_vars(atol, rtol)
+    !-----------------------------------------------------------------
+    ! Description: sets variables and objects needed to compute RHS
+    !   Arguments:
+    !    atol - (obj*, output) NVector that contains atol array
+    !    rtol - (real, output) rtol value
+    !-----------------------------------------------------------------
+
+    !======= Inclusions ===========
+    use HommeNVector, only: NVec_t
+    use kinds,        only: real_kind
+
+    !======= Declarations =========
+    implicit none
+
+    ! calling variables
+    type(NVec_t),    intent(out) :: atol
+    real(real_kind), intent(out) :: rtol
+
+    !======= Internals ============
+    atol = atol_F
+    rtol = rtol_save
+
+    return
+  end subroutine get_EWT_vars
+
+
+    !=================================================================
+
 
   subroutine update_arkode(elem, nets, nete, deriv, hvcoord, hybrid, &
                            dt, eta_ave_w, n0, qn0, arkode_parameters)
@@ -227,14 +243,10 @@ contains
     ! specify start time to be 0.0 so stage time available in farkefun & farkifun
     tstart = 0.d0
 
-    ! store variables for farkefun and farkifun
+    ! store variables for farkefun, farkifun, and farkewt
     dt_save = dt
     eta_ave_w_save = eta_ave_w
     imex_save = arkode_parameters%imex
-    be_save = arkode_parameters%be
-    ce_save = arkode_parameters%ce
-    bi_save = arkode_parameters%bi
-    ci_save = arkode_parameters%ci
     qn0_save = qn0
     hybrid_ptr => hybrid
     deriv_ptr => deriv
@@ -283,16 +295,12 @@ contains
     real(real_kind),       intent(in)  :: tstart
 
     ! local variables
-    integer(C_INT)  :: ierr
+    integer(C_INT)  :: iatol, ierr
 
     !======= Internals ============
-    if (arkode_parameters%iatol == 1) then
-      call farkreinit(tstart, y_C(n0), arkode_parameters%imex, arkode_parameters%iatol, &
-                      arkode_parameters%rtol, arkode_parameters%atol(1), ierr)
-    else if (arkode_parameters%iatol == 2) then
-      call farkreinit(tstart, y_C(n0), arkode_parameters%imex, arkode_parameters%iatol, &
-                      arkode_parameters%rtol, atol_C, ierr)
-    end if
+    iatol = 2
+    call farkreinit(tstart, y_C(n0), arkode_parameters%imex, iatol, &
+                    arkode_parameters%rtol, atol_C, ierr)
     if (ierr /= 0) then
       call abortmp('arkode_init: farkreinit failed')
     endif
@@ -338,7 +346,7 @@ contains
     real(real_kind)               :: rout(40), rpar(1)
     real(real_kind)               :: A_C1(arkode_parameters%s*arkode_parameters%s)
     real(real_kind)               :: A_C2(arkode_parameters%s*arkode_parameters%s)
-    integer(C_INT)                :: idef, ierr
+    integer(C_INT)                :: idef, iflag, iatol, ierr
     integer(C_LONG)               :: iout(40), ipar(1)
     integer                       :: i, j
 
@@ -363,24 +371,23 @@ contains
       y_C(i) = c_loc(y_F(i))
     end do
 
-    if (ap%iatol == 2) then
-      ! set data in 4th timelevel to atol values and 'create' NVec_t object
-      ! NOTE: this is where one could implement spatially targetted convergence criteria
-      do i=nets,nete
-        elem(i)%state%v(:,:,1,:,4) = ap%atol(1)
-        elem(i)%state%v(:,:,2,:,4) = ap%atol(2)
-        elem(i)%state%w(:,:,:,4) = ap%atol(3)
-        elem(i)%state%phinh(:,:,:,4) = ap%atol(4)
-        elem(i)%state%theta_dp_cp(:,:,:,4) = ap%atol(5)
-        elem(i)%state%dp3d(:,:,:,4) = ap%atol(6)
-      end do
-      call MakeHommeNVector(elem, nets, nete, 4, atol_F, ierr)
-      if (ierr /= 0) then
-        call abortmp('Error in MakeHommeNVector')
-      end if
-      ! get C pointer
-      atol_C = c_loc(atol_F)
+    ! save rtol, set data in 4th timelevel to atol values,
+    ! and 'create' NVec_t object
+    rtol_save = ap%rtol
+    do i=nets,nete
+      elem(i)%state%v(:,:,1,:,4) = ap%atol(1)
+      elem(i)%state%v(:,:,2,:,4) = ap%atol(2)
+      elem(i)%state%w(:,:,:,4) = ap%atol(3)
+      elem(i)%state%phinh(:,:,:,4) = ap%atol(4)
+      elem(i)%state%theta_dp_cp(:,:,:,4) = ap%atol(5)
+      elem(i)%state%dp3d(:,:,:,4) = ap%atol(6)
+    end do
+    call MakeHommeNVector(elem, nets, nete, 4, atol_F, ierr)
+    if (ierr /= 0) then
+      call abortmp('Error in MakeHommeNVector')
     end if
+    ! get C pointer
+    atol_C = c_loc(atol_F)
 
     ! initialize ARKode data & operators
     idef = 4  ! flag specifying which SUNDIALS solver will be used (4=ARKode)
@@ -390,13 +397,9 @@ contains
     end if
 
     ! ARKode dataspace
-    if (ap%iatol == 1) then
-      call farkmalloc(tstart, y_C(n0), ap%imex, ap%iatol, ap%rtol, ap%atol(1), &
-                      iout, rout, ipar, rpar, ierr)
-    else if (ap%iatol == 2) then
-      call farkmalloc(tstart, y_C(n0), ap%imex, ap%iatol, ap%rtol, atol_C, &
-                      iout, rout, ipar, rpar, ierr)
-    end if
+    iatol = 2
+    call farkmalloc(tstart, y_C(n0), ap%imex, iatol, ap%rtol, atol_C, &
+                    iout, rout, ipar, rpar, ierr)
     if (ierr /= 0) then
        call abortmp('arkode_init: farkmalloc failed')
     end if
@@ -447,6 +450,13 @@ contains
     else
       call abortmp('arkode_init: invalid imex parameter value')
     end if
+
+    ! ! Specify user-defined error weight vector function
+    ! iflag = 1
+    ! call farkewtset(iflag, ierr)
+    ! if (ierr /= 0) then
+    !    call abortmp('arkode_init: farkewtset failed')
+    ! end if
 
     ! Set linear solve if implicit or imex problem
     if (ap%imex == 0 .or. ap%imex == 2) then

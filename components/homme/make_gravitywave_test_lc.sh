@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WORKDIR=$S/homme/gravity_wave
+WORKDIR=$S/homme/gravity_wave_dp3d
 
 if [[ $HOSTNAME == "cab"* ]]; then
   SYSTEM=cab

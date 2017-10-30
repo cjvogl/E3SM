@@ -9,7 +9,7 @@ module element_state
 
   implicit none
   private
-  integer, public, parameter :: timelevels = 50
+  integer, public, parameter :: timelevels = 100
 
 ! =========== PRIMITIVE-EQUATION DATA-STRUCTURES =====================
 
@@ -21,15 +21,15 @@ module element_state
     ! vertically-lagrangian code advects dp3d instead of ps_v
     ! tracers Q, Qdp always use 2 level time scheme
 
-    real (kind=real_kind) :: v   (np,np,2,nlev,timelevels)            ! horizontal velocity 
-    real (kind=real_kind) :: w   (np,np,nlev,timelevels)              ! vertical velocity                  
-    real (kind=real_kind) :: theta_dp_cp(np,np,nlev,timelevels)       ! potential temperature                       
-    real (kind=real_kind) :: phinh(np,np,nlev,timelevels)             ! geopotential used by NH model 
-    real (kind=real_kind) :: dp3d(np,np,nlev,timelevels)              ! delta p on levels                  
-    real (kind=real_kind) :: ps_v(np,np,timelevels)                   ! surface pressure                   
-    real (kind=real_kind) :: phis(np,np)                              ! surface geopotential (prescribed)  
-    real (kind=real_kind) :: Q   (np,np,nlev,qsize_d)                 ! Tracer concentration               
-    real (kind=real_kind) :: Qdp (np,np,nlev,qsize_d,2)               ! Tracer mass                        
+    real (kind=real_kind) :: v   (np,np,2,nlev,timelevels)            ! horizontal velocity
+    real (kind=real_kind) :: w   (np,np,nlev,timelevels)              ! vertical velocity
+    real (kind=real_kind) :: theta_dp_cp(np,np,nlev,timelevels)       ! potential temperature
+    real (kind=real_kind) :: phinh(np,np,nlev,timelevels)             ! geopotential used by NH model
+    real (kind=real_kind) :: dp3d(np,np,nlev,timelevels)              ! delta p on levels
+    real (kind=real_kind) :: ps_v(np,np,timelevels)                   ! surface pressure
+    real (kind=real_kind) :: phis(np,np)                              ! surface geopotential (prescribed)
+    real (kind=real_kind) :: Q   (np,np,nlev,qsize_d)                 ! Tracer concentration
+    real (kind=real_kind) :: Qdp (np,np,nlev,qsize_d,2)               ! Tracer mass
 
   end type elem_state_t
 

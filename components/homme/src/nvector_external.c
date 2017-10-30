@@ -136,7 +136,7 @@ N_Vector N_VNewEmpty_EXT()
 
   /* Initialize content structure members */
   content->data     = NULL;
-  content->own_data = FALSE;
+  content->own_data = SUNFALSE;
 
   /* Attach content and ops to generic N_Vector */
   v->content = content;
@@ -160,7 +160,7 @@ N_Vector N_VMake_EXT(void* v_data)
 
   /* Attach data if it is non-NULL */
   if ( v_data != NULL ) {
-    NV_OWN_DATA_EXT(v) = FALSE;
+    NV_OWN_DATA_EXT(v) = SUNFALSE;
     NV_DATA_EXT(v)     = v_data;
   }
 
@@ -247,7 +247,7 @@ N_Vector N_VCloneEmpty_EXT(N_Vector w)
   if (content == NULL) { free(ops); free(v); return(NULL); }
 
   /* Initialize content structure members */
-  content->own_data = FALSE;
+  content->own_data = SUNFALSE;
   content->data     = NULL;
 
   /* Attach content and ops */
@@ -285,7 +285,7 @@ N_Vector N_VClone_EXT(N_Vector w)
   if(vdata == NULL) { N_VDestroy_EXT(v); return(NULL); }
 
   /* Attach data */
-  NV_OWN_DATA_EXT(v) = TRUE;
+  NV_OWN_DATA_EXT(v) = SUNTRUE;
   NV_DATA_EXT(v)     = vdata;
   
   return(v);
@@ -297,7 +297,7 @@ N_Vector N_VClone_EXT(N_Vector w)
 void N_VDestroy_EXT(N_Vector v)
 {
   void *vdata = NULL;
-  if ( (NV_OWN_DATA_EXT(v) == TRUE) && (NV_DATA_EXT(v) != NULL) ) {
+  if ( (NV_OWN_DATA_EXT(v) == SUNTRUE) && (NV_DATA_EXT(v) != NULL) ) {
     vdata = NV_DATA_EXT(v);
     FNVEXT_DESTROY(vdata);
     NV_DATA_EXT(v) = NULL;
@@ -648,8 +648,8 @@ booleantype N_VInvTest_EXT(N_Vector x, N_Vector z)
   /* call fortran routine to do operation */
   FNVEXT_INVTEST(xd, zd, &testval);
 
-  if (testval == ZERO)  return(TRUE);
-  else  return(FALSE);
+  if (testval == ZERO)  return(SUNTRUE);
+  else  return(SUNFALSE);
 }
 
 
@@ -678,8 +678,8 @@ booleantype N_VConstrMask_EXT(N_Vector c, N_Vector x, N_Vector m)
   /* call fortran routine to do operation */
   FNVEXT_CONSTRMASK(cd, xd, md, &testval);
 
-  if (testval == ZERO)  return(TRUE);
-  else  return(FALSE);
+  if (testval == ZERO)  return(SUNTRUE);
+  else  return(SUNFALSE);
 }
 
 
