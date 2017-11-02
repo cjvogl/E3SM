@@ -489,11 +489,11 @@ contains
 
       if (ap%useColumnSolver) then
 
-        !---- or to instead use the HOMME columnwise direct solver ----!
-        call FColumnSolInit(ierr)
-        if (ierr /= 0) then
-          call abortmp('arkode_init: FColumnSolInit failed')
-        end if
+!        !---- or to instead use the HOMME columnwise direct solver ----!
+!        call FColumnSolInit(ierr)
+!        if (ierr /= 0) then
+!          call abortmp('arkode_init: FColumnSolInit failed')
+!        end if
 
       else
 
