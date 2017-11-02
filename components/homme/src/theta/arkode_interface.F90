@@ -111,7 +111,7 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   call c_f_pointer(fy_C, fy)
 
   ! TODO: obtain b value for current 'stage number'
-  bval = 0.d0
+  bval = 1.d0/max_stage_num
 
   ! The function call to compute_andor_apply_rhs is as follows:
   !  compute_andor_apply_rhs(np1, nm1, n0, qn0, dt2, elem, hvcoord, hybrid, &
@@ -214,7 +214,7 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   call c_f_pointer(fy_C, fy)
 
   ! TODO: obtain b value for current 'stage number'
-  bval = 0.d0
+  bval = 1.d0/max_stage_num
 
   ! The function call to compute_andor_apply_rhs is as follows:
   !  compute_andor_apply_rhs(np1, nm1, n0, qn0, dt2, elem, hvcoord, hybrid, &

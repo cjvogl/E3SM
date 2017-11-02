@@ -512,13 +512,13 @@ contains
         arkode_parameters%gstype = 1 ! classical Gram-Schmidt orthogonalization
         arkode_parameters%lintol = 0.05d0 ! multiplies NLCOV_COEF in linear conv. criteria
         ! Iteration tolerances (appear in WRMS array as rtol*|u_i| + atol_i)
-        arkode_parameters%rtol = 1.d-5
-        arkode_parameters%atol(1) = 1.d-5 !1.d1*arkode_parameters%rtol ! assumes u ~ 1e1
-        arkode_parameters%atol(2) = 1.d-5 !1.d1*arkode_parameters%rtol ! assumes v ~ 1e1
-        arkode_parameters%atol(3) = 1.d-5 !1.d1*arkode_parameters%rtol ! assumes w ~ 1e1
-        arkode_parameters%atol(4) = 1.d-5 !1.d5*arkode_parameters%rtol ! assumes phinh ~ 1e5
-        arkode_parameters%atol(5) = 1.d-5 !1.d8*arkode_parameters%rtol ! assumes theta_dp_cp ~ 1e8
-        arkode_parameters%atol(6) = 1.d-5 !1.d0*arkode_parameters%rtol ! assumes dp3d ~ 1e0
+        arkode_parameters%rtol = 1.d-8
+        arkode_parameters%atol(1) = 1.d1*arkode_parameters%rtol ! assumes u ~ 1e1
+        arkode_parameters%atol(2) = 1.d1*arkode_parameters%rtol ! assumes v ~ 1e1
+        arkode_parameters%atol(3) = 1.d1*arkode_parameters%rtol ! assumes w ~ 1e1
+        arkode_parameters%atol(4) = 1.d5*arkode_parameters%rtol ! assumes phinh ~ 1e5
+        arkode_parameters%atol(5) = 1.d8*arkode_parameters%rtol ! assumes theta_dp_cp ~ 1e8
+        arkode_parameters%atol(6) = 1.d0*arkode_parameters%rtol ! assumes dp3d ~ 1e0
       end if
 
       ! update ARKode solver
