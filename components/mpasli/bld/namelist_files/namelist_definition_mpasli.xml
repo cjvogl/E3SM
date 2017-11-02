@@ -92,6 +92,22 @@ Valid values: 'uniform', 'radial'
 Default: Defined in namelist_defaults.xml
 </entry>
 
+<entry id="config_use_glp" type="logical"
+	category="velocity_solver" group="velocity_solver">
+If true, then apply Albany's grounding line parameterization
+
+Valid values: .true. or .false.
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_beta_use_effective_pressure" type="logical"
+	category="velocity_solver" group="velocity_solver">
+If true, then multiply beta by effective pressure before passing to Albany.  This allows, e.g., a Weertman basal friction law with an effective pressure term.  Note that basal friction still needs to be selected in Albany xml file.
+
+Valid values: .true. or .false.
+Default: Defined in namelist_defaults.xml
+</entry>
+
 
 <!-- advection -->
 
@@ -226,6 +242,22 @@ Default: Defined in namelist_defaults.xml
 Selection of the method for computing the basal mass balance of floating ice.  'none' sets the basalMassBal field to 0 everywhere.  'file' uses without modification whatever value was read in through an input or forcing file or the value set by an ESM coupler.  'constant' and 'mismip' use hardcoded fields defined in the code.
 
 Valid values: 'none', 'file', 'constant', 'mismip'
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_bmlt_float_flux" type="real"
+	category="thermal_solver" group="thermal_solver">
+Value of the constant heat flux applied to the base of floating ice (positive upward).
+
+Valid values: Any positive real value
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_bmlt_float_xlimit" type="real"
+	category="thermal_solver" group="thermal_solver">
+x value defining region where bmlt_float_flux is applied; melt only where abs(x) > xlimit.
+
+Valid values: Any positive real value
 Default: Defined in namelist_defaults.xml
 </entry>
 
@@ -473,6 +505,14 @@ Valid values: .true. or .false.
 Default: Defined in namelist_defaults.xml
 </entry>
 
+<entry id="config_write_albany_ascii_mesh" type="logical"
+	category="io" group="io">
+Logical flag determining if Albany ascii mesh files will be written.  If .true., model initializes, writes the mesh files, and then terminates.
+
+Valid values: .true. or .false.
+Default: Defined in namelist_defaults.xml
+</entry>
+
 
 <!-- decomposition -->
 
@@ -556,6 +596,201 @@ Default: Defined in namelist_defaults.xml
 After velocity is calculated there are a few checks for appropriate values in certain geometric configurations.  Setting this option to .true. will cause detailed information about those adjustments to be printed.
 
 Valid values: .true. or .false.
+Default: Defined in namelist_defaults.xml
+</entry>
+
+
+<!-- subglacial_hydro -->
+
+<entry id="config_SGH" type="logical"
+	category="subglacial_hydro" group="subglacial_hydro">
+activate subglacial hydrology model
+
+Valid values: .true. or .false.
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_SGH_adaptive_timestep_fraction" type="real"
+	category="subglacial_hydro" group="subglacial_hydro">
+fraction of limiting timestep to use
+
+Valid values: positive real number
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_SGH_max_adaptive_timestep" type="real"
+	category="subglacial_hydro" group="subglacial_hydro">
+The maximum allowable time step in seconds for the subglacial hydrology model.  If the CFL condition allows the time step to be longer than this, then the model uses this value instead.  Defaults to 100 years (in seconds).
+
+Valid values: Any non-negative real value.
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_SGH_tangent_slope_calculation" type="char*1024"
+	category="subglacial_hydro" group="subglacial_hydro">
+Selection of the method for calculating the tangent component of slope at edges. 'from_vertex_barycentric' interpolates scalar values from cell centers to vertices using the barycentric interpolation routine in operators (mpas_cells_to_points_using_baryweights) and then calculates the slope between vertices.  It works for obtuse triangles, but will not work correctly across the edges of periodic meshes. 'from_vertex_barycentric_kiteareas' interpolates scalar values from cell centers to vertices using barycentric interpolation based on kiterea values and then calculates the slope between vertices.  It will work across the edges of periodic meshes, but will not work correctly for obtuse triangles. 'from_normal_slope' uses the vector operator mpas_tangential_vector_1d to calculate the tangent slopes from the normal slopes on the edges of the adjacent cells.  It will work for any mesh configuration, but is the least accurate method.
+
+Valid values: 'from_vertex_barycentric', 'from_vertex_barycentric_kiteareas', 'from_normal_slope'
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_SGH_pressure_calc" type="char*1024"
+	category="subglacial_hydro" group="subglacial_hydro">
+Selection of the method for calculating water pressure. 'cavity' closes the hydrology equations by assuming cavities are always completely full. 'overburden' assumes water pressure is always equal to ice overburden pressure.
+
+Valid values: 'cavity', 'overburden'
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_SGH_alpha" type="real"
+	category="subglacial_hydro" group="subglacial_hydro">
+power in flux formula
+
+Valid values: positive real number
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_SGH_beta" type="real"
+	category="subglacial_hydro" group="subglacial_hydro">
+power in flux formula
+
+Valid values: positive real number
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_SGH_conduc_coeff" type="real"
+	category="subglacial_hydro" group="subglacial_hydro">
+conductivity coefficient
+
+Valid values: positive real number
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_SGH_till_drainage" type="real"
+	category="subglacial_hydro" group="subglacial_hydro">
+background till drainage rate
+
+Valid values: positive real number.  Default value is 0.001 m/yr
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_SGH_advection" type="char*1024"
+	category="subglacial_hydro" group="subglacial_hydro">
+Advection method for SGH.  'fo'=First order upwind; 'fct'=Flux corrected transport.  FCT currently not enabled.
+
+Valid values: 'fo','fct'
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_SGH_bed_roughness" type="real"
+	category="subglacial_hydro" group="subglacial_hydro">
+cavitation coefficient
+
+Valid values: positive real number
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_SGH_bed_roughness_max" type="real"
+	category="subglacial_hydro" group="subglacial_hydro">
+bed roughness scale
+
+Valid values: positive real number
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_SGH_creep_coefficient" type="real"
+	category="subglacial_hydro" group="subglacial_hydro">
+creep closure coefficient
+
+Valid values: positive real number
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_SGH_englacial_porosity" type="real"
+	category="subglacial_hydro" group="subglacial_hydro">
+notional englacial porosity
+
+Valid values: positive real number
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_SGH_till_max" type="real"
+	category="subglacial_hydro" group="subglacial_hydro">
+maximum water thickness in till
+
+Valid values: positive real number
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_SGH_chnl_active" type="logical"
+	category="subglacial_hydro" group="subglacial_hydro">
+activate channels in subglacial hydrology model
+
+Valid values: .true. or .false.
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_SGH_chnl_alpha" type="real"
+	category="subglacial_hydro" group="subglacial_hydro">
+power in flux formula
+
+Valid values: positive real number
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_SGH_chnl_beta" type="real"
+	category="subglacial_hydro" group="subglacial_hydro">
+power in flux formula
+
+Valid values: positive real number
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_SGH_chnl_conduc_coeff" type="real"
+	category="subglacial_hydro" group="subglacial_hydro">
+conductivity coefficient
+
+Valid values: positive real number
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_SGH_chnl_creep_coefficient" type="real"
+	category="subglacial_hydro" group="subglacial_hydro">
+creep closure coefficient
+
+Valid values: positive real number
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_SGH_incipient_channel_width" type="real"
+	category="subglacial_hydro" group="subglacial_hydro">
+width of sheet beneath/around channel that contributes to melt within the channel
+
+Valid values: positive real number
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_SGH_include_pressure_melt" type="logical"
+	category="subglacial_hydro" group="subglacial_hydro">
+whether to include the pressure melt term in the channel opening
+
+Valid values: .true. or .false.
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_SGH_shmip_forcing" type="char*1024"
+	category="subglacial_hydro" group="subglacial_hydro">
+calculate time-varying forcing specified by SHMIP experiments C or D
+
+Valid values: 'none', 'C1'-'C4', 'D1'-'D5'
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_SGH_basal_melt" type="char*1024"
+	category="subglacial_hydro" group="subglacial_hydro">
+source for the basalMeltInput term.  'file' takes whatever field was input and performs no calculation.  'thermal' uses the groundedBasalMassBal field calculated by the thermal model.  'basal_heat' calculates a melt rate assuming the entirety of the basal heat flux (basalFrictionFlux+basalHeatFlux) goes to melting ice at the bed.  This is calculated in the SGH module and is independent of any calculations in the thermal model.
+
+Valid values: 'file', 'thermal', 'basal_heat'
 Default: Defined in namelist_defaults.xml
 </entry>
 

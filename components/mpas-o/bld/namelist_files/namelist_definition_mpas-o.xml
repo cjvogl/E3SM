@@ -668,7 +668,7 @@ Default: Defined in namelist_defaults.xml
 
 <entry id="config_Rayleigh_friction" type="logical"
 	category="Rayleigh_damping" group="Rayleigh_damping">
-If true, Rayleigh friction is included in the momentum equation.
+If true, Rayleigh friction is included in the momentum equation at every depth level.
 
 Valid values: .true. or .false.
 Default: Defined in namelist_defaults.xml
@@ -676,7 +676,23 @@ Default: Defined in namelist_defaults.xml
 
 <entry id="config_Rayleigh_damping_coeff" type="real"
 	category="Rayleigh_damping" group="Rayleigh_damping">
-Inverse-time coefficient for the Rayleigh damping term, $c_R$.
+Inverse-time coefficient for the Rayleigh damping term, $c_R$, applied at every depth level.
+
+Valid values: Any positive real value.
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_Rayleigh_bottom_friction" type="logical"
+	category="Rayleigh_damping" group="Rayleigh_damping">
+If true, Rayleigh friction is only applied to the bottom
+
+Valid values: .true. or .false.
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_Rayleigh_bottom_damping_coeff" type="real"
+	category="Rayleigh_damping" group="Rayleigh_damping">
+Inverse-time coefficient for the Rayleigh damping term, $c_R$, only applied at the bottom.
 
 Valid values: Any positive real value.
 Default: Defined in namelist_defaults.xml
@@ -937,6 +953,22 @@ Valid values: True or False
 Default: Defined in namelist_defaults.xml
 </entry>
 
+<entry id="config_cvmix_num_ri_smooth_loops" type="integer"
+	category="cvmix" group="cvmix">
+Number of smoothing passes over RiTopOfCell for LMD94 shear instability mixing
+
+Valid values: any integer
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_cvmix_use_BLD_smoothing" type="logical"
+	category="cvmix" group="cvmix">
+If true KPP bld is smoothed with a laplacian filter
+
+Valid values: .true. or .false.
+Default: Defined in namelist_defaults.xml
+</entry>
+
 <entry id="config_cvmix_shear_mixing_scheme" type="char*1024"
 	category="cvmix" group="cvmix">
 Choose between Pacanowski/Philander or Large et al. shear mixing
@@ -1149,6 +1181,17 @@ Default: Defined in namelist_defaults.xml
 </entry>
 
 
+<!-- coupling -->
+
+<entry id="config_ssh_grad_relax_timescale" type="real"
+	category="coupling" group="coupling">
+Timescale for relaxation of the ssh gradient for coupling. A value of 0.0 removes any relaxation and gives instantaneous response.
+
+Valid values: Any positive real number.
+Default: Defined in namelist_defaults.xml
+</entry>
+
+
 <!-- shortwaveRadiation -->
 
 <entry id="config_sw_absorption_type" type="char*1024"
@@ -1174,15 +1217,6 @@ Depth over which to apply penetrating SW to sfcBuoyancyFlux
 Valid values: Real Values greater than zero less than bottomDepth
 Default: Defined in namelist_defaults.xml
 </entry>
-
-<entry id="config_forcing_restart_file" type="char*1024"
-	category="shortwaveRadiation" group="shortwaveRadiation">
-Filename for the restart timestamp in the forcing file
-
-Valid values: MISSING POSSIBLE VALUES
-Default: Defined in namelist_defaults.xml
-</entry>
-
 
 <!-- frazil_ice -->
 
@@ -1435,7 +1469,31 @@ Default: Defined in namelist_defaults.xml
 
 <!-- bottom_drag -->
 
-<entry id="config_bottom_drag_coeff" type="real"
+<entry id="config_use_implicit_bottom_drag" type="logical"
+	category="bottom_drag" group="bottom_drag">
+If true, implicit bottom drag is used on the momentum equation.
+
+Valid values: .true. or .false.
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_implicit_bottom_drag_coeff" type="real"
+	category="bottom_drag" group="bottom_drag">
+Dimensionless bottom drag coefficient, $c_{drag}$.
+
+Valid values: any positive real, typically 1.0e-3
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_use_explicit_bottom_drag" type="logical"
+	category="bottom_drag" group="bottom_drag">
+If true, explicit bottom drag is used on the momentum equation.
+
+Valid values: .true. or .false.
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_explicit_bottom_drag_coeff" type="real"
 	category="bottom_drag" group="bottom_drag">
 Dimensionless bottom drag coefficient, $c_{drag}$.
 
@@ -1824,6 +1882,14 @@ Valid values: .true. or .false.
 Default: Defined in namelist_defaults.xml
 </entry>
 
+<entry id="config_compute_active_tracer_budgets" type="logical"
+	category="debug" group="debug">
+Enables the computation of tracer budget terms
+
+Valid values: .true. or .false.
+Default: Defined in namelist_defaults.xml
+</entry>
+
 <entry id="config_disable_thick_all_tend" type="logical"
 	category="debug" group="debug">
 Disables all tendencies on the thickness field.
@@ -1891,6 +1957,14 @@ Default: Defined in namelist_defaults.xml
 <entry id="config_disable_vel_surface_stress" type="logical"
 	category="debug" group="debug">
 Disables tendencies on the velocity field from horizontal surface stresses (e.g. wind stress and top drag).
+
+Valid values: .true. or .false.
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_disable_vel_explicit_bottom_drag" type="logical"
+	category="debug" group="debug">
+Disables tendencies on the velocity field from explicit bottom drag
 
 Valid values: .true. or .false.
 Default: Defined in namelist_defaults.xml
@@ -2871,6 +2945,22 @@ Default: Defined in namelist_defaults.xml
 Variable name for the grounded land ice fraction in the land ice topography file.
 
 Valid values: Variable name from input file.
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_global_ocean_use_constant_land_ice_cavity_temperature" type="logical"
+	category="global_ocean" group="global_ocean">
+Logical flag that controls if ocean temperature in land-ice cavities is set to a constant temperature.
+
+Valid values: .true. or .false.
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_global_ocean_constant_land_ice_cavity_temperature" type="real"
+	category="global_ocean" group="global_ocean">
+The constant temperature value to be used under land ice, typically something close to the freezing point.
+
+Valid values: Any real number.
 Default: Defined in namelist_defaults.xml
 </entry>
 
@@ -4067,6 +4157,38 @@ Valid values: Any real positive number.
 Default: Defined in namelist_defaults.xml
 </entry>
 
+<entry id="config_soma_use_surface_temp_restoring" type="logical"
+	category="soma" group="soma">
+Logical flag that determines if surface temperature restoring is to be used.
+
+Valid values: .true. or .false.
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_soma_surface_temp_restoring_at_center_latitude" type="real"
+	category="soma" group="soma">
+Surface restoring temperature value at center latitutde.
+
+Valid values: Any real positive number.
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_soma_surface_temp_restoring_latitude_gradient" type="real"
+	category="soma" group="soma">
+Surface restoring temperature gradient in latitudal direction.
+
+Valid values: Any real positive number.
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_soma_restoring_temp_piston_vel" type="real"
+	category="soma" group="soma">
+Restoring piston velocity for surface temperature.
+
+Valid values: Any real number.
+Default: Defined in namelist_defaults.xml
+</entry>
+
 
 <!-- ziso -->
 
@@ -5105,6 +5227,30 @@ Valid values: .true. or .false.
 Default: Defined in namelist_defaults.xml
 </entry>
 
+<entry id="config_ecosys_atm_co2_option" type="char*1024"
+	category="tracer_forcing_ecosysTracers" group="tracer_forcing_ecosysTracers">
+sets how atm co2 is set
+
+Valid values: none,constant,prognostic,diagnostic
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_ecosys_atm_alt_co2_option" type="char*1024"
+	category="tracer_forcing_ecosysTracers" group="tracer_forcing_ecosysTracers">
+sets how alt atm co2 is set
+
+Valid values: none,constant,prognostic,diagnostic
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_ecosys_atm_co2_constant_value" type="real"
+	category="tracer_forcing_ecosysTracers" group="tracer_forcing_ecosysTracers">
+value of atm co2 when config_ecosys_atm_co2_option = constant
+
+Valid values: positive real number
+Default: Defined in namelist_defaults.xml
+</entry>
+
 <entry id="config_use_ecosysTracers_surface_bulk_forcing" type="logical"
 	category="tracer_forcing_ecosysTracers" group="tracer_forcing_ecosysTracers">
 if true, surface bulk forcing from coupler is added to surfaceTracerFlux in 'ecosysGRP' category
@@ -5164,6 +5310,46 @@ Default: Defined in namelist_defaults.xml
 <entry id="config_use_ecosysTracers_sea_ice_coupling" type="logical"
 	category="tracer_forcing_ecosysTracers" group="tracer_forcing_ecosysTracers">
 if true, couple ecosys fields with sea ice
+
+Valid values: .true. or .false.
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_ecosysTracers_diagnostic_fields_level1" type="logical"
+	category="tracer_forcing_ecosysTracers" group="tracer_forcing_ecosysTracers">
+if true, make variables in ecosysDiagFieldsLevel1 available for output
+
+Valid values: .true. or .false.
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_ecosysTracers_diagnostic_fields_level2" type="logical"
+	category="tracer_forcing_ecosysTracers" group="tracer_forcing_ecosysTracers">
+if true, make variables in ecosysDiagFieldsLevel2 available for output
+
+Valid values: .true. or .false.
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_ecosysTracers_diagnostic_fields_level3" type="logical"
+	category="tracer_forcing_ecosysTracers" group="tracer_forcing_ecosysTracers">
+if true, make variables in ecosysDiagFieldsLevel3 available for output
+
+Valid values: .true. or .false.
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_ecosysTracers_diagnostic_fields_level4" type="logical"
+	category="tracer_forcing_ecosysTracers" group="tracer_forcing_ecosysTracers">
+if true, make variables in ecosysDiagFieldsLevel4 available for output
+
+Valid values: .true. or .false.
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_ecosysTracers_diagnostic_fields_level5" type="logical"
+	category="tracer_forcing_ecosysTracers" group="tracer_forcing_ecosysTracers">
+if true, make variables in ecosysDiagFieldsLevel5 available for output
 
 Valid values: .true. or .false.
 Default: Defined in namelist_defaults.xml
@@ -5496,6 +5682,22 @@ Valid values: any real number greater than config_AM_waterMassCensus_minSalinity
 Default: Defined in namelist_defaults.xml
 </entry>
 
+<entry id="config_AM_waterMassCensus_compute_predefined_regions" type="logical"
+	category="AM_waterMassCensus" group="AM_waterMassCensus">
+Computes predefined regions. (Does not require a region mask file.)
+
+Valid values: .true. or .false.
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_AM_waterMassCensus_region_group" type="char*1024"
+	category="AM_waterMassCensus" group="AM_waterMassCensus">
+The name of the region group, for which the WMC should be computed in addition to the existing WMC.
+
+Valid values: 'all', '', or the name of a region group.
+Default: Defined in namelist_defaults.xml
+</entry>
+
 
 <!-- AM_layerVolumeWeightedAverage -->
 
@@ -5769,6 +5971,14 @@ Default: Defined in namelist_defaults.xml
 maximum bin boundary value.  If set to -1.0e34, the maximum value in the domain is found.
 
 Valid values: Any real number.
+Default: Defined in namelist_defaults.xml
+</entry>
+
+<entry id="config_AM_meridionalHeatTransport_region_group" type="char*1024"
+	category="AM_meridionalHeatTransport" group="AM_meridionalHeatTransport">
+The name of the region group, for which the MHT should be computed in addition to the global MHT.
+
+Valid values: 'all', '', or the name of a region group.
 Default: Defined in namelist_defaults.xml
 </entry>
 

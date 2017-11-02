@@ -52,6 +52,8 @@ module physpkg
   integer ::  qini_idx           = 0 
   integer ::  cldliqini_idx      = 0 
   integer ::  cldiceini_idx      = 0 
+  integer ::  static_ener_ac_idx = 0
+  integer ::  water_vap_ac_idx   = 0
 
   integer ::  prec_str_idx       = 0
   integer ::  snow_str_idx       = 0
@@ -146,6 +148,7 @@ subroutine phys_register
     use rad_constituents,   only: rad_cnst_get_info ! Added to query if it is a modal aero sim or not
     use subcol,             only: subcol_register
     use subcol_utils,       only: is_subcol_on
+    use output_aerocom_aie, only: output_aerocom_aie_register, do_aerocom_ind3
 
     !---------------------------Local variables-----------------------------
     !
@@ -160,6 +163,7 @@ subroutine phys_register
                       microp_scheme_out        = microp_scheme,   &
                       cld_macmic_num_steps_out = cld_macmic_num_steps, &
                       do_clubb_sgs_out         = do_clubb_sgs,     &
+                      do_aerocom_ind3_out      = do_aerocom_ind3,  &
                       use_subcol_microp_out    = use_subcol_microp, &
                       state_debug_checks_out   = state_debug_checks, &
                       micro_do_icesupersat_out = micro_do_icesupersat)
@@ -186,6 +190,9 @@ subroutine phys_register
     call pbuf_add_field('QINI',      'physpkg', dtype_r8, (/pcols,pver/), qini_idx)
     call pbuf_add_field('CLDLIQINI', 'physpkg', dtype_r8, (/pcols,pver/), cldliqini_idx)
     call pbuf_add_field('CLDICEINI', 'physpkg', dtype_r8, (/pcols,pver/), cldiceini_idx)
+    call pbuf_add_field('static_ener_ac', 'global', dtype_r8, (/pcols/), static_ener_ac_idx)
+    call pbuf_add_field('water_vap_ac',   'global', dtype_r8, (/pcols/), water_vap_ac_idx)
+
 
     ! check energy package
     call check_energy_register
@@ -296,6 +303,9 @@ subroutine phys_register
 
        ! vertical diffusion
        if (.not. do_clubb_sgs) call vd_register()
+
+       if (do_aerocom_ind3) call output_aerocom_aie_register()
+    
     end if
 
     ! Register diagnostics PBUF
@@ -703,6 +713,8 @@ subroutine phys_init( phys_state, phys_tend, pbuf2d, cam_out )
     use solar_data,         only: solar_data_init
     use rad_solar_var,      only: rad_solar_var_init
     use nudging,            only: Nudge_Model,nudging_init
+    use output_aerocom_aie, only: output_aerocom_aie_init, do_aerocom_ind3
+
 
     ! Input/output arguments
     type(physics_state), pointer       :: phys_state(:)
@@ -840,7 +852,6 @@ subroutine phys_init( phys_state, phys_tend, pbuf2d, cam_out )
        call conv_water_init
     end if
 
-
     ! initiate CLUBB within CAM
     if (do_clubb_sgs) call clubb_ini_cam(pbuf2d,dp1)
 
@@ -853,6 +864,8 @@ subroutine phys_init( phys_state, phys_tend, pbuf2d, cam_out )
 #endif
     call sslt_rebin_init()
     call tropopause_init()
+
+    if(do_aerocom_ind3) call output_aerocom_aie_init()
 
     prec_dp_idx  = pbuf_get_index('PREC_DP')
     snow_dp_idx  = pbuf_get_index('SNOW_DP')
@@ -909,6 +922,7 @@ subroutine phys_run1(phys_state, ztodt, phys_tend, pbuf2d,  cam_in, cam_out)
 #if ( defined OFFLINE_DYN )
      use metdata,       only: get_met_srf1
 #endif
+
     !
     ! Input arguments
     !
@@ -1115,6 +1129,7 @@ subroutine phys_run2(phys_state, ztodt, phys_tend, pbuf2d,  cam_out, &
     ! Purpose: 
     ! Second part of atmospheric physics package after updating of surface models
     ! 
+    ! Modified by Kai Zhang 2017-03: add IEFLX fixer treatment 
     !-----------------------------------------------------------------------
     use physics_buffer,         only: physics_buffer_desc, pbuf_get_chunk, pbuf_deallocate, pbuf_update_tim_idx
     use mo_lightning,   only: lightning_no_prod
@@ -1127,6 +1142,9 @@ subroutine phys_run2(phys_state, ztodt, phys_tend, pbuf2d,  cam_out, &
 #if ( defined OFFLINE_DYN )
     use metdata,        only: get_met_srf2
 #endif
+    use time_manager,   only: get_nstep
+    use check_energy,   only: ieflx_gmean, check_ieflx_fix 
+    use phys_control,   only: ieflx_opt
     !
     ! Input arguments
     !
@@ -1146,6 +1164,7 @@ subroutine phys_run2(phys_state, ztodt, phys_tend, pbuf2d,  cam_out, &
     !
     integer :: c                                 ! chunk index
     integer :: ncol                              ! number of columns
+    integer :: nstep                             ! current timestep number
 #if (! defined SPMD)
     integer  :: mpicom = 0
 #endif
@@ -1177,11 +1196,29 @@ subroutine phys_run2(phys_state, ztodt, phys_tend, pbuf2d,  cam_out, &
     call t_startf ('ac_physics')
     !call t_adj_detailf(+1)
 
+    nstep = get_nstep()
+
+
+    !! calculate the global mean ieflx 
+
+    if(ieflx_opt>0) then
+       call ieflx_gmean(phys_state, phys_tend, pbuf2d, cam_in, cam_out, nstep)
+    end if
+
 !$OMP PARALLEL DO PRIVATE (C, NCOL, phys_buffer_chunk)
 
     do c=begchunk,endchunk
        ncol = get_ncols_p(c)
        phys_buffer_chunk => pbuf_get_chunk(pbuf2d, c)
+
+       !! 
+       !! add the implied internal energy flux to sensible heat flux
+       !! 
+
+       if(ieflx_opt>0) then
+          call check_ieflx_fix(c, ncol, nstep, cam_in(c)%shf)
+       end if
+
        !
        ! surface diagnostics for history files
        !
@@ -1282,7 +1319,7 @@ subroutine tphysac (ztodt,   cam_in,  &
     use ionosphere,         only: ionos_intr ! WACCM-X ionosphere
     use tracers,            only: tracers_timestep_tend
     use aoa_tracers,        only: aoa_tracers_timestep_tend
-    use physconst,          only: rhoh2o, latvap,latice
+    use physconst,          only: rhoh2o, latvap,latice, rga
     use aero_model,         only: aero_model_drydep
     use carma_intr,         only: carma_emission_tend, carma_timestep_tend
     use carma_flags_mod,    only: carma_do_aerosol, carma_do_emission
@@ -1351,6 +1388,9 @@ subroutine tphysac (ztodt,   cam_in,  &
     real(r8) :: tmp_cldliq(pcols,pver) ! tmp space
     real(r8) :: tmp_cldice(pcols,pver) ! tmp space
     real(r8) :: tmp_t     (pcols,pver) ! tmp space
+    real(r8) :: ftem      (pcols,pver) ! tmp space
+    real(r8), pointer, dimension(:) :: static_ener_ac_2d ! Vertically integrated static energy
+    real(r8), pointer, dimension(:) :: water_vap_ac_2d   ! Vertically integrated water vapor
 
     ! physics buffer fields for total energy and mass adjustment
     integer itim_old, ifld
@@ -1707,6 +1747,25 @@ end if ! l_ac_energy_chk
 
     call clybry_fam_set( ncol, lchnk, map2chm, state%q, pbuf )
 
+    static_ener_ac_idx = pbuf_get_index('static_ener_ac')
+    call pbuf_get_field(pbuf, static_ener_ac_idx, static_ener_ac_2d )
+    water_vap_ac_idx   = pbuf_get_index('water_vap_ac')
+    call pbuf_get_field(pbuf, water_vap_ac_idx, water_vap_ac_2d )
+
+    !Integrate column static energy
+    ftem(:ncol,:) = (state%s(:ncol,:) + latvap*state%q(:ncol,:,1)) * state%pdel(:ncol,:)*rga
+    do k=2,pver
+       ftem(:ncol,1) = ftem(:ncol,1) + ftem(:ncol,k)
+    end do
+    static_ener_ac_2d(:ncol) = ftem(:ncol,1)
+
+    !Integrate water vapor
+    ftem(:ncol,:) = state%q(:ncol,:,1)*state%pdel(:ncol,:)*rga
+    do k=2,pver
+       ftem(:ncol,1) = ftem(:ncol,1) + ftem(:ncol,k)
+    end do
+    water_vap_ac_2d(:ncol) = ftem(:ncol,1)
+
 end subroutine tphysac
 
 subroutine tphysbc (ztodt,               &
@@ -1752,7 +1811,7 @@ subroutine tphysbc (ztodt,               &
          physics_ptend_init, physics_ptend_sum, physics_state_check, physics_ptend_scale
     use cam_diagnostics, only: diag_conv_tend_ini, diag_phys_writeout, diag_conv, diag_export, diag_state_b4_phys_write
     use cam_history,     only: outfld
-    use physconst,       only: cpair, latvap, gravit
+    use physconst,       only: cpair, latvap, gravit, rga
     use constituents,    only: pcnst, qmin, cnst_get_ind
     use convect_deep,    only: convect_deep_tend, convect_deep_tend_2, deep_scheme_does_scav_trans
     use time_manager,    only: is_first_step, get_nstep
@@ -1775,6 +1834,7 @@ subroutine tphysbc (ztodt,               &
     use clubb_intr,      only: clubb_tend_cam
     use sslt_rebin,      only: sslt_rebin_adv
     use tropopause,      only: tropopause_output
+    use output_aerocom_aie, only: do_aerocom_ind3, cloud_top_aerocom
     use cam_abortutils,      only: endrun
     use subcol,          only: subcol_gen, subcol_ptend_avg
     use subcol_utils,    only: subcol_ptend_copy, is_subcol_on
@@ -1929,7 +1989,10 @@ subroutine tphysbc (ztodt,               &
 
     real(r8)  :: lcldo(pcols,pver)              !Pass old liqclf from macro_driver to micro_driver
 
-
+    real(r8) :: ftem(pcols,pver)         ! tmp space
+    real(r8), pointer, dimension(:) :: static_ener_ac_2d ! Vertically integrated static energy
+    real(r8), pointer, dimension(:) :: water_vap_ac_2d   ! Vertically integrated water vapor
+    real(r8) :: CIDiff(pcols)            ! Difference in vertically integrated static energy
 
     !HuiWan (2014/15): added for a short-term time step convergence test ++ 
     logical :: l_bc_energy_fix
@@ -1967,6 +2030,36 @@ subroutine tphysbc (ztodt,               &
 
     nstep = get_nstep()
 
+
+    static_ener_ac_idx = pbuf_get_index('static_ener_ac')
+    call pbuf_get_field(pbuf, static_ener_ac_idx, static_ener_ac_2d )
+    water_vap_ac_idx   = pbuf_get_index('water_vap_ac')
+    call pbuf_get_field(pbuf, water_vap_ac_idx, water_vap_ac_2d )
+
+    ! Integrate and compute the difference
+    ! CIDiff = difference of column integrated values
+    if( nstep == 0 ) then
+       CIDiff(:ncol) = 0.0_r8
+       call outfld('DTENDTH', CIDiff, pcols, lchnk )
+       call outfld('DTENDTQ', CIDiff, pcols, lchnk )
+    else
+       ! MSE first
+       ftem(:ncol,:) = (state%s(:ncol,:) + latvap*state%q(:ncol,:,1)) * state%pdel(:ncol,:)*rga
+       do k=2,pver
+          ftem(:ncol,1) = ftem(:ncol,1) + ftem(:ncol,k)
+       end do
+       CIDiff(:ncol) = (ftem(:ncol,1) - static_ener_ac_2d(:ncol))*rtdt
+
+       call outfld('DTENDTH', CIDiff, pcols, lchnk )
+       ! Water vapor second
+       ftem(:ncol,:) = state%q(:ncol,:,1)*state%pdel(:ncol,:)*rga
+       do k=2,pver
+          ftem(:ncol,1) = ftem(:ncol,1) + ftem(:ncol,k)
+       end do
+       CIDiff(:ncol) = (ftem(:ncol,1) - water_vap_ac_2d(:ncol))*rtdt
+
+       call outfld('DTENDTQ', CIDiff, pcols, lchnk )
+    end if
 
     ! Associate pointers with physics buffer fields
     itim_old = pbuf_old_tim_idx()
@@ -2588,6 +2681,10 @@ if (l_rad) then
     call t_stopf('radiation')
 
 end if ! l_rad
+
+    if(do_aerocom_ind3) then
+       call cloud_top_aerocom(state, pbuf) 
+    end if
 
     ! Diagnose the location of the tropopause and its location to the history file(s).
     call t_startf('tropopause')

@@ -5,7 +5,7 @@
 module namelist_mod
 
   use kinds,      only: real_kind, iulog
-  use params_mod, only: recursive, sfcurve
+  use params_mod, only: recursive, sfcurve, SPHERE_COORDS, Z2_NO_TASK_MAPPING
   use cube_mod,   only: rotate_grid
   use physical_constants, only: rearth, rrearth, omega
 
@@ -13,6 +13,8 @@ module namelist_mod
     MAX_STRING_LEN,&
     MAX_FILE_LEN,  &
     partmethod,    &       ! Mesh partitioning method (METIS)
+    coord_transform_method,    &       !how to represent the coordinates.
+    z2_map_method,    &       !zoltan2 how to perform mapping (network-topology aware)
     topology,      &       ! Mesh topology
     test_case,     &       ! test case
     uselapi,       &
@@ -88,12 +90,11 @@ module namelist_mod
     dcmip2_x_h0,                      &
     dcmip2_x_d,                       &
     dcmip2_x_xi,                      &
-    dcmip2_x_xi,                      &
     dcmip4_moist,                     &
     dcmip4_X
 #endif
 
-  use thread_mod,     only: nthreads, nthreads_accel, omp_set_num_threads, omp_get_max_threads, vert_num_threads, vthreads
+  use thread_mod,     only: nthreads, omp_set_num_threads, omp_get_max_threads, vthreads
   use dimensions_mod, only: ne, np, nnodes, nmpi_per_node, npart, qsize, qsize_d, set_mesh_dimensions
 #ifdef CAM
   use time_mod,       only: nsplit, smooth, phys_tscale
@@ -179,25 +180,27 @@ module namelist_mod
     ! Namelists
     ! ============================================
 
-    namelist /ctl_nl/ PARTMETHOD,       &         ! mesh partitioning method
-                      TOPOLOGY,         &         ! mesh topology
+    namelist /ctl_nl/ PARTMETHOD,                &         ! mesh partitioning method
+                      COORD_TRANSFORM_METHOD,    &         ! Zoltan2 coordinate transformation method.
+                      Z2_MAP_METHOD,             &         ! Zoltan2 processor mapping (network-topology aware) method.
+                      TOPOLOGY,                  &         ! mesh topology
 #ifdef CAM
       se_partmethod,     &
       se_topology,       &
       se_ne,             &
       se_limiter_option, &
-      vthreads,          &         ! number of vertical/column threads per horizontal thread
 #else
       qsize,             &         ! number of SE tracers
       nthreads,          &         ! number of threads per process
-      vert_num_threads,  &         ! number of threads per process
-      nthreads_accel,    &         ! number of threads per an accelerator process
       limiter_option,    &
       smooth,            &         ! timestep Filter
       pertlim,           &         ! temperature initial perturbation
       omega,                   &   ! scaled rotation rate
       rearth,                  &   ! scaled earth radius
 #endif
+      COORD_TRANSFORM_METHOD, &
+      Z2_MAP_METHOD,  &
+      vthreads,      &             ! number of vertical/column threads per horizontal thread
       npart,         &
       uselapi,       &
       multilevel,    &
@@ -320,8 +323,10 @@ module namelist_mod
     ! ==========================
     ! Set the default partmethod
     ! ==========================
-
-    PARTMETHOD    = RECURSIVE
+    PARTMETHOD    = SFCURVE
+!    PARTMETHOD    = RECURSIVE
+    COORD_TRANSFORM_METHOD = SPHERE_COORDS
+    Z2_MAP_METHOD = Z2_NO_TASK_MAPPING
     npart         = 1
     useframes     = 0
     multilevel    = 1
@@ -340,18 +345,17 @@ module namelist_mod
     se_phys_tscale=0
     se_nsplit = 1
     qsize = qsize_d
-    vthreads = 1
 #else
     ndays         = 0
     nmax          = 12
     nthreads = 1
-    vert_num_threads = 1
-    nthreads_accel = -1
     se_ftype = ftype   ! MNL: For non-CAM runs, ftype=0 in control_mod
     phys_tscale=0
     nsplit = 1
     pertlim = 0.0_real_kind
 #endif
+    vthreads      = 1
+    sub_case      = 1
     numnodes      = -1
     restartfreq   = -100
     restartdir    = "./restart/"
@@ -402,11 +406,8 @@ module namelist_mod
       read(*,nml=ctl_nl)
 #endif
 #ifndef _USEMETIS
-      !=================================
-      ! override the selected partition
-      ! method and set it to SFCURVE
-      !=================================
-      PARTMETHOD = SFCURVE
+      ! override METIS options to SFCURVE
+      if (partmethod>=0 .and. partmethod<=3) partmethod=SFCURVE
 #endif
        ! ========================
        ! if this is a restart run
@@ -591,6 +592,8 @@ module namelist_mod
 
     ! Broadcast namelist variables to all MPI processes
 
+    call MPI_bcast(Z2_MAP_METHOD ,1,MPIinteger_t,par%root,par%comm,ierr)
+    call MPI_bcast(COORD_TRANSFORM_METHOD ,1,MPIinteger_t,par%root,par%comm,ierr)
     call MPI_bcast(PARTMETHOD ,     1,MPIinteger_t,par%root,par%comm,ierr)
     call MPI_bcast(TOPOLOGY,        MAX_STRING_LEN,MPIChar_t  ,par%root,par%comm,ierr)
     call MPI_bcast(test_case,       MAX_STRING_LEN,MPIChar_t  ,par%root,par%comm,ierr)
@@ -610,7 +613,6 @@ module namelist_mod
     phys_tscale     = se_phys_tscale
     limiter_option  = se_limiter_option
     nsplit          = se_nsplit
-    call MPI_bcast(vthreads  ,      1, MPIinteger_t, par%root,par%comm,ierr)
 #else
     if(test_case == "dcmip2012_test4") then
        rearth = rearth/dcmip4_X
@@ -621,8 +623,6 @@ module namelist_mod
     call MPI_bcast(tstep,           1, MPIreal_t   , par%root,par%comm,ierr)
     call MPI_bcast(nmax,            1, MPIinteger_t, par%root,par%comm,ierr)
     call MPI_bcast(NTHREADS,        1, MPIinteger_t, par%root,par%comm,ierr)
-    call MPI_bcast(vert_num_threads,1, MPIinteger_t, par%root,par%comm,ierr)
-    call MPI_bcast(nthreads_accel,  1, MPIinteger_t, par%root,par%comm,ierr)
     call MPI_bcast(ndays,           1, MPIinteger_t, par%root,par%comm,ierr)
     nEndStep = nmax
 
@@ -640,6 +640,7 @@ module namelist_mod
     call MPI_bcast(dcmip4_moist,    1, MPIinteger_t, par%root,par%comm,ierr)
     call MPI_bcast(dcmip4_X,        1, MPIreal_t,    par%root,par%comm,ierr)
 #endif
+    call MPI_bcast(vthreads  ,      1, MPIinteger_t, par%root,par%comm,ierr)
     call MPI_bcast(smooth,          1, MPIreal_t,    par%root,par%comm,ierr)
     call MPI_bcast(phys_tscale,     1, MPIreal_t,    par%root,par%comm,ierr)
     call MPI_bcast(NSPLIT,          1, MPIinteger_t, par%root,par%comm,ierr)
@@ -724,21 +725,15 @@ module namelist_mod
     call MPI_bcast(output_type , 9,MPIChar_t,par%root,par%comm,ierr)
     call MPI_bcast(infilenames ,160*MAX_INFILES ,MPIChar_t,par%root,par%comm,ierr)
 
-#ifdef IS_ACCELERATOR
-    if (nthreads_accel > 0) then
-        nthreads = nthreads_accel
-    end if
-#endif
-
     ! sanity check on thread count
     ! HOMME will run if if nthreads > max, but gptl will print out GB of warnings.
-    if (NThreads*vert_num_threads > omp_get_max_threads()) then
+    if (NThreads*vthreads > omp_get_max_threads()) then
        if(par%masterproc) write(iulog,*) "Main:NThreads=",NThreads
        if(par%masterproc) print *,'omp_get_max_threads() = ',OMP_get_max_threads()
        if(par%masterproc) print *,'requested threads exceeds OMP_get_max_threads()'
        call abortmp('stopping')
     endif
-    call omp_set_num_threads(NThreads*vert_num_threads)
+    call omp_set_num_threads(NThreads*vthreads)
 
 
     ! if user sets hypervis_subcycle=-1, then use automatic formula
@@ -887,12 +882,13 @@ module namelist_mod
           call abortmp('user specified qsize > qsize_d parameter in dimensions_mod.F90')
        endif
        write(iulog,*)"readnl: NThreads      = ",NTHREADS
-       write(iulog,*)"readnl: vert_num_threads = ",vert_num_threads
-       write(iulog,*)"readnl: nthreads_accel = ",nthreads_accel
 #endif
 
        write(iulog,*)"readnl: ne,np         = ",NE,np
        write(iulog,*)"readnl: partmethod    = ",PARTMETHOD
+       write(iulog,*)"readnl: COORD_TRANSFORM_METHOD    = ",COORD_TRANSFORM_METHOD
+       write(iulog,*)"readnl: Z2_MAP_METHOD    = ",Z2_MAP_METHOD
+
        write(iulog,*)'readnl: nmpi_per_node = ',nmpi_per_node
        write(iulog,*)"readnl: vthreads      = ",vthreads
        write(iulog,*)'readnl: multilevel    = ',multilevel

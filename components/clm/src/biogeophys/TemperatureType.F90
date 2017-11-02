@@ -7,13 +7,13 @@ module TemperatureType
   use shr_log_mod     , only : errMsg => shr_log_errMsg
   use decompMod       , only : bounds_type
   use abortutils      , only : endrun
-  use clm_varctl      , only : use_ed, use_cndv, iulog
+  use clm_varctl      , only : use_cndv, iulog
   use clm_varpar      , only : nlevsno, nlevgrnd, nlevlak, nlevlak, nlevurb, crop_prog 
   use clm_varcon      , only : spval
-  use GridcellType    , only : grc
-  use LandunitType    , only : lun                
-  use ColumnType      , only : col                
-  use PatchType       , only : pft                
+  use GridcellType    , only : grc_pp
+  use LandunitType    , only : lun_pp                
+  use ColumnType      , only : col_pp                
+  use VegetationType       , only : veg_pp                
   !
   implicit none
   save
@@ -102,6 +102,9 @@ module TemperatureType
 
      ! For VSFM model
      real(r8), pointer :: t_soil_col_1d            (:)   ! 1D temperature of soil layers (Kelvin)
+
+     ! For coupling with pflotran
+     real(r8), pointer :: t_nearsurf_col           (:)   ! near-surface air temperature averaged over bare-veg as BC  (Kelvin)
 
    contains
 
@@ -237,7 +240,10 @@ contains
     allocate(this%c_h2osfc_col             (begc:endc))                      ; this%c_h2osfc_col             (:)   = nan
 
     ! For VSFM model
-    allocate(this%t_soil_col_1d            ((endc-begc+1)*nlevgrnd))         ; this%t_soil_col_1d            (:) = nan
+    allocate(this%t_soil_col_1d            ((endc-begc+1)*nlevgrnd))         ; this%t_soil_col_1d            (:)   = nan
+
+    ! for coupling with pflotran
+    allocate(this%t_nearsurf_col           (begc:endc))                      ; this%t_nearsurf_col           (:)   = nan
 
   end subroutine InitAllocate
 
@@ -465,7 +471,7 @@ contains
          avgflag='A', long_name='vegetation temperature (last 240hrs)', &
          ptr_patch=this%t_veg240_patch, default='inactive')
 
-    if (crop_prog .or. use_ed) then
+    if (crop_prog) then
        this%gdd0_patch(begp:endp) = spval
        call hist_addfld1d (fname='GDD0', units='ddays', &
             avgflag='A', long_name='Growing degree days base  0C from planting', &
@@ -539,14 +545,14 @@ contains
     SHR_ASSERT_ALL((ubound(em_improad_lun) == (/bounds%endl/)), errMsg(__FILE__, __LINE__))
     SHR_ASSERT_ALL((ubound(em_perroad_lun) == (/bounds%endl/)), errMsg(__FILE__, __LINE__))
 
-    associate(snl => col%snl) ! Output: [integer (:)    ]  number of snow layers   
+    associate(snl => col_pp%snl) ! Output: [integer (:)    ]  number of snow layers   
 
       ! Set snow/soil temperature
       ! t_lake only has valid values over non-lake   
       ! t_soisno, t_grnd and t_veg have valid values over all land 
 
       do c = bounds%begc,bounds%endc
-         l = col%landunit(c)
+         l = col_pp%landunit(c)
 
          this%t_soisno_col(c,-nlevsno+1:nlevgrnd) = spval
 
@@ -558,46 +564,46 @@ contains
          end if
 
          ! Below snow temperatures - nonlake points (lake points are set below)
-         if (.not. lun%lakpoi(l)) then 
+         if (.not. lun_pp%lakpoi(l)) then 
 
-            if (lun%itype(l)==istice .or. lun%itype(l)==istice_mec) then
+            if (lun_pp%itype(l)==istice .or. lun_pp%itype(l)==istice_mec) then
                this%t_soisno_col(c,1:nlevgrnd) = 250._r8
 
-            else if (lun%itype(l) == istwet) then
+            else if (lun_pp%itype(l) == istwet) then
                this%t_soisno_col(c,1:nlevgrnd) = 277._r8
 
-            else if (lun%urbpoi(l)) then
+            else if (lun_pp%urbpoi(l)) then
                if (use_vancouver) then
-                  if (col%itype(c) == icol_road_perv .or. col%itype(c) == icol_road_imperv) then 
+                  if (col_pp%itype(c) == icol_road_perv .or. col_pp%itype(c) == icol_road_imperv) then 
                      ! Set road top layer to initial air temperature and interpolate other
                      ! layers down to 20C in bottom layer
                      do j = 1, nlevgrnd
                         this%t_soisno_col(c,j) = 297.56 - (j-1) * ((297.56-293.16)/(nlevgrnd-1)) 
                      end do
                      ! Set wall and roof layers to initial air temperature
-                  else if (col%itype(c) == icol_sunwall .or. col%itype(c) == icol_shadewall .or. col%itype(c) == icol_roof) then
+                  else if (col_pp%itype(c) == icol_sunwall .or. col_pp%itype(c) == icol_shadewall .or. col_pp%itype(c) == icol_roof) then
                      this%t_soisno_col(c,1:nlevurb) = 297.56
                   else
                      this%t_soisno_col(c,1:nlevgrnd) = 283._r8
                   end if
                else if (use_mexicocity) then
-                  if (col%itype(c) == icol_road_perv .or. col%itype(c) == icol_road_imperv) then 
+                  if (col_pp%itype(c) == icol_road_perv .or. col_pp%itype(c) == icol_road_imperv) then 
                      ! Set road top layer to initial air temperature and interpolate other
                      ! layers down to 22C in bottom layer
                      do j = 1, nlevgrnd
                         this%t_soisno_col(c,j) = 289.46 - (j-1) * ((289.46-295.16)/(nlevgrnd-1)) 
                      end do
-                  else if (col%itype(c) == icol_sunwall .or. col%itype(c) == icol_shadewall .or. col%itype(c) == icol_roof) then
+                  else if (col_pp%itype(c) == icol_sunwall .or. col_pp%itype(c) == icol_shadewall .or. col_pp%itype(c) == icol_roof) then
                      ! Set wall and roof layers to initial air temperature
                      this%t_soisno_col(c,1:nlevurb) = 289.46
                   else
                      this%t_soisno_col(c,1:nlevgrnd) = 283._r8
                   end if
                else
-                  if (col%itype(c) == icol_road_perv .or. col%itype(c) == icol_road_imperv) then 
+                  if (col_pp%itype(c) == icol_road_perv .or. col_pp%itype(c) == icol_road_imperv) then 
                      this%t_soisno_col(c,1:nlevgrnd) = 274._r8
-                  else if (col%itype(c) == icol_sunwall .or. col%itype(c) == icol_shadewall &
-                       .or. col%itype(c) == icol_roof) then
+                  else if (col_pp%itype(c) == icol_sunwall .or. col_pp%itype(c) == icol_shadewall &
+                       .or. col_pp%itype(c) == icol_roof) then
                      ! Set sunwall, shadewall, roof to fairly high temperature to avoid initialization
                      ! shock from large heating/air conditioning flux
                      this%t_soisno_col(c,1:nlevurb) = 292._r8
@@ -612,9 +618,9 @@ contains
       ! Set Ground temperatures
 
       do c = bounds%begc,bounds%endc
-         l = col%landunit(c)
+         l = col_pp%landunit(c)
 
-         if (lun%lakpoi(l)) then 
+         if (lun_pp%lakpoi(l)) then 
             this%t_grnd_col(c) = 277._r8
          else
             this%t_grnd_col(c) = this%t_soisno_col(c,snl(c)+1)
@@ -623,8 +629,8 @@ contains
       end do
 
       do c = bounds%begc,bounds%endc
-         l = col%landunit(c)
-         if (lun%lakpoi(l)) then ! lake
+         l = col_pp%landunit(c)
+         if (lun_pp%lakpoi(l)) then ! lake
             this%t_lake_col(c,1:nlevlak) = this%t_grnd_col(c)
             this%t_soisno_col(c,1:nlevgrnd) = this%t_grnd_col(c)
          end if
@@ -637,8 +643,8 @@ contains
       ! Set t_veg, t_ref2m, t_ref2m_u and tref2m_r 
 
       do p = bounds%begp, bounds%endp
-         c = pft%column(p)
-         l = pft%landunit(p)
+         c = veg_pp%column(p)
+         l = veg_pp%landunit(p)
 
          if (use_vancouver) then
             this%t_veg_patch(p)   = 297.56
@@ -656,7 +662,7 @@ contains
             this%t_ref2m_patch(p) = 283._r8
          end if
 
-         if (lun%urbpoi(l)) then
+         if (lun_pp%urbpoi(l)) then
             if (use_vancouver) then
                this%t_ref2m_u_patch(p) = 297.56
             else if (use_mexicocity) then
@@ -665,7 +671,7 @@ contains
                this%t_ref2m_u_patch(p) = 283._r8
             end if
          else 
-            if (.not. lun%ifspecial(l)) then 
+            if (.not. lun_pp%ifspecial(l)) then 
                if (use_vancouver) then
                   this%t_ref2m_r_patch(p) = 297.56
                else if (use_mexicocity) then
@@ -683,7 +689,7 @@ contains
     end associate
 
     do l = bounds%begl, bounds%endl 
-       if (lun%urbpoi(l)) then
+       if (lun_pp%urbpoi(l)) then
           if (use_vancouver) then
              this%taf_lun(l) = 297.56_r8
           else if (use_mexicocity) then
@@ -695,13 +701,13 @@ contains
     end do
 
     do c = bounds%begc,bounds%endc
-       l = col%landunit(c)
+       l = col_pp%landunit(c)
 
-       if (col%itype(c) == icol_roof       ) this%emg_col(c) = em_roof_lun(l)
-       if (col%itype(c) == icol_sunwall    ) this%emg_col(c) = em_wall_lun(l)
-       if (col%itype(c) == icol_shadewall  ) this%emg_col(c) = em_wall_lun(l)
-       if (col%itype(c) == icol_road_imperv) this%emg_col(c) = em_improad_lun(l)
-       if (col%itype(c) == icol_road_perv  ) this%emg_col(c) = em_perroad_lun(l)
+       if (col_pp%itype(c) == icol_roof       ) this%emg_col(c) = em_roof_lun(l)
+       if (col_pp%itype(c) == icol_sunwall    ) this%emg_col(c) = em_wall_lun(l)
+       if (col_pp%itype(c) == icol_shadewall  ) this%emg_col(c) = em_wall_lun(l)
+       if (col_pp%itype(c) == icol_road_imperv) this%emg_col(c) = em_improad_lun(l)
+       if (col_pp%itype(c) == icol_road_perv  ) this%emg_col(c) = em_perroad_lun(l)
     end do
 
   end subroutine InitCold
@@ -936,14 +942,6 @@ contains
             subgrid_type='pft', numlev=1, init_value=SHR_CONST_TKFRZ)
     end if
 
-    if ( use_ed ) then
-
-       call init_accum_field (name='ED_GDD0', units='K', &
-            desc='growing degree-days base 0C from planting', accum_type='runaccum', accum_period=not_used, &
-            subgrid_type='pft', numlev=1, init_value=0._r8)
-
-    end if
-
     if ( crop_prog )then
 
        ! All GDD summations are relative to the planting date (Kucharik & Brye 2003)
@@ -1048,12 +1046,6 @@ contains
        this%t_ref2m_min_inst_u_patch(begp:endp) =  spval
     end if
 
-    if ( use_ed ) then
-!       write(iulog,*) 'SPM before this one line 1040 '
-       call extract_accum_field ('ED_GDD0', rbufslp, nstep)
-       this%gdd0_patch(begp:endp) = rbufslp(begp:endp)
-    end if
-
     if ( crop_prog ) then
 
        call extract_accum_field ('GDD0', rbufslp, nstep)
@@ -1073,17 +1065,15 @@ contains
   end subroutine InitAccVars
 
   !-----------------------------------------------------------------------
-  subroutine UpdateAccVars (this, EDbio_vars, bounds)
+  subroutine UpdateAccVars (this, bounds)
     !
     ! USES
     use shr_const_mod    , only : SHR_CONST_CDAY, SHR_CONST_TKFRZ
     use clm_time_manager , only : get_step_size, get_nstep, is_end_curr_day, get_curr_date
     use accumulMod       , only : update_accum_field, extract_accum_field, accumResetVal
-    use EDBioType        , only : EDbio_type
     !
     ! !ARGUMENTS:
     class(temperature_type)                :: this
-    type(EDbio_type)       , intent(inout) :: EDbio_vars
     type(bounds_type)      , intent(in)    :: bounds
     !
     ! !LOCAL VARIABLES:
@@ -1159,13 +1149,13 @@ contains
     call update_accum_field  ('TREFAV_U', this%t_ref2m_u_patch, nstep)
     call extract_accum_field ('TREFAV_U', rbufslp, nstep)
     do p = begp,endp
-       l = pft%landunit(p)
+       l = veg_pp%landunit(p)
        if (rbufslp(p) /= spval) then
           this%t_ref2m_max_inst_u_patch(p) = max(rbufslp(p), this%t_ref2m_max_inst_u_patch(p))
           this%t_ref2m_min_inst_u_patch(p) = min(rbufslp(p), this%t_ref2m_min_inst_u_patch(p))
        endif
        if (end_cd) then
-         if (lun%urbpoi(l)) then
+         if (lun_pp%urbpoi(l)) then
           this%t_ref2m_max_u_patch(p) = this%t_ref2m_max_inst_u_patch(p)
           this%t_ref2m_min_u_patch(p) = this%t_ref2m_min_inst_u_patch(p)
           this%t_ref2m_max_inst_u_patch(p) = -spval
@@ -1187,13 +1177,13 @@ contains
     call update_accum_field  ('TREFAV_R', this%t_ref2m_r_patch, nstep)
     call extract_accum_field ('TREFAV_R', rbufslp, nstep)
     do p = begp,endp
-       l = pft%landunit(p)
+       l = veg_pp%landunit(p)
        if (rbufslp(p) /= spval) then
           this%t_ref2m_max_inst_r_patch(p) = max(rbufslp(p), this%t_ref2m_max_inst_r_patch(p))
           this%t_ref2m_min_inst_r_patch(p) = min(rbufslp(p), this%t_ref2m_min_inst_r_patch(p))
        endif
        if (end_cd) then
-         if (.not.(lun%ifspecial(l))) then
+         if (.not.(lun_pp%ifspecial(l))) then
           this%t_ref2m_max_r_patch(p) = this%t_ref2m_max_inst_r_patch(p)
           this%t_ref2m_min_r_patch(p) = this%t_ref2m_min_inst_r_patch(p)
           this%t_ref2m_max_inst_r_patch(p) = -spval
@@ -1229,57 +1219,16 @@ contains
 
     end if
 
-    if ( use_ed ) then
-
-       ! Accumulate and extract GDD0 for ED
-       do p = bounds%begp,bounds%endp
-
-          g = pft%gridcell(p)
-
-          if(grc%latdeg(g) >= 0._r8)then
-             m = 1
-          else
-             m = 6
-          endif
-
-          ! FIX(RF,032414) - is this accumulation a bug in the normal phenology code,
-          ! as it means to count from november but ctually counts from january?
-          if ( month==m .and. day==1 .and. secs==int(dtime) ) then
-             rbufslp(p) = -99999._r8 ! reset ED_GDD
-          else
-             rbufslp(p) = max(0._r8, min(26._r8, this%t_ref2m_patch(p)-SHR_CONST_TKFRZ)) &
-                  * dtime/SHR_CONST_CDAY
-          end if
-
-          if( EDbio_vars%phen_cd_status_patch(p) == 2 ) then ! we have over-counted past the maximum possible range
-             rbufslp(p) = -99999._r8 !don't understand how this doens't make it negative, but it doesn't. RF
-          endif
-
-          if( grc%latdeg(g) >= 0._r8.and.month >= 7 ) then !do not accumulate in latter half of year.
-             rbufslp(p) = -99999._r8
-          endif
-
-          if( grc%latdeg(g) < 0._r8.and.month < 6 ) then !do not accumulate in earlier half of year.
-             rbufslp(p) = -99999._r8
-          endif
-
-       end do
-
-       call update_accum_field  ( 'ED_GDD0', rbufslp, nstep )
-       call extract_accum_field ( 'ED_GDD0', EDbio_vars%ED_GDD_patch, nstep )
-
-    endif
-
     if ( crop_prog )then
 
        ! Accumulate and extract GDD0
 
        do p = begp,endp
-          g = pft%gridcell(p)
+          g = veg_pp%gridcell(p)
           if (month==1 .and. day==1 .and. secs==int(dtime)) then
              rbufslp(p) = accumResetVal ! reset gdd
-          else if (( month > 3 .and. month < 10 .and. grc%latdeg(g) >= 0._r8) .or. &
-                   ((month > 9 .or.  month < 4) .and. grc%latdeg(g) <  0._r8)     ) then
+          else if (( month > 3 .and. month < 10 .and. grc_pp%latdeg(g) >= 0._r8) .or. &
+                   ((month > 9 .or.  month < 4) .and. grc_pp%latdeg(g) <  0._r8)     ) then
              rbufslp(p) = max(0._r8, min(26._r8, this%t_ref2m_patch(p)-SHR_CONST_TKFRZ)) * dtime/SHR_CONST_CDAY
           else
              rbufslp(p) = 0._r8      ! keeps gdd unchanged at other times (eg, through Dec in NH)
@@ -1292,11 +1241,11 @@ contains
        ! Accumulate and extract GDD8
 
        do p = begp,endp
-          g = pft%gridcell(p)
+          g = veg_pp%gridcell(p)
           if (month==1 .and. day==1 .and. secs==int(dtime)) then
              rbufslp(p) = accumResetVal ! reset gdd
-          else if (( month > 3 .and. month < 10 .and. grc%latdeg(g) >= 0._r8) .or. &
-                   ((month > 9 .or.  month < 4) .and. grc%latdeg(g) <  0._r8)     ) then
+          else if (( month > 3 .and. month < 10 .and. grc_pp%latdeg(g) >= 0._r8) .or. &
+                   ((month > 9 .or.  month < 4) .and. grc_pp%latdeg(g) <  0._r8)     ) then
              rbufslp(p) = max(0._r8, min(30._r8, &
                   this%t_ref2m_patch(p)-(SHR_CONST_TKFRZ + 8._r8))) * dtime/SHR_CONST_CDAY
           else
@@ -1309,11 +1258,11 @@ contains
        ! Accumulate and extract GDD10
 
        do p = begp,endp
-          g = pft%gridcell(p)
+          g = veg_pp%gridcell(p)
           if (month==1 .and. day==1 .and. secs==int(dtime)) then
              rbufslp(p) = accumResetVal ! reset gdd
-          else if (( month > 3 .and. month < 10 .and. grc%latdeg(g) >= 0._r8) .or. &
-                   ((month > 9 .or.  month < 4) .and. grc%latdeg(g) <  0._r8)     ) then
+          else if (( month > 3 .and. month < 10 .and. grc_pp%latdeg(g) >= 0._r8) .or. &
+                   ((month > 9 .or.  month < 4) .and. grc_pp%latdeg(g) <  0._r8)     ) then
              rbufslp(p) = max(0._r8, min(30._r8, &
                   this%t_ref2m_patch(p)-(SHR_CONST_TKFRZ + 10._r8))) * dtime/SHR_CONST_CDAY
           else

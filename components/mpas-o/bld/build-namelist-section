@@ -8,12 +8,18 @@ add_default($nl, 'config_ocean_run_mode');
 # Namelist group: time_management #
 ###################################
 
-add_default($nl, 'config_do_restart');
+if ($CONTINUE_RUN eq 'TRUE') {
+	add_default($nl, 'config_do_restart', 'val'=>".true.");
+} else {
+	add_default($nl, 'config_do_restart', 'val'=>".false.");
+}
 add_default($nl, 'config_restart_timestamp_name');
-add_default($nl, 'config_start_time');
-add_default($nl, 'config_stop_time');
-add_default($nl, 'config_run_duration');
-add_default($nl, 'config_calendar_type');
+add_default($nl, 'config_calendar_type', 'calendar'=>"$CALENDAR");
+if ($CONTINUE_RUN eq 'TRUE') {
+	add_default($nl, 'config_start_time', 'val'=>"'file'");
+} else {
+	add_default($nl, 'config_start_time', 'val'=>"'${RUN_STARTDATE}_${START_TOD}'");
+}
 
 ######################
 # Namelist group: io #
@@ -28,7 +34,7 @@ add_default($nl, 'config_pio_stride');
 #################################
 
 add_default($nl, 'config_num_halos');
-add_default($nl, 'config_block_decomp_file_prefix');
+add_default($nl, 'config_block_decomp_file_prefix', 'val'=>"'${DIN_LOC_ROOT}/ocn/mpas-o/${OCN_GRID}/mpas-o.graph.info.${date_stamp}.part.'");
 add_default($nl, 'config_number_of_blocks');
 add_default($nl, 'config_explicit_proc_decomp');
 add_default($nl, 'config_proc_decomp_file_prefix');
@@ -164,6 +170,8 @@ add_default($nl, 'config_mom_del4_tensor');
 
 add_default($nl, 'config_Rayleigh_friction');
 add_default($nl, 'config_Rayleigh_damping_coeff');
+add_default($nl, 'config_Rayleigh_bottom_friction');
+add_default($nl, 'config_Rayleigh_bottom_damping_coeff');
 
 ########################
 # Namelist group: vmix #
@@ -219,6 +227,8 @@ add_default($nl, 'config_cvmix_convective_viscosity');
 add_default($nl, 'config_cvmix_convective_basedOnBVF');
 add_default($nl, 'config_cvmix_convective_triggerBVF');
 add_default($nl, 'config_use_cvmix_shear');
+add_default($nl, 'config_cvmix_num_ri_smooth_loops');
+add_default($nl, 'config_cvmix_use_BLD_smoothing');
 add_default($nl, 'config_cvmix_shear_mixing_scheme');
 add_default($nl, 'config_cvmix_shear_PP_nu_zero');
 add_default($nl, 'config_cvmix_shear_PP_alpha');
@@ -251,6 +261,12 @@ add_default($nl, 'config_use_bulk_thickness_flux');
 add_default($nl, 'config_flux_attenuation_coefficient');
 add_default($nl, 'config_flux_attenuation_coefficient_runoff');
 
+############################
+# Namelist group: coupling #
+############################
+
+add_default($nl, 'config_ssh_grad_relax_timescale');
+
 ######################################
 # Namelist group: shortwaveRadiation #
 ######################################
@@ -258,7 +274,6 @@ add_default($nl, 'config_flux_attenuation_coefficient_runoff');
 add_default($nl, 'config_sw_absorption_type');
 add_default($nl, 'config_jerlov_water_type');
 add_default($nl, 'config_surface_buoyancy_depth');
-add_default($nl, 'config_forcing_restart_file');
 
 ##############################
 # Namelist group: frazil_ice #
@@ -309,7 +324,10 @@ add_default($nl, 'config_monotonic');
 # Namelist group: bottom_drag #
 ###############################
 
-add_default($nl, 'config_bottom_drag_coeff');
+add_default($nl, 'config_use_implicit_bottom_drag');
+add_default($nl, 'config_implicit_bottom_drag_coeff');
+add_default($nl, 'config_use_explicit_bottom_drag');
+add_default($nl, 'config_explicit_bottom_drag_coeff');
 
 ###################################
 # Namelist group: ocean_constants #
@@ -390,6 +408,7 @@ add_default($nl, 'config_prescribe_velocity');
 add_default($nl, 'config_prescribe_thickness');
 add_default($nl, 'config_include_KE_vertex');
 add_default($nl, 'config_check_tracer_monotonicity');
+add_default($nl, 'config_compute_active_tracer_budgets');
 add_default($nl, 'config_disable_thick_all_tend');
 add_default($nl, 'config_disable_thick_hadv');
 add_default($nl, 'config_disable_thick_vadv');
@@ -399,6 +418,7 @@ add_default($nl, 'config_disable_vel_coriolis');
 add_default($nl, 'config_disable_vel_pgrad');
 add_default($nl, 'config_disable_vel_hmix');
 add_default($nl, 'config_disable_vel_surface_stress');
+add_default($nl, 'config_disable_vel_explicit_bottom_drag');
 add_default($nl, 'config_disable_vel_vmix');
 add_default($nl, 'config_disable_vel_vadv');
 add_default($nl, 'config_disable_tr_all_tend');
@@ -549,6 +569,8 @@ add_default($nl, 'config_global_ocean_land_ice_topo_thickness_varname');
 add_default($nl, 'config_global_ocean_land_ice_topo_draft_varname');
 add_default($nl, 'config_global_ocean_land_ice_topo_ice_frac_varname');
 add_default($nl, 'config_global_ocean_land_ice_topo_grounded_frac_varname');
+add_default($nl, 'config_global_ocean_use_constant_land_ice_cavity_temperature');
+add_default($nl, 'config_global_ocean_constant_land_ice_cavity_temperature');
 add_default($nl, 'config_global_ocean_cull_inland_seas');
 add_default($nl, 'config_global_ocean_windstress_file');
 add_default($nl, 'config_global_ocean_windstress_nlat_dimname');
@@ -712,6 +734,10 @@ add_default($nl, 'config_soma_thermocline_depth');
 add_default($nl, 'config_soma_density_difference_linear');
 add_default($nl, 'config_soma_surface_temperature');
 add_default($nl, 'config_soma_surface_salinity');
+add_default($nl, 'config_soma_use_surface_temp_restoring');
+add_default($nl, 'config_soma_surface_temp_restoring_at_center_latitude');
+add_default($nl, 'config_soma_surface_temp_restoring_latitude_gradient');
+add_default($nl, 'config_soma_restoring_temp_piston_vel');
 
 ########################
 # Namelist group: ziso #
@@ -888,6 +914,9 @@ add_default($nl, 'config_use_debugTracers_ttd_forcing');
 ################################################
 
 add_default($nl, 'config_use_ecosysTracers');
+add_default($nl, 'config_ecosys_atm_co2_option');
+add_default($nl, 'config_ecosys_atm_alt_co2_option');
+add_default($nl, 'config_ecosys_atm_co2_constant_value');
 add_default($nl, 'config_use_ecosysTracers_surface_bulk_forcing');
 add_default($nl, 'config_use_ecosysTracers_surface_restoring');
 add_default($nl, 'config_use_ecosysTracers_interior_restoring');
@@ -896,6 +925,11 @@ add_default($nl, 'config_use_ecosysTracers_idealAge_forcing');
 add_default($nl, 'config_use_ecosysTracers_ttd_forcing');
 add_default($nl, 'config_use_ecosysTracers_surface_value');
 add_default($nl, 'config_use_ecosysTracers_sea_ice_coupling');
+add_default($nl, 'config_ecosysTracers_diagnostic_fields_level1');
+add_default($nl, 'config_ecosysTracers_diagnostic_fields_level2');
+add_default($nl, 'config_ecosysTracers_diagnostic_fields_level3');
+add_default($nl, 'config_ecosysTracers_diagnostic_fields_level4');
+add_default($nl, 'config_ecosysTracers_diagnostic_fields_level5');
 
 #############################################
 # Namelist group: tracer_forcing_DMSTracers #
@@ -960,6 +994,8 @@ add_default($nl, 'config_AM_waterMassCensus_minTemperature');
 add_default($nl, 'config_AM_waterMassCensus_maxTemperature');
 add_default($nl, 'config_AM_waterMassCensus_minSalinity');
 add_default($nl, 'config_AM_waterMassCensus_maxSalinity');
+add_default($nl, 'config_AM_waterMassCensus_compute_predefined_regions');
+add_default($nl, 'config_AM_waterMassCensus_region_group');
 
 #################################################
 # Namelist group: AM_layerVolumeWeightedAverage #
@@ -1013,6 +1049,7 @@ add_default($nl, 'config_AM_meridionalHeatTransport_output_stream');
 add_default($nl, 'config_AM_meridionalHeatTransport_num_bins');
 add_default($nl, 'config_AM_meridionalHeatTransport_min_bin');
 add_default($nl, 'config_AM_meridionalHeatTransport_max_bin');
+add_default($nl, 'config_AM_meridionalHeatTransport_region_group');
 
 ##########################################
 # Namelist group: AM_testComputeInterval #

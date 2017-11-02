@@ -9,7 +9,7 @@ module TracerBalanceMod
   use shr_log_mod        , only : errMsg => shr_log_errMsg
   use decompMod          , only : bounds_type
   use BeTRTracerType     , only : betrtracer_type
-  use ColumnType         , only : col
+  use ColumnType         , only : col_pp
   use clm_time_manager   , only : get_nstep
   use clm_varctl         , only : iulog
 implicit none
@@ -53,7 +53,7 @@ implicit none
       call tracerflux_vars%Reset(bounds, numf, filter)
 
       call betr_tracer_mass_summary(bounds, lbj, ubj, numf, filter, betrtracer_vars, tracerstate_vars, &
-           tracerstate_vars%beg_tracer_molarmass_col)
+           tracerstate_vars%beg_tracer_molarmass_col(bounds%begc:bounds%endc, 1:betrtracer_vars%ntracers))
 
     end subroutine begin_betr_tracer_massbalance
 
@@ -108,7 +108,7 @@ implicit none
            )
 
         call betr_tracer_mass_summary(bounds, lbj, ubj, numf, filter, betrtracer_vars, tracerstate_vars, &
-             end_tracer_molarmass)
+             end_tracer_molarmass(bounds%begc:bounds%endc, 1:betrtracer_vars%ntracers))
 
         dtime=get_step_size()
 
@@ -118,8 +118,8 @@ implicit none
            call tracerflux_vars%flux_summary(c, betrtracer_vars)
 
            do kk = 1, ngwmobile_tracers
-              errtracer(c,kk) = beg_tracer_molarmass(c,kk)-end_tracer_molarmass(c,kk)  &
-                   + tracer_flx_netpro(c,kk)-tracer_flx_netphyloss(c,kk)
+              errtracer(c,kk) = beg_tracer_molarmass(c,kk)-end_tracer_molarmass(c,kk)  
+              errtracer(c,kk) = errtracer(c,kk) + tracer_flx_netpro(c,kk)-tracer_flx_netphyloss(c,kk)
               if(abs(errtracer(c,kk))<err_min)then
                  err_rel=1.e-4_r8
               else
@@ -185,7 +185,7 @@ implicit none
            tracer_conc_mobile        => tracerstate_vars%tracer_conc_mobile_col           , &
            tracer_conc_solid_equil   => tracerstate_vars%tracer_conc_solid_equil_col      , &
            tracer_conc_solid_passive => tracerstate_vars%tracer_conc_solid_passive_col    , &
-           dz                        => col%dz                                            , &
+           dz                        => col_pp%dz                                            , &
            ngwmobile_tracers         => betrtracer_vars%ngwmobile_tracers                 , &
            ntracers                  => betrtracer_vars%ntracers                          , &
            is_adsorb                 => betrtracer_vars%is_adsorb                         , &

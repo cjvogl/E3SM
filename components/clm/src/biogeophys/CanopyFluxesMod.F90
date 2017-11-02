@@ -19,15 +19,11 @@ module CanopyFluxesMod
   use pftvarcon             , only : nbrdlf_dcd_tmp_shrub, nsoybean , nsoybeanirrig
   use decompMod             , only : bounds_type
   use PhotosynthesisMod     , only : Photosynthesis, PhotosynthesisTotal, Fractionation
-  use EDPhotosynthesisMod   , only : Photosynthesis_ED
-  use EDAccumulateFluxesMod , only : AccumulateFluxes_ED
-  use EDBtranMod            , only : BTRAN_ED
-  use EDBioType             , only : EDbio_type
   use SoilMoistStressMod    , only : calc_effective_soilporosity, calc_volumetric_h2oliq
   use SoilMoistStressMod    , only : calc_root_moist_stress, set_perchroot_opt
   use SimpleMathMod         , only : array_div_vector
   use SurfaceResistanceMod  , only : do_soilevap_beta
-  use EcophysConType        , only : ecophyscon
+   use VegetationPropertiesType        , only : veg_vp
   use atm2lndType           , only : atm2lnd_type
   use CanopyStateType       , only : canopystate_type
   use CNStateType           , only : cnstate_type
@@ -41,12 +37,12 @@ module CanopyFluxesMod
   use WaterstateType        , only : waterstate_type
   use ch4Mod                , only : ch4_type
   use PhotosynthesisType    , only : photosyns_type
-  use GridcellType          , only : grc                
-  use ColumnType            , only : col                
-  use PatchType             , only : pft                
-  use EDtypesMod            , only : site, numpft_ed
+  use GridcellType          , only : grc_pp                
+  use ColumnType            , only : col_pp                
+  use VegetationType        , only : veg_pp                
   use PhosphorusStateType   , only : phosphorusstate_type
   use CNNitrogenStateType   , only : nitrogenstate_type
+  use CLMFatesInterfaceMod  , only : hlm_fates_interface_type
   !
   ! !PUBLIC TYPES:
   implicit none
@@ -71,7 +67,8 @@ contains
        atm2lnd_vars, canopystate_vars, cnstate_vars, energyflux_vars, &
        frictionvel_vars, soilstate_vars, solarabs_vars, surfalb_vars, &
        temperature_vars, waterflux_vars, waterstate_vars, ch4_vars, photosyns_vars, &
-       EDbio_vars, soil_water_retention_curve, nitrogenstate_vars, phosphorusstate_vars) 
+       soil_water_retention_curve, nitrogenstate_vars, phosphorusstate_vars, &
+       alm_fates) 
     !
     ! !DESCRIPTION:
     ! 1. Calculates the leaf temperature:
@@ -131,11 +128,10 @@ contains
     type(waterflux_type)      , intent(inout) :: waterflux_vars
     type(ch4_type)            , intent(inout) :: ch4_vars
     type(photosyns_type)      , intent(inout) :: photosyns_vars
-    type(EDbio_type)          , intent(inout) :: EDbio_vars
     class(soil_water_retention_curve_type), intent(in) :: soil_water_retention_curve
     type(nitrogenstate_type)  , intent(inout) :: nitrogenstate_vars
     type(phosphorusstate_type), intent(inout) :: phosphorusstate_vars
-    
+    type(hlm_fates_interface_type) , intent(inout) :: alm_fates
     !
     ! !LOCAL VARIABLES:
     real(r8), parameter :: btran0 = 0.0_r8  ! initial value
@@ -314,18 +310,16 @@ contains
     real(r8) :: dt_veg(bounds%begp:bounds%endp)          ! change in t_veg, last iteration (Kelvin)                              
     integer  :: jtop(bounds%begc:bounds%endc)            ! lbning
     integer  :: filterc_tmp(bounds%endp-bounds%begp+1)   ! temporary variable
-    real(r8) :: rresis_ft(numpft_ed,nlevgrnd)            ! resistance to water uptake per pft and soil layer.
     integer  :: ft                                       ! plant functional type index
-    real(r8) :: pftgs(numpft_ed)                         ! patch weighted stomatal conductance s/m
     real(r8) :: temprootr                 
     real(r8) :: dt_veg_temp(bounds%begp:bounds%endp)
     integer  :: iv
     !------------------------------------------------------------------------------
 
     associate(                                                               & 
-         snl                  => col%snl                                   , & ! Input:  [integer  (:)   ]  number of snow layers                                                  
-         dayl                 => grc%dayl                                  , & ! Input:  [real(r8) (:)   ]  daylength (s)
-         max_dayl             => grc%max_dayl                              , & ! Input:  [real(r8) (:)   ]  maximum daylength for this grid cell (s)
+         snl                  => col_pp%snl                                   , & ! Input:  [integer  (:)   ]  number of snow layers                                                  
+         dayl                 => grc_pp%dayl                                  , & ! Input:  [real(r8) (:)   ]  daylength (s)
+         max_dayl             => grc_pp%max_dayl                              , & ! Input:  [real(r8) (:)   ]  maximum daylength for this grid cell (s)
 
          forc_lwrad           => atm2lnd_vars%forc_lwrad_downscaled_col    , & ! Input:  [real(r8) (:)   ]  downward infrared (longwave) radiation (W/m**2)                       
          forc_q               => atm2lnd_vars%forc_q_downscaled_col        , & ! Input:  [real(r8) (:)   ]  atmospheric specific humidity (kg/kg)                                 
@@ -339,9 +333,9 @@ contains
          forc_pc13o2          => atm2lnd_vars%forc_pc13o2_grc              , & ! Input:  [real(r8) (:)   ]  partial pressure c13o2 (Pa)                                           
          forc_po2             => atm2lnd_vars%forc_po2_grc                 , & ! Input:  [real(r8) (:)   ]  partial pressure o2 (Pa)                                              
 
-         dleaf                => ecophyscon%dleaf                          , & ! Input:  [real(r8) (:)   ]  characteristic leaf dimension (m)                                     
-         smpso                => ecophyscon%smpso                          , & ! Input:  [real(r8) (:)   ]  soil water potential at full stomatal opening (mm)                    
-         smpsc                => ecophyscon%smpsc                          , & ! Input:  [real(r8) (:)   ]  soil water potential at full stomatal closure (mm)                    
+         dleaf                => veg_vp%dleaf                          , & ! Input:  [real(r8) (:)   ]  characteristic leaf dimension (m)                                     
+         smpso                => veg_vp%smpso                          , & ! Input:  [real(r8) (:)   ]  soil water potential at full stomatal opening (mm)                    
+         smpsc                => veg_vp%smpsc                          , & ! Input:  [real(r8) (:)   ]  soil water potential at full stomatal closure (mm)                    
 
          htvp                 => energyflux_vars%htvp_col                  , & ! Input:  [real(r8) (:)   ]  latent heat of evaporation (/sublimation) [J/kg] (constant)                      
 
@@ -357,7 +351,8 @@ contains
          htop                 => canopystate_vars%htop_patch               , & ! Input:  [real(r8) (:)   ]  canopy top(m)                                                         
          altmax_lastyear_indx => canopystate_vars%altmax_lastyear_indx_col , & ! Input:  [integer  (:)   ]  prior year maximum annual depth of thaw                                
          altmax_indx          => canopystate_vars%altmax_indx_col          , & ! Input:  [integer  (:)   ]  maximum annual depth of thaw                                           
-         
+
+         dleaf_patch          => canopystate_vars%dleaf_patch                 , & ! Output: [real(r8) (:)   ]  mean leaf diameter for this patch/pft
          watsat               => soilstate_vars%watsat_col                 , & ! Input:  [real(r8) (:,:) ]  volumetric soil water at saturation (porosity)   (constant)                     
          watdry               => soilstate_vars%watdry_col                 , & ! Input:  [real(r8) (:,:) ]  btran parameter for btran=0                      (constant)                                        
          watopt               => soilstate_vars%watopt_col                 , & ! Input:  [real(r8) (:,:) ]  btran parameter for btran=1                      (constant)                                      
@@ -438,10 +433,7 @@ contains
          eflx_sh_h2osfc       => energyflux_vars%eflx_sh_h2osfc_patch      , & ! Output: [real(r8) (:)   ]  sensible heat flux from soil (W/m**2) [+ to atm]                      
          eflx_sh_soil         => energyflux_vars%eflx_sh_soil_patch        , & ! Output: [real(r8) (:)   ]  sensible heat flux from soil (W/m**2) [+ to atm]                      
          eflx_sh_veg          => energyflux_vars%eflx_sh_veg_patch         , & ! Output: [real(r8) (:)   ]  sensible heat flux from leaves (W/m**2) [+ to atm]                    
-         eflx_sh_grnd         => energyflux_vars%eflx_sh_grnd_patch        , & ! Output: [real(r8) (:)   ]  sensible heat flux from ground (W/m**2) [+ to atm]                    
-
-         rscanopy             => canopystate_vars%rscanopy_patch           ,  & ! Output: [real(r8) (:,:)]   canopy resistance s/m (ED)
-
+         eflx_sh_grnd         => energyflux_vars%eflx_sh_grnd_patch        , & ! Output: [real(r8) (:)   ]  sensible heat flux from ground (W/m**2) [+ to atm]
          begp                 => bounds%begp                               , &
          endp                 => bounds%endp                                 &
          )
@@ -456,7 +448,7 @@ contains
 
       do fp = 1,num_nolakeurbanp
          p = filter_nolakeurbanp(fp)
-         c = pft%column(p)
+         c = veg_pp%column(p)
          if (frac_veg_nosno(p) == 0) then
             btran(p) = 0._r8     
             t_veg(p) = forc_t(c) 
@@ -477,6 +469,7 @@ contains
 
       call photosyns_vars%TimeStepInit(bounds)
 
+
       ! -----------------------------------------------------------------
       ! Filter patches where frac_veg_nosno IS NON-ZERO
       ! -----------------------------------------------------------------
@@ -489,6 +482,12 @@ contains
             filterp(fn) = p
          end if
       end do
+
+
+      if (use_ed) then
+         call alm_fates%prep_canopyfluxes( bounds )
+      end if
+
 
       ! Initialize
 
@@ -508,7 +507,7 @@ contains
       ! calculate daylength control for Vcmax
       do f = 1, fn
          p=filterp(f)
-         g=pft%gridcell(p)
+         g=veg_pp%gridcell(p)
          ! calculate dayl_factor as the ratio of (current:max dayl)^2
          ! set a minimum of 0.01 (1%) for the dayl_factor
          dayl_factor(p)=min(1._r8,max(0.01_r8,(dayl(g)*dayl(g))/(max_dayl(g)*max_dayl(g))))
@@ -516,49 +515,56 @@ contains
 
       rb1(begp:endp) = 0._r8
 
-      ! FIX(FIX(SPM,032414),032414) refactor this...
-      if ( use_ed ) then  
-
-         do f = 1, fn
-            p = filterp(f)
-            call BTRAN_ED(p, soilstate_vars, waterstate_vars, temperature_vars, energyflux_vars)
-         enddo
-
+      !assign the temporary filter
+      do f = 1, fn
+         p = filterp(f)
+         filterc_tmp(f)=veg_pp%column(p)
+      enddo
+      
+      !compute effective soil porosity
+      call calc_effective_soilporosity(bounds,                          &
+           ubj = nlevgrnd,                                              &
+           numf = fn,                                                   &
+           filter = filterc_tmp(1:fn),                                  &
+           watsat = watsat(bounds%begc:bounds%endc, 1:nlevgrnd),        &
+           h2osoi_ice = h2osoi_ice(bounds%begc:bounds%endc,1:nlevgrnd), &
+           denice = denice,                                             &
+           eff_por=eff_porosity(bounds%begc:bounds%endc, 1:nlevgrnd) )
+      
+      !compute volumetric liquid water content
+      jtop(bounds%begc:bounds%endc) = 1
+      
+      call calc_volumetric_h2oliq(bounds,                                    &
+           jtop = jtop(bounds%begc:bounds%endc),                             &
+           lbj = 1,                                                          &
+           ubj = nlevgrnd,                                                   &
+           numf = fn,                                                        &
+           filter = filterc_tmp(1:fn),                                       &
+           eff_porosity = eff_porosity(bounds%begc:bounds%endc, 1:nlevgrnd), &
+           h2osoi_liq = h2osoi_liq(bounds%begc:bounds%endc, 1:nlevgrnd),     &
+           denh2o = denh2o,                                                  &
+           vol_liq = h2osoi_liqvol(bounds%begc:bounds%endc, 1:nlevgrnd) )
+      
+      !set up perchroot options
+      call set_perchroot_opt(perchroot, perchroot_alt)
+   
+      ! --------------------------------------------------------------------------
+      ! if this is a FATES simulation
+      ! ask fates to calculate btran functions and distribution of uptake
+      ! this will require boundary conditions from CLM, boundary conditions which
+      ! may only be available from a smaller subset of patches that meet the
+      ! exposed veg.  
+      ! calc_root_moist_stress already calculated root soil water stress 'rresis'
+      ! this is the input boundary condition to calculate the transpiration
+      ! wetness factor btran and the root weighting factors for FATES.  These
+      ! values require knowledge of the belowground root structure.
+      ! --------------------------------------------------------------------------
+      
+      if(use_ed)then
+         call alm_fates%wrap_btran(bounds, fn, filterc_tmp(1:fn), soilstate_vars, waterstate_vars, &
+               temperature_vars, energyflux_vars, soil_water_retention_curve)
+         
       else
-
-         !assign the temporary filter
-         do f = 1, fn
-            p = filterp(f)
-            filterc_tmp(f)=pft%column(p)
-         enddo
-
-         !compute effective soil porosity
-         call calc_effective_soilporosity(bounds,                          &
-              ubj = nlevgrnd,                                              &
-              numf = fn,                                                   &
-              filter = filterc_tmp(1:fn),                                  &
-              watsat = watsat(bounds%begc:bounds%endc, 1:nlevgrnd),        &
-              h2osoi_ice = h2osoi_ice(bounds%begc:bounds%endc,1:nlevgrnd), &
-              denice = denice,                                             &
-              eff_por=eff_porosity(bounds%begc:bounds%endc, 1:nlevgrnd) )
-
-         !compute volumetric liquid water content
-         jtop(bounds%begc:bounds%endc) = 1
-
-         call calc_volumetric_h2oliq(bounds,                                    &
-              jtop = jtop(bounds%begc:bounds%endc),                             &
-              lbj = 1,                                                          &
-              ubj = nlevgrnd,                                                   &
-              numf = fn,                                                        &
-              filter = filterc_tmp(1:fn),                                       &
-              eff_porosity = eff_porosity(bounds%begc:bounds%endc, 1:nlevgrnd), &
-              h2osoi_liq = h2osoi_liq(bounds%begc:bounds%endc, 1:nlevgrnd),     &
-              denh2o = denh2o,                                                  &
-              vol_liq = h2osoi_liqvol(bounds%begc:bounds%endc, 1:nlevgrnd) )
-
-         !set up perchroot options
-         call set_perchroot_opt(perchroot, perchroot_alt)
-
          !calculate root moisture stress
          call calc_root_moist_stress(bounds,     &
               nlevgrnd = nlevgrnd,               &
@@ -570,7 +576,7 @@ contains
               temperature_vars=temperature_vars, &
               waterstate_vars=waterstate_vars,   &
               soil_water_retention_curve=soil_water_retention_curve)
-
+         
       end if !use_ed
 
       ! Determine if irrigation is needed (over irrigated soil columns)
@@ -584,11 +590,15 @@ contains
 
       do f = 1, fn
          p = filterp(f)
-         c = pft%column(p)
-         g = pft%gridcell(p)
-         if (irrigated(pft%itype(p)) == 1._r8 .and. elai(p) > irrig_min_lai .and. btran(p) < irrig_btran_thresh) then
+         c = veg_pp%column(p)
+         g = veg_pp%gridcell(p)
+         if ( .not.veg_pp%is_fates(p)             .and. &
+              irrigated(veg_pp%itype(p)) == 1._r8 .and. &
+              elai(p) > irrig_min_lai          .and. &
+              btran(p) < irrig_btran_thresh ) then
+            
             ! see if it's the right time of day to start irrigating:
-            local_time = modulo(time + nint(grc%londeg(g)/degpsec), isecspday)
+            local_time = modulo(time + nint(grc_pp%londeg(g)/degpsec), isecspday)
             seconds_since_irrig_start_time = modulo(local_time - irrig_start_time, isecspday)
             if (seconds_since_irrig_start_time < dtime) then
                ! it's time to start irrigating
@@ -601,18 +611,21 @@ contains
          else  ! non-irrig pft or elai<=irrig_min_lai or btran>irrig_btran_thresh
             check_for_irrig(p)       = .false.
          end if
-
+         
       end do
 
 
-      ! Now 'measure' soil water for the grid cells identified above and see if the soil is dry enough to warrant irrigation
+      ! Now 'measure' soil water for the grid cells identified above and see if the 
+      ! soil is dry enough to warrant irrigation
       ! (Note: frozen_soil could probably be a column-level variable, but that would be
       ! slightly less robust to potential future modifications)
+      ! This should not be operating on FATES patches (see is_fates filter above, pushes
+      ! check_for_irrig = false
       frozen_soil(bounds%begp : bounds%endp) = .false.
       do j = 1,nlevgrnd
          do f = 1, fn
             p = filterp(f)
-            c = pft%column(p)
+            c = veg_pp%column(p)
             if (check_for_irrig(p) .and. .not. frozen_soil(p)) then
                ! if level L was frozen, then we don't look at any levels below L
                if (t_soisno(c,j) <= SHR_CONST_TKFRZ) then
@@ -622,11 +635,11 @@ contains
 
                   ! Calculate vol_liq_so - i.e., vol_liq at which smp_node = smpso - by inverting the above equations 
                   ! for the root resistance factors
-                  vol_liq_so   = eff_porosity(c,j) * (-smpso(pft%itype(p))/sucsat(c,j))**(-1/bsw(c,j))
+                  vol_liq_so   = eff_porosity(c,j) * (-smpso(veg_pp%itype(p))/sucsat(c,j))**(-1/bsw(c,j))
 
                   ! Translate vol_liq_so and eff_porosity into h2osoi_liq_so and h2osoi_liq_sat and calculate deficit
-                  h2osoi_liq_so  = vol_liq_so * denh2o * col%dz(c,j)
-                  h2osoi_liq_sat = eff_porosity(c,j) * denh2o * col%dz(c,j)
+                  h2osoi_liq_so  = vol_liq_so * denh2o * col_pp%dz(c,j)
+                  h2osoi_liq_sat = eff_porosity(c,j) * denh2o * col_pp%dz(c,j)
                   deficit        = max((h2osoi_liq_so + irrig_factor*(h2osoi_liq_sat - h2osoi_liq_so)) - h2osoi_liq(c,j), 0._r8)
 
                   ! Add deficit to irrig_rate, converting units from mm to mm/sec
@@ -640,7 +653,7 @@ contains
       ! Modify aerodynamic parameters for sparse/dense canopy (X. Zeng)
       do f = 1, fn
          p = filterp(f)
-         c = pft%column(p)
+         c = veg_pp%column(p)
 
          lt = min(elai(p)+esai(p), tlsai_crit)
          egvf =(1._r8 - alpha_aero * exp(-lt)) / (1._r8 - alpha_aero * exp(-tlsai_crit))
@@ -654,8 +667,8 @@ contains
       found = .false.
       do f = 1, fn
          p = filterp(f)
-         c = pft%column(p)
-         g = pft%gridcell(p)
+         c = veg_pp%column(p)
+         g = veg_pp%gridcell(p)
 
          ! Net absorbed longwave radiation by canopy and ground
          ! =air+bir*t_veg**4+cir*t_grnd(c)**4
@@ -709,7 +722,7 @@ contains
 
       do f = 1, fn
          p = filterp(f)
-         c = pft%column(p)
+         c = veg_pp%column(p)
 
          ! Initialize Monin-Obukhov length and wind speed
 
@@ -739,8 +752,8 @@ contains
 
          do f = 1, fn
             p = filterp(f)
-            c = pft%column(p)
-            g = pft%gridcell(p)
+            c = veg_pp%column(p)
+            g = veg_pp%gridcell(p)
 
             tlbef(p) = t_veg(p)
             del2(p) = del(p)
@@ -755,7 +768,16 @@ contains
 
             uaf(p) = um(p)*sqrt( 1._r8/(ram1(p)*um(p)) )
 
-            cf  = 0.01_r8/(sqrt(uaf(p))*sqrt(dleaf(pft%itype(p))))
+            ! Use pft parameter for leaf characteristic width
+            ! dleaf_patch if this is not an ed patch.
+            ! Otherwise, the value has already been loaded
+            ! during the FATES dynamics and/or initialization call
+            if(.not.veg_pp%is_fates(p)) then  
+               dleaf_patch(p) = dleaf(veg_pp%itype(p))
+            end if
+            
+            
+            cf  = 0.01_r8/(sqrt(uaf(p))*sqrt( dleaf_patch(p) ))
             rb(p)  = 1._r8/(cf*uaf(p))
             rb1(p) = rb(p)
 
@@ -811,44 +833,28 @@ contains
          
          do f = 1, fn
             p = filterp(f)
-            c = pft%column(p)
+            c = veg_pp%column(p)
             if (use_cndv) then
-               if (pft%itype(p) == nbrdlf_dcd_tmp_shrub) then
+               if (veg_pp%itype(p) == nbrdlf_dcd_tmp_shrub) then
                   btran(p) = min(1._r8, btran(p) * 3.33_r8)
                end if
             end if
-            if (pft%itype(p) == nsoybean .or. pft%itype(p) == nsoybeanirrig) then
-               btran(p) = min(1._r8, btran(p) * 1.25_r8)
+            if(.not.veg_pp%is_fates(p)) then
+               if (veg_pp%itype(p) == nsoybean .or. veg_pp%itype(p) == nsoybeanirrig) then
+                  btran(p) = min(1._r8, btran(p) * 1.25_r8)
+               end if
             end if
          end do
 
          if ( use_ed ) then      
 
-            call t_startf('edpsn')
-            ! FIX(FIX(SPM,032414),032414) Photo*_ED will need refactoring
-            call Photosynthesis_ED (bounds, fn, filterp, &
-                 svpts(begp:endp), &
-                 eah(begp:endp), &
-                 o2(begp:endp), &
-                 co2(begp:endp), &
-                 rb(begp:endp), &
-                 dayl_factor(begp:endp), &
-                 atm2lnd_vars, temperature_vars, canopystate_vars, photosyns_vars, EDbio_vars)
-
-            ! zero all of these things, not just the ones in the filter. 
-            do p = bounds%begp,bounds%endp 
-               photosyns_vars%rssun_patch(p)    = 0._r8
-               photosyns_vars%rssha_patch(p)    = 0._r8
-               photosyns_vars%psnsun_patch(p)   = 0._r8
-               photosyns_vars%psnsha_patch(p)   = 0._r8
-               photosyns_vars%fpsn_patch(p)     = 0._r8
-               canopystate_vars%laisun_patch(p) = 0._r8
-               canopystate_vars%laisha_patch(p) = 0._r8
-            enddo
-
-            call t_stopf('edpsn')
+            call alm_fates%wrap_photosynthesis(bounds, fn, filterp(1:fn), &
+                  svpts(begp:endp), eah(begp:endp), o2(begp:endp), &
+                  co2(begp:endp), rb(begp:endp), dayl_factor(begp:endp), &
+                  atm2lnd_vars, temperature_vars, canopystate_vars, photosyns_vars)
 
          else ! not use_ed
+
             call Photosynthesis (bounds, fn, filterp, &
                  svpts(begp:endp), eah(begp:endp), o2(begp:endp), co2(begp:endp), rb(begp:endp), btran(begp:endp), &
                  dayl_factor(begp:endp), atm2lnd_vars, temperature_vars, surfalb_vars, solarabs_vars, &
@@ -862,13 +868,13 @@ contains
 
             do f = 1, fn
                p = filterp(f)
-               c = pft%column(p)
+               c = veg_pp%column(p)
                if (use_cndv) then
-                  if (pft%itype(p) == nbrdlf_dcd_tmp_shrub) then
+                  if (veg_pp%itype(p) == nbrdlf_dcd_tmp_shrub) then
                      btran(p) = min(1._r8, btran(p) * 3.33_r8)
                   end if
                end if
-               if (pft%itype(p) == nsoybean .or. pft%itype(p) == nsoybeanirrig) then
+               if (veg_pp%itype(p) == nsoybean .or. veg_pp%itype(p) == nsoybeanirrig) then
                   btran(p) = min(1._r8, btran(p) * 1.25_r8)
                end if
             end do
@@ -888,8 +894,8 @@ contains
 
          do f = 1, fn
             p = filterp(f)
-            c = pft%column(p)
-            g = pft%gridcell(p)
+            c = veg_pp%column(p)
+            g = veg_pp%gridcell(p)
 
             ! Sensible heat conductance for air, leaf and ground
             ! Moved the original subroutine in-line...
@@ -908,33 +914,17 @@ contains
 
             ! Fraction of potential evaporation from leaf
 
-            if ( use_ed ) then
+            if (fdry(p) > 0._r8) then
+               rppdry  = fdry(p)*rb(p)*(laisun(p)/(rb(p)+rssun(p)) + &
+                    laisha(p)/(rb(p)+rssha(p)))/elai(p)
+            else
+               rppdry = 0._r8
+            end if
                
-               if (fdry(p)  >  0._r8) then
-                  rppdry  = fdry(p)*rb(p)/(rb(p)+rscanopy(p))
-               else
-                  rppdry = 0._r8
-               end if
-               if (use_lch4) then
-                  ! Calculate canopy conductance for methane / oxygen (e.g. stomatal conductance & leaf bdy cond)
-                  canopy_cond(p) = 1.0_r8/(rb(p)+rscanopy(p))
-               end if
-
-            else ! use_ed
-
-               if (fdry(p) > 0._r8) then
-                  rppdry  = fdry(p)*rb(p)*(laisun(p)/(rb(p)+rssun(p)) + &
-                       laisha(p)/(rb(p)+rssha(p)))/elai(p)
-               else
-                  rppdry = 0._r8
-               end if
-
-               ! Calculate canopy conductance for methane / oxygen (e.g. stomatal conductance & leaf bdy cond)
-               if (use_lch4) then
-                  canopy_cond(p) = (laisun(p)/(rb(p)+rssun(p)) + laisha(p)/(rb(p)+rssha(p)))/max(elai(p), 0.01_r8)
-               end if
-
-            end if ! end of if use_ed         
+            ! Calculate canopy conductance for methane / oxygen (e.g. stomatal conductance & leaf bdy cond)
+            if (use_lch4) then
+               canopy_cond(p) = (laisun(p)/(rb(p)+rssun(p)) + laisha(p)/(rb(p)+rssha(p)))/max(elai(p), 0.01_r8)
+            end if
 
             efpot = forc_rho(c)*wtl*(qsatl(p)-qaf(p))
 
@@ -1126,8 +1116,8 @@ contains
 
       do f = 1, fn
          p = filterp(f)
-         c = pft%column(p)
-         g = pft%gridcell(p)
+         c = veg_pp%column(p)
+         g = veg_pp%gridcell(p)
 
          ! Energy balance check in canopy
 
@@ -1203,45 +1193,37 @@ contains
 
          h2ocan(p) = max(0._r8,h2ocan(p)+(qflx_tran_veg(p)-qflx_evap_veg(p))*dtime)
 
-         if ( use_ed ) then
-            call AccumulateFluxes_ED(p, photosyns_vars)
-         end if
-
       end do
 
-      ! Determine total photosynthesis
+      if ( use_ed ) then
+         call alm_fates%wrap_accumulatefluxes(bounds,fn,filterp(1:fn))
+         call alm_fates%wrap_hydraulics_drive(bounds,soilstate_vars, &
+               waterstate_vars,waterflux_vars,solarabs_vars,energyflux_vars)
 
-      call PhotosynthesisTotal(fn, filterp, &
-           atm2lnd_vars, cnstate_vars, canopystate_vars, photosyns_vars)
+      else
 
-      ! Filter out patches which have small energy balance errors; report others
-
-      fnold = fn
-      fn = 0
-      do f = 1, fnold
-         p = filterp(f)
-         if (abs(err(p)) > 0.1_r8) then
-            fn = fn + 1
-            filterp(fn) = p
-         end if
-      end do
-
-      do f = 1, fn
-         p = filterp(f)
-         write(iulog,*) 'energy balance in canopy ',p,', err=',err(p)
-      end do
-
-      if ( use_ed ) then      
-         ! zero all of the array,  not just the ones in the filter. 
-         do p = bounds%begp,bounds%endp 
-            photosyns_vars%rssun_patch(p)    = 0._r8
-            photosyns_vars%rssha_patch(p)    = 0._r8
-            photosyns_vars%psnsun_patch(p)   = 0._r8
-            photosyns_vars%psnsha_patch(p)   = 0._r8
-            photosyns_vars%fpsn_patch(p)     = 0._r8
-            canopystate_vars%laisun_patch(p) = 0._r8
-            canopystate_vars%laisha_patch(p) = 0._r8
-         enddo
+         ! Determine total photosynthesis
+         
+         call PhotosynthesisTotal(fn, filterp, &
+              atm2lnd_vars, cnstate_vars, canopystate_vars, photosyns_vars)
+         
+         ! Filter out patches which have small energy balance errors; report others
+         
+         fnold = fn
+         fn = 0
+         do f = 1, fnold
+            p = filterp(f)
+            if (abs(err(p)) > 0.1_r8) then
+               fn = fn + 1
+               filterp(fn) = p
+            end if
+         end do
+         
+         do f = 1, fn
+            p = filterp(f)
+            write(iulog,*) 'energy balance in canopy ',p,', err=',err(p)
+         end do
+         
       end if
 
     end associate

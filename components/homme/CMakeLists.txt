@@ -56,7 +56,7 @@ ENDIF ()
 # Some options for conditional builds
 OPTION(BUILD_HOMME_SWEQX "Shallow water equations FEM" ON)
 OPTION(BUILD_HOMME_PREQX "Primitive equations FEM" ON)
-OPTION(BUILD_HOMME_THETA "SB81 NH model with theta and Exner pressure" ON)
+OPTION(BUILD_HOMME_THETA "SB81 NH model with theta and Exner pressure" OFF)
 OPTION(BUILD_HOMME_PREQX_ACC "Primitive equations FEM with OpenACC" ON)
 OPTION(BUILD_HOMME_PESE  "Primitive equations with vertical spectral elements" OFF)
 OPTION(BUILD_HOMME_SWIM  "Shallow water equations implicit" OFF)
@@ -68,8 +68,12 @@ IF(${BUILD_HOMME_SWIM} OR ${BUILD_HOMME_PRIM})
   SET (HOMME_USE_TRILINOS TRUE)
 ELSE ()
   SET(HOMME_USE_CXX FALSE)
-  SET(HOMME_USE_TRILINOS FALSE)
 ENDIF ()
+
+IF (${HOMME_USE_TRILINOS}) 
+  SET (HOMME_USE_CXX TRUE)
+ENDIF()
+
 
 IF (${HOMME_USE_CXX})
   MESSAGE(STATUS "This configuration of HOMME requires a C++ compiler")
@@ -81,12 +85,6 @@ ENDIF ()
 ##############################################################################
 INCLUDE(SetCompilerFlags)
 
-# Print the compiler flags to be used
-MESSAGE(STATUS "Fortran Flags = ${CMAKE_Fortran_FLAGS}")
-MESSAGE(STATUS "C Flags = ${CMAKE_C_FLAGS}")
-MESSAGE(STATUS "CXX Flags = ${CMAKE_CXX_FLAGS}")
-MESSAGE(STATUS "Linker Flags = ${CMAKE_EXE_LINKER_FLAGS}")
-##############################################################################
 
 OPTION(ENABLE_PERSISTENT_MPI "Enable persistent MPI" OFF)
 IF (${ENABLE_PERSISTENT_MPI})
@@ -94,9 +92,12 @@ IF (${ENABLE_PERSISTENT_MPI})
 ENDIF ()
 
 OPTION(HOMME_USE_MKL "Whether to use Intel's MKL instead of blas/lapack" FALSE)
-MESSAGE(STATUS "HOMME_USE_MKL=${HOMME_USE_MKL}")
 IF(${HOMME_USE_MKL})
-  MESSAGE(STATUS "For Edison/Cori at NERSC, MKL included with Intel compiler")
+  MESSAGE(STATUS "HOMME_USE_MKL=${HOMME_USE_MKL}, adding -mkl")
+  SET(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -mkl")
+  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mkl")
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mkl")
+  SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mkl")
 ELSE()
   OPTION(HOMME_FIND_BLASLAPACK "Whether to use system blas/lapack" FALSE)
   MESSAGE(STATUS "HOMME_FIND_BLASLAPACK=${HOMME_FIND_BLASLAPACK}")
@@ -111,10 +112,30 @@ ELSE()
     ADD_SUBDIRECTORY(libs/lapack)
   ENDIF()
 ENDIF()
+
 IF (${HOMME_USE_TRILINOS})
   MESSAGE(STATUS "This configuration of requires Trilinos")
   FIND_PACKAGE(Trilinos REQUIRED)
+  SET(HAVE_TRILINOS TRUE)
+  IF("${Trilinos_PACKAGE_LIST}"  MATCHES ".*Zoltan2*.")
+    MESSAGE(STATUS "Trilinos is compiled with Zoltan2 Trilinos_PACKAGE_LIST:${Trilinos_PACKAGE_LIST}")
+    MESSAGE(STATUS "ENABLING ZOLTAN2")
+    SET(TRILINOS_HAVE_ZOLTAN2 TRUE)
+  ENDIF ()
+  add_definitions(${Trilinos_CXX_COMPILER_FLAGS})
+  include_directories(${Trilinos_TPL_INCLUDE_DIRS})
+  include_directories(${Trilinos_INCLUDE_DIRS})
+  link_directories(${Trilinos_LIBRARY_DIRS})
+  link_directories(${Trilinos_TPL_LIBRARY_DIRS})
 ENDIF ()
+
+# Print the compiler flags to be used
+MESSAGE(STATUS "\nFortran Flags = ${CMAKE_Fortran_FLAGS}")
+MESSAGE(STATUS "C Flags = ${CMAKE_C_FLAGS}")
+MESSAGE(STATUS "CXX Flags = ${CMAKE_CXX_FLAGS}")
+MESSAGE(STATUS "Linker Flags = ${CMAKE_EXE_LINKER_FLAGS} \n")
+##############################################################################
+
 
 # Zoltan partitioning library
 IF (DEFINED ZOLTAN_DIR)
@@ -148,27 +169,62 @@ IF (${ENABLE_NANOTIMERS})
     ADD_DEFINITIONS(-DBIT64)
   ENDIF ()
 ENDIF ()
-ADD_SUBDIRECTORY(utils/cime/share/timing)
+ADD_SUBDIRECTORY(utils/cime/src/share/timing)
 
 
 # Use CIME's FindNETCDF path
 # CMAKE_CURRENT_SOURCE_DIR == homme
-SET (CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/utils/cime/externals/CMake" ${CMAKE_MODULE_PATH})
-FIND_PACKAGE(NETCDF)
+SET (CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+SET (CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/utils/cime/src/CMake" ${CMAKE_MODULE_PATH})
+SET (CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/utils/cime/src/externals/pio2/cmake" ${CMAKE_MODULE_PATH})
 
+
+#
+# Bug in PIO: PIO1 calls TARGET_LINK_LIBRARIES uses all caps variables, 
+# instead of the mixed case variables computed by PIO's findNetCDF.  
+# 2017/6 PR submitted to pio1
+# workaround until this makes it back into ACME:
+#
+SET(NetCDF_PATH ${NETCDF_DIR})
+SET(PnetCDF_PATH ${PNETCDF_DIR})
+FIND_PACKAGE(NetCDF "4.3.3" COMPONENTS C Fortran)
+FIND_PACKAGE(PnetCDF COMPONENTS C Fortran)
+set(NETCDF_LIBRARIES ${NetCDF_Fortran_LIBRARIES})
+set(PNETCDF_LIBRARY ${PnetCDF_Fortran_FOUND})
+set(PNETCDF_LIBRARIES ${PnetCDF_Fortran_LIBRARIES})
+# needed to build cprnc:
+set(NETCDF_INCLUDE_DIR ${NetCDF_Fortran_INCLUDE_DIRS})
+
+
+
+#
+# PIO
+#
+#set search paths for PIO's findNetCDF
+SET(NetCDF_PATH ${NETCDF_DIR})
+SET(PnetCDF_PATH ${PNETCDF_DIR})
 # pio needs cime/externals/genf90/genf90.pl
-SET(GENF90_PATH ${CMAKE_CURRENT_SOURCE_DIR}/utils/cime/externals/genf90)
+SET(GENF90_PATH ${CMAKE_CURRENT_SOURCE_DIR}/utils/cime/src/externals/genf90)
+ADD_SUBDIRECTORY(utils/cime/src/externals/pio1)
 
-# For pio - allow the user to set HDF5_DIR to find libhdf5 etc.
-IF (HDF5_DIR)
-  SET(ENV{HDF5_ROOT} ${HDF5_DIR})
-ENDIF ()
-ADD_SUBDIRECTORY(utils/cime/externals/pio1)
+
 
 # CPRNC locations
-SET (CPRNC_INSTALL_DIR ${CMAKE_BINARY_DIR}/utils/cime/tools/cprnc)
-SET (CPRNC_BINARY ${CMAKE_BINARY_DIR}/utils/cime/tools/cprnc/cprnc)
-ADD_SUBDIRECTORY(utils/cime/tools/cprnc)
+IF (CPRNC_DIR)
+  # user specifed CPRNC binary - dont build
+  ADD_EXECUTABLE( cprnc IMPORTED)
+  find_program(CPRNC_BINARY cprnc ${CPRNC_DIR})
+  IF ( CPRNC_BINARY )
+     message("-- CPRNC_BINARY = ${CPRNC_BINARY}")
+  ELSE()
+     message(WARNING "cprnc not found - cannot check regression test output")
+  ENDIF ()
+ELSE ()
+  # compile CPRNC from CIME source code. Requires CIME support for machine
+  SET (CPRNC_INSTALL_DIR ${CMAKE_BINARY_DIR}/utils/cime/tools/cprnc)
+  SET (CPRNC_BINARY ${CMAKE_BINARY_DIR}/utils/cime/tools/cprnc/cprnc)
+  ADD_SUBDIRECTORY(utils/cime/tools/cprnc)
+ENDIF ()
 
 
 SET(EXEC_LIST ""  CACHE INTERNAL "List of configured executables")
