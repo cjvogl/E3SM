@@ -62,8 +62,8 @@ int ColumnSolSolve(struct ARKodeMemRec *ark_mem, N_Vector b,
                    N_Vector ycur, N_Vector fcur) {
 
   /* declare local data */
-  void *bd, *yd, *fyd;
-  double tcur;
+  void *bd, *yd;
+  double tcur, gamma;
   int ier;
 
   /* initialize return flag to success */
@@ -73,13 +73,13 @@ int ColumnSolSolve(struct ARKodeMemRec *ark_mem, N_Vector b,
   tcur = ark_mem->ark_tn;
 
   /* extract N_Vector data pointers */
-  bd = yd = fyd = NULL;
+  bd = yd = NULL;
   bd  = NV_DATA_EXT(b);
   yd  = NV_DATA_EXT(ycur);
-  fyd = NV_DATA_EXT(fcur);
+  gamma = ark_mem->ark_gamma;
 
   /* call Fortran routine to do operation */
-  FCOLUMNSOL_SOLVE(bd, &tcur, yd, fyd, &ier);
+  FCOLUMNSOL_SOLVE(bd, &tcur, yd, &gamma, &ier);
   return(ier);
 }
 

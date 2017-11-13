@@ -45,15 +45,15 @@ extern "C" {
   void FCOLUMNSOL_INIT(int *ier);
 
   /* Prototype of the Fortran-supplied 'solve' routine: given a RHS vector B, the 
-     current time T, the current solution, Y and the current implicit RHS, FY, 
-     this solves the linear systems (defined internally), storing the solution 
-     back in the vector B.  
+     current time T, the current solution, Y, and the current time step scale factor, 
+     GAMMA, this solves the linear systems (defined internally), storing the 
+     solution back in the vector B.  
 
      The return value should be 0 on success, a positive value on a recoverable 
      failure (e.g. an illegal value that might be fixed with a smaller time step 
      size), and a negative value on a non-recoverable failure.
   */
-  void FCOLUMNSOL_SOLVE(void* B, double* T, void* Y, void *FY, int* IER);
+  void FCOLUMNSOL_SOLVE(void* B, double* T, void* Y, double *GAMMA, int* IER);
 
   /* Prototype of the C interface to FCOLUMNSOL_SOLVE -- this is the 'lsolve' 
      routine attached to ARKode's memory structure */
