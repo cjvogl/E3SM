@@ -37,7 +37,7 @@ elif [[ $HOSTNAME == "quartz"* ]]; then
     module load hdf5-parallel/1.8.17
     export NETCDF=$HOME/local/netcdf-c4.3.3.1_f4.4.2_quartz_intel_opt
     export HDF5=/usr/tce/packages/hdf5/hdf5-parallel-1.8.17-intel16.0.3-mvapich22.2
-    export SUNDIALS=$HOME/local/sundials-2.7.0_quartz_intel_opt
+    export SUNDIALS=$HOME/local/sundials-3.1.0_quartz_intel_opt
   fi
 fi
 

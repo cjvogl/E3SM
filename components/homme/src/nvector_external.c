@@ -4,7 +4,7 @@
  * Copyright 2010; all rights reserved
  *-----------------------------------------------------------------
  * This is the implementation file for an implementation
- * of the NVECTOR package, specifically suited to interface with 
+ * of the NVECTOR package, specifically suited to interface with
  * a external [Fortran] data structure and vector implementation.
  *
  * It contains the N_Vector kernels listed in nvector_external.h,
@@ -31,7 +31,7 @@ N_Vector F2C_KINSOL_vec;
 N_Vector F2C_ARKODE_vec;
 
 
-/* FNVEXT_INIT is the Fortran interface routine to initialize the 
+/* FNVEXT_INIT is the Fortran interface routine to initialize the
    template NVector */
 void FNVEXT_INIT(int *code, int *ier)
 {
@@ -92,7 +92,7 @@ N_Vector N_VNewEmpty_EXT()
   v = NULL;
   ops = NULL;
   content = NULL;
-  
+
   /* Create vector */
   v = (N_Vector) malloc(sizeof *v);
   if (v == NULL) return(NULL);
@@ -130,13 +130,13 @@ N_Vector N_VNewEmpty_EXT()
   ops->nvminquotient     = N_VMinQuotient_EXT;
 
   /* Create content */
-  content = 
+  content =
     (N_VectorContent_EXT) malloc(sizeof(struct _N_VectorContent_EXT));
   if (content == NULL) {free(ops); free(v); return(NULL);}
 
   /* Initialize content structure members */
   content->data     = NULL;
-  content->own_data = FALSE;
+  content->own_data = SUNFALSE;
 
   /* Attach content and ops to generic N_Vector */
   v->content = content;
@@ -147,7 +147,7 @@ N_Vector N_VNewEmpty_EXT()
 
 
 
-/* N_VMake_EXT (or nvmake) creates a EXT N_Vector with 'content' 
+/* N_VMake_EXT (or nvmake) creates a EXT N_Vector with 'content'
    pointing to user-provided structure */
 N_Vector N_VMake_EXT(void* v_data)
 {
@@ -160,7 +160,7 @@ N_Vector N_VMake_EXT(void* v_data)
 
   /* Attach data if it is non-NULL */
   if ( v_data != NULL ) {
-    NV_OWN_DATA_EXT(v) = FALSE;
+    NV_OWN_DATA_EXT(v) = SUNFALSE;
     NV_DATA_EXT(v)     = v_data;
   }
 
@@ -169,7 +169,7 @@ N_Vector N_VMake_EXT(void* v_data)
 
 
 
-/* N_VPrint_EXT prints the N_Vector v to stdout.  This routine is 
+/* N_VPrint_EXT prints the N_Vector v to stdout.  This routine is
    provided to aid in debugging code using this vector package. */
 void N_VPrint_EXT(N_Vector v)
 {
@@ -189,8 +189,8 @@ void N_VPrint_EXT(N_Vector v)
 /***************************************************************************/
 /* BEGIN implementation of vector operations */
 
-/* N_VCloneEmpty_EXT returns a new N_Vector of the same form as the 
-   input N_Vector, but with empty data container */ 
+/* N_VCloneEmpty_EXT returns a new N_Vector of the same form as the
+   input N_Vector, but with empty data container */
 N_Vector N_VCloneEmpty_EXT(N_Vector w)
 {
   N_Vector v;
@@ -242,12 +242,12 @@ N_Vector N_VCloneEmpty_EXT(N_Vector w)
   ops->nvminquotient     = w->ops->nvminquotient;
 
   /* Create content */
-  content = 
+  content =
     (N_VectorContent_EXT) malloc(sizeof(struct _N_VectorContent_EXT));
   if (content == NULL) { free(ops); free(v); return(NULL); }
 
   /* Initialize content structure members */
-  content->own_data = FALSE;
+  content->own_data = SUNFALSE;
   content->data     = NULL;
 
   /* Attach content and ops */
@@ -259,8 +259,8 @@ N_Vector N_VCloneEmpty_EXT(N_Vector w)
 
 
 
-/* N_VClone_EXT returns a new N_Vector of the same form as the 
-   input N_Vector. */ 
+/* N_VClone_EXT returns a new N_Vector of the same form as the
+   input N_Vector. */
 N_Vector N_VClone_EXT(N_Vector w)
 {
   N_Vector v;
@@ -285,19 +285,19 @@ N_Vector N_VClone_EXT(N_Vector w)
   if(vdata == NULL) { N_VDestroy_EXT(v); return(NULL); }
 
   /* Attach data */
-  NV_OWN_DATA_EXT(v) = TRUE;
+  NV_OWN_DATA_EXT(v) = SUNTRUE;
   NV_DATA_EXT(v)     = vdata;
-  
+
   return(v);
 }
 
 
 
-/* N_VDestroy_EXT frees the data storage for a N_Vector */ 
+/* N_VDestroy_EXT frees the data storage for a N_Vector */
 void N_VDestroy_EXT(N_Vector v)
 {
   void *vdata = NULL;
-  if ( (NV_OWN_DATA_EXT(v) == TRUE) && (NV_DATA_EXT(v) != NULL) ) {
+  if ( (NV_OWN_DATA_EXT(v) == SUNTRUE) && (NV_DATA_EXT(v) != NULL) ) {
     vdata = NV_DATA_EXT(v);
     FNVEXT_DESTROY(vdata);
     NV_DATA_EXT(v) = NULL;
@@ -311,9 +311,9 @@ void N_VDestroy_EXT(N_Vector v)
 
 
 
-/* N_VSpace_EXT should return the space requirements for one N_Vector; 
-   however this routine is not utilized by SUNDIALS unless the user asks a 
-   particular integrator about its storage requirements.  As such, this is 
+/* N_VSpace_EXT should return the space requirements for one N_Vector;
+   however this routine is not utilized by SUNDIALS unless the user asks a
+   particular integrator about its storage requirements.  As such, this is
    essentially a dummy routine, and so we return zero for both arguments. */
 void N_VSpace_EXT(N_Vector v, long int* lrw, long int* liw)
 {
@@ -324,14 +324,14 @@ void N_VSpace_EXT(N_Vector v, long int* lrw, long int* liw)
 
 
 
-/* N_VGetArrayPointer_EXT (or nvgetarraypointer) extracts the 
+/* N_VGetArrayPointer_EXT (or nvgetarraypointer) extracts the
    data component array from the N_Vector v.  While the resulting pointer
-   is cast to have 'realtype' type, this will just be re-cast to the 
-   appropriate pointer type by the user routines.  
+   is cast to have 'realtype' type, this will just be re-cast to the
+   appropriate pointer type by the user routines.
 
-   **Warning: do not attempt to use SUNDIALS' direct linear solvers 
+   **Warning: do not attempt to use SUNDIALS' direct linear solvers
      from this interface, since they will attempt to access specific
-     entries of the data 'array', which will in actuality point to 
+     entries of the data 'array', which will in actuality point to
      random memory locations in the Fortran vector data structure. */
 realtype *N_VGetArrayPointer_EXT(N_Vector v)
 {
@@ -340,8 +340,8 @@ realtype *N_VGetArrayPointer_EXT(N_Vector v)
 
 
 
-/* N_VSetArrayPointer_EXT or (nvsetarraypointer) attaches the 
-   data component array v_data to the N_Vector v.  While the input 
+/* N_VSetArrayPointer_EXT or (nvsetarraypointer) attaches the
+   data component array v_data to the N_Vector v.  While the input
    pointer is assumed to have 'realtype' type, this will just be
    re-cast from the actual Fortran pointer type. */
 void N_VSetArrayPointer_EXT(realtype* v_data, N_Vector v)
@@ -353,7 +353,7 @@ void N_VSetArrayPointer_EXT(realtype* v_data, N_Vector v)
 
 
 /* N_VLinearSum_EXT (or nvlinearsum) calculates z = a*x + b*y */
-void N_VLinearSum_EXT(realtype a, N_Vector x, realtype b, 
+void N_VLinearSum_EXT(realtype a, N_Vector x, realtype b,
 		      N_Vector y, N_Vector z)
 {
   /* extract data array handles from vectors */
@@ -456,8 +456,8 @@ void N_VAbs_EXT(N_Vector x, N_Vector z)
 
 
 
-/* N_VInv_EXT (or nvinv) calculates z[i] = 1/x[i].  
-   Note: it does not check for division by 0.  It should be called only 
+/* N_VInv_EXT (or nvinv) calculates z[i] = 1/x[i].
+   Note: it does not check for division by 0.  It should be called only
    with an N_Vector x which is guaranteed to have all non-zero components. */
 void N_VInv_EXT(N_Vector x, N_Vector z)
 {
@@ -469,7 +469,7 @@ void N_VInv_EXT(N_Vector x, N_Vector z)
 
   /* call fortran routine to do operation */
   FNVEXT_INV(xd, zd);
-  
+
   return;
 }
 
@@ -483,7 +483,7 @@ void N_VAddConst_EXT(N_Vector x, realtype b, N_Vector z)
   xd = zd = NULL;
   xd = NV_DATA_EXT(x);
   zd = NV_DATA_EXT(z);
-  
+
   /* call fortran routine to do operation */
   FNVEXT_ADDCONST(&b, xd, zd);
 
@@ -492,7 +492,7 @@ void N_VAddConst_EXT(N_Vector x, realtype b, N_Vector z)
 
 
 
-/* N_VDotProd_EXT (or nvdotprod) returns the value of the 
+/* N_VDotProd_EXT (or nvdotprod) returns the value of the
    ordinary dot product of x and y, i.e. sum (i=0 to N-1) {x[i] * y[i]} */
 realtype N_VDotProd_EXT(N_Vector x, N_Vector y)
 {
@@ -510,10 +510,10 @@ realtype N_VDotProd_EXT(N_Vector x, N_Vector y)
 
 
 
-/* N_VMaxNorm_EXT (or nvmaxnorm) returns the maximum norm of x, 
+/* N_VMaxNorm_EXT (or nvmaxnorm) returns the maximum norm of x,
    i.e. max(i=1 to N-1) |x[i]|  */
 realtype N_VMaxNorm_EXT(N_Vector x)
-{ 
+{
   /* extract data array handles from N_Vectors */
   realtype maxval = ZERO;
   void *xd  = NULL;
@@ -526,8 +526,8 @@ realtype N_VMaxNorm_EXT(N_Vector x)
 
 
 
-/* N_VWrmsNorm_EXT (or nvwrmsnorm) returns the weighted root 
-   mean square norm of x with weight factor w, 
+/* N_VWrmsNorm_EXT (or nvwrmsnorm) returns the weighted root
+   mean square norm of x with weight factor w,
    i.e. sqrt [(sum (i=0 to N-1) {(x[i] * w[i])^2}) / N] */
 realtype N_VWrmsNorm_EXT(N_Vector x, N_Vector w)
 {
@@ -545,7 +545,7 @@ realtype N_VWrmsNorm_EXT(N_Vector x, N_Vector w)
 
 
 
-/* N_VWrmsNormMask_EXT or (nvwrmsnormmask) returns wrms norm over 
+/* N_VWrmsNormMask_EXT or (nvwrmsnormmask) returns wrms norm over
    indices indicated by id */
 realtype N_VWrmsNormMask_EXT(N_Vector x, N_Vector w, N_Vector id)
 {
@@ -579,8 +579,8 @@ realtype N_VMin_EXT(N_Vector x)
 
 
 
-/* N_VWL2Norm_EXT (or nvwl2norm) returns the weighted 
-   Euclidean L2 norm of x with weight factor w, 
+/* N_VWL2Norm_EXT (or nvwl2norm) returns the weighted
+   Euclidean L2 norm of x with weight factor w,
    i.e. sqrt [(sum (i=0 to N-1) {(x[i]*w[i])^2}) ] */
 realtype N_VWL2Norm_EXT(N_Vector x, N_Vector w)
 {
@@ -598,7 +598,7 @@ realtype N_VWL2Norm_EXT(N_Vector x, N_Vector w)
 
 
 
-/* N_VL1Norm_EXT (or nvl1norm) returns the L1 norm of x, 
+/* N_VL1Norm_EXT (or nvl1norm) returns the L1 norm of x,
    i.e. sum (i=0 to N-1) {|x[i]|} */
 realtype N_VL1Norm_EXT(N_Vector x)
 {
@@ -614,7 +614,7 @@ realtype N_VL1Norm_EXT(N_Vector x)
 
 
 
-/* N_VCompare_EXT (or nvcompare) calculates 
+/* N_VCompare_EXT (or nvcompare) calculates
    z[i] = 1 if |x[i]| > c, z[i] = 0 otherwise */
 void N_VCompare_EXT(realtype c, N_Vector x, N_Vector z)
 {
@@ -632,10 +632,10 @@ void N_VCompare_EXT(realtype c, N_Vector x, N_Vector z)
 
 
 
-/* N_VInvTest_EXT (or nvinvtest) computes z[i] = 1/x[i] 
-   with a test for x[i] == 0 before inverting x[i].  This routine 
-   returns TRUE if all components of x are nonzero (successful 
-   inversion) and returns FALSE otherwise. */
+/* N_VInvTest_EXT (or nvinvtest) computes z[i] = 1/x[i]
+   with a test for x[i] == 0 before inverting x[i].  This routine
+   returns SUNTRUE if all components of x are nonzero (successful
+   inversion) and returns SUNFALSE otherwise. */
 booleantype N_VInvTest_EXT(N_Vector x, N_Vector z)
 {
   /* extract data array handles from N_Vectors */
@@ -648,22 +648,22 @@ booleantype N_VInvTest_EXT(N_Vector x, N_Vector z)
   /* call fortran routine to do operation */
   FNVEXT_INVTEST(xd, zd, &testval);
 
-  if (testval == ZERO)  return(TRUE);
-  else  return(FALSE);
+  if (testval == ZERO)  return(SUNTRUE);
+  else  return(SUNFALSE);
 }
 
 
 
-/* N_VConstrMask_EXT (or nvconstrmask) returns a boolean FALSE 
-   if any element fails the constraint test, and TRUE if all passed.  The 
-   constraint test is as follows: 
+/* N_VConstrMask_EXT (or nvconstrmask) returns a boolean SUNFALSE
+   if any element fails the constraint test, and SUNTRUE if all passed.  The
+   constraint test is as follows:
          if c[i] =  2.0, then x[i] must be >  0.0
          if c[i] =  1.0, then x[i] must be >= 0.0
          if c[i] = -1.0, then x[i] must be <= 0.0
          if c[i] = -2.0, then x[i] must be <  0.0
-   It also sets a mask vector m, with elements equal to 1.0 where the 
-   corresponding constraint test failed, and equal to 0.0 where the 
-   constraint test passed.  This routine is specialized in that it is 
+   It also sets a mask vector m, with elements equal to 1.0 where the
+   corresponding constraint test failed, and equal to 0.0 where the
+   constraint test passed.  This routine is specialized in that it is
    used only for constraint checking. */
 booleantype N_VConstrMask_EXT(N_Vector c, N_Vector x, N_Vector m)
 {
@@ -678,13 +678,13 @@ booleantype N_VConstrMask_EXT(N_Vector c, N_Vector x, N_Vector m)
   /* call fortran routine to do operation */
   FNVEXT_CONSTRMASK(cd, xd, md, &testval);
 
-  if (testval == ZERO)  return(TRUE);
-  else  return(FALSE);
+  if (testval == ZERO)  return(SUNTRUE);
+  else  return(SUNFALSE);
 }
 
 
 
-/* N_VMinQuotient_EXT (or nvminquotient) returns 
+/* N_VMinQuotient_EXT (or nvminquotient) returns
    min(num[i]/denom[i]) over all i such that denom[i] != 0. */
 realtype N_VMinQuotient_EXT(N_Vector num, N_Vector denom)
 {
@@ -694,11 +694,11 @@ realtype N_VMinQuotient_EXT(N_Vector num, N_Vector denom)
   nd = dd = NULL;
   nd = NV_DATA_EXT(num);
   dd = NV_DATA_EXT(denom);
- 
+
   /* call fortran routine to do operation */
   FNVEXT_MINQUOTIENT(nd, dd, &minquot);
   return(minquot);
 }
 
- 
+
 /*********************** END OF FILE ***********************/

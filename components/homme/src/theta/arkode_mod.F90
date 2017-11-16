@@ -519,30 +519,23 @@ contains
 
       else
 
-        ! indicate use of GMRES linear solver (and set options)
-        call farkspgmr(ap%precLR, ap%gstype, ap%maxl, ap%lintol, ierr)
+        ! ! indicate use of GMRES linear solver (and set options)
+        call FSunSPGMRInit(4, ap%precLR, ap%maxl, ierr)
         if (ierr /= 0) then
-          call abortmp('arkode_init: farkspgmr failed')
+          call abortmp('arkode_init: FSunSPGMRInit failed')
         end if
-
-
-
-        ! call FSunSPGMRInit(4, ap%precLR, ap%maxl, ierr)
-        ! if (ierr /= 0) then
-        !   call abortmp('arkode_init: FSunSPGMRInit failed')
-        ! end if
-        ! call FSunSPGMRSetGSType(4, ap%gstype, ierr)
-        ! if (ierr /= 0) then
-        !   call abortmp('arkode_init: FSunSPGMRSetGSType failed')
-        ! end if
-        ! call FARKSpilsInit(ierr)
-        ! if (ierr /= 0) then
-        !   call abortmp('arkode_init: FARKSpilsInit failed')
-        ! end if
-        ! call FARKSpilsSetEpsLin(ap%lintol, ierr)
-        ! if (ierr /= 0) then
-        !   call abortmp('arkode_init: FARKSpilsSetEpsLin failed')
-        ! end if
+        call FSunSPGMRSetGSType(4, ap%gstype, ierr)
+        if (ierr /= 0) then
+          call abortmp('arkode_init: FSunSPGMRSetGSType failed')
+        end if
+        call FARKSpilsInit(ierr)
+        if (ierr /= 0) then
+          call abortmp('arkode_init: FARKSpilsInit failed')
+        end if
+        call FARKSpilsSetEpsLin(ap%lintol, ierr)
+        if (ierr /= 0) then
+          call abortmp('arkode_init: FARKSpilsSetEpsLin failed')
+        end if
 
         !      Indicate to use our own preconditioner setup/solve routines (otherwise
         !      preconditioning is disabled)
