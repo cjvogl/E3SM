@@ -77,7 +77,8 @@ module arkode_mod
     real(real_kind) :: atol(6) ! absolute tolerances (u,v,w,phinh,theta_dp_cp,dp3d)
   end type parameter_list
 
-  public :: parameter_list, update_arkode, get_solution_ptr, get_RHS_vars
+  public :: parameter_list, update_arkode, get_solution_ptr, get_hvcoord_ptr
+  public :: get_RHS_vars
   public :: max_stage_num, table_list, set_Butcher_tables, get_EWT_vars
 
   save
@@ -121,11 +122,34 @@ contains
 
   !=================================================================
 
-  subroutine get_RHS_vars(imex, qn0, dt, eta_ave_w, hvcoord, hybrid, deriv)
+  subroutine get_hvcoord_ptr(hvcoord)
+    !-----------------------------------------------------------------
+    ! Description: sets pointer to NVector for specified timelevel
+    !   Arguments:
+    !     hvcoord - (obj*, output) hvcoord object pointer
+    !-----------------------------------------------------------------
+
+    !======= Inclusions ===========
+    use hybvcoord_mod,  only: hvcoord_t
+
+    !======= Declarations =========
+    implicit none
+
+    ! calling variables
+    type(hvcoord_t),    intent(out) :: hvcoord
+
+    !======= Internals ============
+    hvcoord = hvcoord_ptr
+
+    return
+  end subroutine get_hvcoord_ptr
+
+  !=================================================================
+
+  subroutine get_RHS_vars(imex, qn0, dt, eta_ave_w, hybrid, deriv)
     !-----------------------------------------------------------------
     ! Description: sets variables and objects needed to compute RHS
     !   Arguments:
-    !     hvcoord - (obj*, output) hvcoord object pointer
     !      hybrid - (obj*, output) hybrid object pointer
     !       deriv - (obj*, output) deriv object pointer
     !-----------------------------------------------------------------
@@ -133,14 +157,12 @@ contains
     !======= Inclusions ===========
     use derivative_mod, only: derivative_t
     use hybrid_mod,     only: hybrid_t
-    use hybvcoord_mod,  only: hvcoord_t
     use kinds,          only: real_kind
 
     !======= Declarations =========
     implicit none
 
     ! calling variables
-    type(hvcoord_t),    intent(out) :: hvcoord
     type(hybrid_t),     intent(out) :: hybrid
     type(derivative_t), intent(out) :: deriv
     integer,            intent(out) :: imex, qn0
@@ -151,7 +173,6 @@ contains
     qn0 = qn0_save
     dt = dt_save
     eta_ave_w = eta_ave_w_save
-    hvcoord = hvcoord_ptr
     hybrid = hybrid_ptr
     deriv = deriv_ptr
 
