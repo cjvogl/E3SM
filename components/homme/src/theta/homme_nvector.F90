@@ -142,7 +142,7 @@ end subroutine FNVExtPrint
 
 
 
-subroutine FNVExtClone(x_C, y_C)
+subroutine FNVExtClone(x_C, y_C, ierr)
   !-----------------------------------------------------------------------
   ! Clone routine for EXT vector -- allocates memory for a new NVec_t y that
   ! that matches structure for x.
@@ -152,6 +152,7 @@ subroutine FNVExtClone(x_C, y_C)
   implicit none
   type(c_ptr), intent(in) :: x_C
   type(c_ptr), intent(out) :: y_C
+  integer(c_int), intent(out) :: ierr
   type(NVec_t), pointer :: x => NULL()
   type(NVec_t), pointer :: y => NULL()
   integer :: tl_idx
@@ -159,10 +160,11 @@ subroutine FNVExtClone(x_C, y_C)
   !=======Internals ============
 
   ! grab next available registry index;
-  ! if none are available, return with a NULL value for y_C
+  ! if none are available, set error flag and return
+  ierr = 0
   tl_idx = ReserveHommeNVectorRegistryIdx()
   if (tl_idx == 0) then
-     y_C = C_NULL_PTR
+     ierr = 1
      return
   end if
 

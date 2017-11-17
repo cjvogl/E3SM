@@ -130,7 +130,7 @@ extern "C" {
      the user, and define the variables in the supplied vector 
      depending on the physical problem under consideration */
   void FNVEXT_PRINT(void*);
-  void FNVEXT_CLONE(void*, void*);
+  void FNVEXT_CLONE(void*, void*, int*);
   void FNVEXT_DESTROY(void*);
   void FNVEXT_LINSUM(realtype*, void*, realtype*, void*, void*);
   void FNVEXT_CONST(realtype*, void*);
