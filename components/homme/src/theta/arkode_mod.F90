@@ -29,8 +29,8 @@ module arkode_mod
   private
 
   integer, parameter :: max_stage_num = 10
-  integer, parameter :: freelevels = timelevels-30
-  ! Note that 30 is an estimate, but needs to be at least > 25
+  integer, parameter :: freelevels = timelevels-35
+  ! Note that 35 is an estimate, but needs to be at least > 30
   ! If a larger Krylov subspace is desired, timelevels should be
   ! increased.
 
@@ -509,22 +509,20 @@ contains
 
 
       if (ap%useColumnSolver) then
-
-        !---- or to instead use the HOMME columnwise direct solver ----!
-!        call FColumnSolInit(ierr)
-!        if (ierr /= 0) then
-!          call abortmp('arkode_init: FColumnSolInit failed')
-!        end if
-        call abortmp('arkode_init: HOMME native solver not implemented yet')
+      ! use the HOMME columnwise direct solver
+        call FColumnSolInit(ierr)
+        if (ierr /= 0) then
+          call abortmp('arkode_init: FColumnSolInit failed')
+        end if
 
       else
-
-        ! ! indicate use of GMRES linear solver (and set options)
-        call FSunSPGMRInit(4, ap%precLR, ap%maxl, ierr)
+      ! use the GMRES linear solver (and set options)
+        idef = 4 ! flag specifying which SUNDIALS solver will be used (4=ARKode)
+        call FSunSPGMRInit(idef, ap%precLR, ap%maxl, ierr)
         if (ierr /= 0) then
           call abortmp('arkode_init: FSunSPGMRInit failed')
         end if
-        call FSunSPGMRSetGSType(4, ap%gstype, ierr)
+        call FSunSPGMRSetGSType(idef, ap%gstype, ierr)
         if (ierr /= 0) then
           call abortmp('arkode_init: FSunSPGMRSetGSType failed')
         end if

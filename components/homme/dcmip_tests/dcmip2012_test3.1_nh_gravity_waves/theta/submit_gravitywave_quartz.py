@@ -16,7 +16,7 @@ if (len(sys.argv) < 2):
 paramDict = {
   'tsteptype':'5',
   'tstep':'1.0',
-  'nmax':'600',
+  'nmax':'300',
   'ne':'27',
   'nu':'5.0e8'
 }

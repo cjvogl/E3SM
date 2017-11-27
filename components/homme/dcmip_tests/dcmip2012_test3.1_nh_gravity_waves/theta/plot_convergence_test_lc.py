@@ -3,31 +3,29 @@ import matplotlib.pyplot as pyplot
 from netCDF4 import Dataset
 import numpy as np
 
-noHV = False
+noHV = True
 
 methodDict = {'U35-ref': 5,
-              #    'U35': 11,
-               #   'ARS232-ref': 7,
-                  'ARS232': 12}
-                #  'DBM453': 13,
-                 # 'ARS222': 14}
-                  #'ARS233': 15,
-                  #'ARS343': 16,
-                  #'ARS443': 17,
-                  #'ARK324': 18}
+                  'U35': 11,
+                  'ARS232-ref': 7,
+                  'ARS232': 12,
+                  'DBM453': 13,
+                  'ARS222': 14,
+                  'ARS233': 15,
+                  'ARS343': 16,
+                  'ARS443': 17,
+                  'ARK324': 18}
                   #'ARK436': 19}
 
 # Load reference solution
 tsteptypeRef = 5
-#dtRef = 0.00078125
-#nmaxRef = 768000
-dtRef = 0.0015625
-nmaxRef = 384000
+dtRef = 0.000390625
+nmaxRef = 768000
 if (noHV):
-    directory = './output_tsteptype%d_tstep%8.7f_nmax%d_nu0.0/dcmip2012_test31.nc' \
+    directory = './output_tsteptype%d_tstep%10.9f_nmax%d_nu0.0/dcmip2012_test31.nc' \
                     % (tsteptypeRef,dtRef,nmaxRef)
 else:
-    directory = './output_tsteptype%d_tstep%8.7f_nmax%d/dcmip2012_test31.nc' \
+    directory = './output_tsteptype%d_tstep%10.9f_nmax%d/dcmip2012_test31.nc' \
                     % (tsteptypeRef,dtRef,nmaxRef)
 print 'Reading reference solution from ' + directory
 data = Dataset(directory)
@@ -37,10 +35,9 @@ shape = np.shape(Tref)
 numElements = shape[0]*shape[1]*shape[2]
 
 # Iterate through methods and plot convergence test
-#f, (ax1,ax2) = pyplot.subplots(1,2,figsize=(12,6))
-f, ax1 = pyplot.subplots()
-f, ax2 = pyplot.subplots()
-for method in methodDict.keys():
+f, ax1 = pyplot.subplots(figsize=(10,10))
+f, ax2 = pyplot.subplots(figsize=(10,10))
+for m,method in enumerate(methodDict.keys()):
   dtList = []
   solutionDict = {}
   print method
@@ -49,7 +46,7 @@ for method in methodDict.keys():
     if ((noHV and "nu0.0" in fileName) or (not noHV and "nu0.0" not in fileName)):
       words = fileName.split('_')
       dt = words[1].replace('tstep','')
-      if (float(dt) > 0.03125+1e-12): #dtRef+1e-12):
+      if (float(dt) > 2.0*dtRef+1e-12):
         dtList.append(float(dt))
         directory = './output_'+fileName.replace('.out','')
         print 'Reading solution in ' + directory
@@ -70,14 +67,14 @@ for method in methodDict.keys():
   for j,dt in enumerate(dtPlot):
     L2Plot[j] = L2error[str(dt)]
     LIPlot[j] = LIerror[str(dt)]
-  orderA = np.log(L2Plot[1]/L2Plot[0])/np.log(dtPlot[1]/dtPlot[0])
-  orderB = np.log(L2Plot[2]/L2Plot[1])/np.log(dtPlot[2]/dtPlot[1])
-  orderC = np.log(L2Plot[-1]/L2Plot[-2])/np.log(dtPlot[-1]/dtPlot[-2])
-  ax1.loglog(dtPlot,L2Plot,'-o',label='%s (%3.2f, %3.2f, %3.2f)' % (method,orderA,orderB,orderC))
-  orderA = np.log(LIPlot[1]/LIPlot[0])/np.log(dtPlot[1]/dtPlot[0])
-  orderB = np.log(LIPlot[2]/LIPlot[1])/np.log(dtPlot[2]/dtPlot[1])
-  orderC = np.log(LIPlot[-1]/LIPlot[-2])/np.log(dtPlot[-1]/dtPlot[-2])
-  ax2.loglog(dtPlot,LIPlot,'-o',label='%s (%3.2f, %3.2f, %3.2f)' % (method,orderA,orderB,orderC))
+  if (m < 7):
+    lineStyle = '-o'
+  else:
+    lineStyle = '-d'
+  order = np.log(L2Plot[1:]/L2Plot[0:-1])/np.log(dtPlot[1:]/dtPlot[0:-1])
+  ax1.loglog(dtPlot,L2Plot,lineStyle,label='%s (final=%3.2f, max=%3.2f)' % (method,order[0],np.amax(order)))
+  order = np.log(LIPlot[1:]/LIPlot[0:-1])/np.log(dtPlot[1:]/dtPlot[0:-1])
+  ax2.loglog(dtPlot,LIPlot,lineStyle,label='%s (final=%3.2f, max=%3.2f)' % (method,order[0],np.amax(order)))
 
 #orderList = ('first', 'second', 'third')
 #for j, order in enumerate(orderList):
@@ -92,7 +89,7 @@ ax1.axis('equal')
 ax1.legend(loc='best')
 ax2.set_title('LI Error')
 ax2.set_xlabel('dt')
-ax1.axis('equal')
+ax2.axis('equal')
 ax2.legend(loc='best')
 
 pyplot.show()
