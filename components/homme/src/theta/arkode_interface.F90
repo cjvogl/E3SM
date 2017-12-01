@@ -57,14 +57,14 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   !-----------------------------------------------------------------
 
   !======= Inclusions ===========
-  use arkode_mod,       only: max_stage_num, get_RHS_vars, get_hvcoord_ptr
+  use arkode_mod,       only: max_stage_num, get_RHS_vars, get_hvcoord_ptr, &
+                              get_qn0
   use kinds,            only: real_kind
   use HommeNVector,     only: NVec_t
   use hybrid_mod,       only: hybrid_t
   use derivative_mod,   only: derivative_t
   use hybvcoord_mod,    only: hvcoord_t
   use prim_advance_mod, only: compute_andor_apply_rhs
-  use parallel_mod,     only: abortmp
   use iso_c_binding
 
   !======= Declarations =========
@@ -89,7 +89,8 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
 
   !======= Internals ============
   call get_hvcoord_ptr(hvcoord)
-  call get_RHS_vars(imex,qn0,dt,eta_ave_w,hybrid,deriv)
+  call get_qn0(qn0)
+  call get_RHS_vars(imex,dt,eta_ave_w,hybrid,deriv)
 
   ! set scale factors depending on whether using implicit, explicit, or IMEX
   if (imex == 0) then
@@ -139,7 +140,6 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
 !       1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
 !       .false., bval*eta_ave_w, scale1, scale2, scale3,1.d0)
 
-
   return
 end subroutine farkifun
 
@@ -161,14 +161,14 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   !-----------------------------------------------------------------
 
   !======= Inclusions ===========
-  use arkode_mod,       only: max_stage_num, get_RHS_vars, get_hvcoord_ptr
+  use arkode_mod,       only: max_stage_num, get_RHS_vars, get_hvcoord_ptr, &
+                              get_qn0
   use kinds,            only: real_kind
   use HommeNVector,     only: NVec_t
   use hybrid_mod,       only: hybrid_t
   use derivative_mod,   only: derivative_t
   use hybvcoord_mod,    only: hvcoord_t
   use prim_advance_mod, only: compute_andor_apply_rhs
-  use parallel_mod,     only: abortmp
   use iso_c_binding
 
   !======= Declarations =========
@@ -193,7 +193,8 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
 
   !======= Internals ============
   call get_hvcoord_ptr(hvcoord)
-  call get_RHS_vars(imex,qn0,dt,eta_ave_w,hybrid,deriv)
+  call get_qn0(qn0)
+  call get_RHS_vars(imex,dt,eta_ave_w,hybrid,deriv)
 
   ! set scale factors depending on whether using implicit, explicit, or IMEX
   if (imex == 0) then
@@ -246,96 +247,6 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
 
   return
 end subroutine farkefun
-
-!=================================================================
-
-subroutine farkewt(y_C, ewt_C, ipar, rpar, ierr)
-  !-----------------------------------------------------------------
-  ! Description: farkewt sets the weight vector used in the WRMS norm
-  !
-  !  Arguments:
-  !       y_C - (ptr, input) C Pointer to NVec_t containing state variables
-  !     ewt_C - (ptr) C pointer to NVec_t to hold error weight vector
-  !      ipar - (long int(*), input) integer user parameter data
-  !             (passed back here, unused)
-  !      rpar - (dbl(*), input) real user parameter data (passed here,
-  !             unused)
-  !      ierr - (int, output) return flag: 0=>success, otherwise error
-  !-----------------------------------------------------------------
-  !======= Inclusions ===========
-  use arkode_mod,    only: get_EWT_vars
-  use dimensions_mod, only: np, nlev
-  use kinds,          only: real_kind
-  use HommeNVector,   only: NVec_t
-  use iso_c_binding
-
-  !======= Declarations =========
-  implicit none
-
-  ! calling variables
-  type(c_ptr),     intent(in),    target :: y_C
-  type(c_ptr),     intent(inout), target :: ewt_C
-  integer(C_LONG), intent(in)            :: ipar(1)
-  real*8,          intent(in)            :: rpar(1)
-  integer(C_INT),  intent(out)           :: ierr
-
-  ! local variables
-  type(NVec_t), pointer :: y => NULL()
-  type(NVec_t), pointer :: ewt => NULL()
-  type(NVec_t)          :: atol
-  real(real_kind)       :: rtol
-  integer               :: ie, inlev, inpx, inpy
-
-  !=======Internals ============
-
-  ! initialize ierr to "error" value (later set to success)
-  ierr = 1
-
-  ! obtain variables from arkode module for error weight vector
-  call get_EWT_vars(atol, rtol)
-
-  ! dereference pointers for NVec_t objects
-  call c_f_pointer(y_C, y)
-  call c_f_pointer(ewt_C, ewt)
-
-  ! set error weight vector values
-  do ie=y%nets,y%nete
-    do inlev=1,nlev
-      do inpy=1,np
-        do inpx=1,np
-          ewt%elem(ie)%state%v(inpx,inpy,1,inlev,ewt%tl_idx) = &
-            1.d0 / &!sqrt(y%elem(ie)%state%dp3d(inpx,inpy,inlev,y%tl_idx)) / &
-            ( rtol*abs(y%elem(ie)%state%v(inpx,inpy,1,inlev,y%tl_idx)) + &
-                    atol%elem(ie)%state%v(inpx,inpy,1,inlev,atol%tl_idx) )
-          ewt%elem(ie)%state%v(inpx,inpy,2,inlev,ewt%tl_idx) = &
-            1.d0 / &!sqrt(y%elem(ie)%state%dp3d(inpx,inpy,inlev,y%tl_idx)) / &
-            ( rtol*abs(y%elem(ie)%state%v(inpx,inpy,2,inlev,y%tl_idx)) + &
-                    atol%elem(ie)%state%v(inpx,inpy,2,inlev,atol%tl_idx) )
-          ewt%elem(ie)%state%w(inpx,inpy,inlev,ewt%tl_idx) = &
-            1.d0 / &!sqrt(y%elem(ie)%state%dp3d(inpx,inpy,inlev,y%tl_idx)) / &
-            ( rtol*abs(y%elem(ie)%state%w(inpx,inpy,inlev,y%tl_idx)) + &
-                    atol%elem(ie)%state%w(inpx,inpy,inlev,atol%tl_idx) )
-          ewt%elem(ie)%state%phinh(inpx,inpy,inlev,ewt%tl_idx) = &
-            1.d0 / &!sqrt(y%elem(ie)%state%dp3d(inpx,inpy,inlev,y%tl_idx)) / &
-            ( rtol*abs(y%elem(ie)%state%phinh(inpx,inpy,inlev,y%tl_idx)) + &
-                    atol%elem(ie)%state%phinh(inpx,inpy,inlev,atol%tl_idx) )
-          ewt%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,ewt%tl_idx) = &
-            1.d0 / &!sqrt(y%elem(ie)%state%dp3d(inpx,inpy,inlev,y%tl_idx)) / &
-            ( rtol*abs(y%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,y%tl_idx)) + &
-                    atol%elem(ie)%state%theta_dp_cp(inpx,inpy,inlev,atol%tl_idx) )
-          ewt%elem(ie)%state%dp3d(inpx,inpy,inlev,ewt%tl_idx) = &
-            1.d0 / &!sqrt(y%elem(ie)%state%dp3d(inpx,inpy,inlev,y%tl_idx)) / &
-            ( rtol*abs(y%elem(ie)%state%dp3d(inpx,inpy,inlev,y%tl_idx)) + &
-                    atol%elem(ie)%state%dp3d(inpx,inpy,inlev,atol%tl_idx) )
-        end do ! inpx
-      end do ! inpy
-    end do ! inlev
-  end do ! ie
-
-! set return value to "success"
-ierr = 0
-
-end subroutine farkewt
 
 !=================================================================
 
@@ -423,7 +334,7 @@ subroutine FColumnSolSolve(b_C, t, y_C, gamma, ierr)
   !-----------------------------------------------------------------
 
   !======= Inclusions ===========
-  use arkode_mod,         only: get_hvcoord_ptr
+  use arkode_mod,         only: get_hvcoord_ptr, get_qn0
   use control_mod,        only: theta_hydrostatic_mode
   use element_ops,        only: get_kappa_star
   use eos,                only: get_pnh_and_exner, get_dirk_jacobian
@@ -432,6 +343,7 @@ subroutine FColumnSolSolve(b_C, t, y_C, gamma, ierr)
   use hybvcoord_mod,      only: hvcoord_t
   use physical_constants, only: g
   use dimensions_mod,     only: np, nlev, nlevp
+  use parallel_mod,       only: abortmp
   use iso_c_binding
 
   !======= Declarations =========
@@ -448,9 +360,9 @@ subroutine FColumnSolSolve(b_C, t, y_C, gamma, ierr)
   type(hvcoord_t)       :: hvcoord
   type(NVec_t), pointer :: b  => NULL()
   type(NVec_t), pointer :: y  => NULL()
-  real (kind=real_kind) :: JacD(nlev,np,np), JacDcopy(nlev,np,np)
-  real (kind=real_kind) :: JacL(nlev-1,np,np), JacLcopy(nlev-1,np,np)
-  real (kind=real_kind) :: JacU(nlev-1,np,np), JacUcopy(nlev-1,np,np)
+  real (kind=real_kind) :: JacD(nlev,np,np)
+  real (kind=real_kind) :: JacL(nlev-1,np,np)
+  real (kind=real_kind) :: JacU(nlev-1,np,np)
   real (kind=real_kind) :: JacU2(nlev-2,np,np)
   real (kind=real_kind), pointer, dimension(:,:,:) :: phi_np1
   real (kind=real_kind), pointer, dimension(:,:,:) :: dp3d
@@ -463,11 +375,12 @@ subroutine FColumnSolSolve(b_C, t, y_C, gamma, ierr)
   real (kind=real_kind) :: pnh_i(np,np,nlevp)
   real (kind=real_kind) :: exner(np,np,nlev)
   real (kind=real_kind) :: dpnh_dp(np,np,nlev)
-  real (kind=real_kind) :: x(nlev,np,np)
-  integer :: i, j, k, ie, info(np,np), Ipiv(nlev,np,np)
+  real (kind=real_kind) :: b1(nlev,np,np)
+  integer :: qn0, i, j, k, ie, info(np,np), Ipiv(nlev,np,np)
 
   !======= Internals ============
   call get_hvcoord_ptr(hvcoord)
+  call get_qn0(qn0)
 
   ! set return value to success
   ierr = 0
@@ -485,7 +398,7 @@ subroutine FColumnSolSolve(b_C, t, y_C, gamma, ierr)
   !    phi = phi0 + g*dt2*w
   ! where w0 and phi0 contain the explicit portions of each time-dependent equation,
   ! g is the gravitational constant, dt2 is the scaled time step size (includes the
-  ! diagonal coefficient for the DIRK method), and dpdpi = (dp/dpi).  Due to its
+  ! diagonal coefficient for the DIRK method: dt*Ai(i,i)), and dpdpi = (dp/dpi).  Due to its
   ! structure, this is solved via substitution:
   !
   !    phi = phi0 + g*dt2*(w0 + g*dt2*(1-dpdpi(phi)))
@@ -494,14 +407,17 @@ subroutine FColumnSolSolve(b_C, t, y_C, gamma, ierr)
   ! <=>
   !    phi + (g*dt2)^2*dpdpi(phi) - phi0 - g*dt2*w0 - (g*dt2)^2 = 0
   !
-  ! This nonlinear equation has tridiagonal Jacobian matrix, M = I + (g*dt2)^2*J, the
-  ! diagonals of which are constructed in the call get_dirk_jacobian().
+  ! This nonlinear equation has tridiagonal Jacobian matrix, M = I + (g*dt2)^2*J,
+  ! where J is the Jacobian matrix of dpdpi(phi).
+  ! The diagonals of M are constructed in the call get_dirk_jacobian().
   !
   ! For our problem, we consider a 'state vector'
   !    U = [v1; v2; w; phi; theta_dp_cp; dp3d]
   ! and we solve an IMEX problem of the form  U' = fE(U) + fI(U), where the implicit
   ! portion has structure
-  !    fI(U) = [0; 0; fI_w(phi); fI_phi(w); 0; 0]
+  !    fI(U) = [0; 0; fI_w(phi); fI_phi(w); 0; 0], where
+  !    fI_W(phi) = g*(1 - dpdpi(phi))
+  !    fI_phi(w) = g*w
   ! The resulting Jacobian for our nonlinear implicit solve has structure
   !    A = I-gamma*[0  0   0    0   0  0]
   !                [0  0   0    0   0  0]
@@ -509,6 +425,7 @@ subroutine FColumnSolSolve(b_C, t, y_C, gamma, ierr)
   !                [0  0  g*I   0   0  0]
   !                [0  0   0    0   0  0]
   !                [0  0   0    0   0  0]
+  !    gamma = dt*Ai(i,i) = dt2
   ! or equivalently, the linear system A*x = b corresponds to
   !      x_v1 = b_v1,  x_v2 = b_v2,  x_theta = b_theta,  x_dp3d = b_dp3d,
   ! and
@@ -528,17 +445,17 @@ subroutine FColumnSolSolve(b_C, t, y_C, gamma, ierr)
   !       x_w =  b_w + [x_phi - M*x_phi]/(gamma*g)
   ! So to solve our full linear system, we use the following steps:
   !    (a) construct M = I + (gamma*g)^2*J via a call to get_dirk_jacobian with dt2=gamma
-  !    (b) copy M2 = M
-  !    (c) construct right-hand side vector:  b1 = (b_phi + gamma*g*b_w)
-  !    (d) solve M*x_phi = b1 for x_phi via calls to DGTTRF and DGTTRS
-  !    (e) compute x_w = b_w + [x_phi - M2*x_phi]/(gamma*g)
-  !    (f) copy x_v1 = b_v1, x_v2 = b_v2, x_theta = b_theta, x_dp3d = b_dp3d
+  !    (b) construct right-hand side vector:  b1 = (b_phi + gamma*g*b_w)
+  !    (c) solve M*x_phi = b1 for x_phi via calls to DGTTRF and DGTTRS
+  !    (d) compute x_w = [x_phi - b_phi]/(gamma*g)
+  !    (e) copy x_v1 = b_v1, x_v2 = b_v2, x_theta = b_theta, x_dp3d = b_dp3d
 
   ! outer loop
   do ie=y%nets,y%nete
 
      !-------------
      ! step (a) construct M = I + (gamma*g)^2*J via a call to get_dirk_jacobian with dt2=gamma
+     !-------------
      ! set pointers for this ie
      dp3d  => y%elem(ie)%state%dp3d(:,:,:,y%tl_idx)
      theta_dp_cp  => y%elem(ie)%state%theta_dp_cp(:,:,:,y%tl_idx)
@@ -546,7 +463,7 @@ subroutine FColumnSolSolve(b_C, t, y_C, gamma, ierr)
      phis => y%elem(ie)%state%phis(:,:)
 
      ! compute intermediate variables for Jacobian calculation
-     call get_kappa_star(kappa_star, y%elem(ie)%state%Qdp(:,:,:,1,y%tl_idx), dp3d)
+     call get_kappa_star(kappa_star, y%elem(ie)%state%Qdp(:,:,:,1,qn0), dp3d)
      if (theta_hydrostatic_mode) then
         dpnh_dp(:,:,:)=1.d0
      else
@@ -570,69 +487,38 @@ subroutine FColumnSolSolve(b_C, t, y_C, gamma, ierr)
      info(:,:) = 0
      call get_dirk_jacobian(JacL,JacD,JacU,gamma,dp3d,phi_np1,phis,kappa_star_i,pnh_i,1)
 
-     !-------------
-     ! step (b) copy M2 = M
-     JacLcopy = JacL
-     JacDcopy = JacD
-     JacUcopy = JacU
-
      ! loop over components of this ie
 #if (defined COLUMN_OPENMP)
   !$omp parallel do private(i,j,k) collapse(2)
 #endif
      do i=1,np
         do j=1,np
-
            !-------------
-           ! step (c) construct right-hand side vector:  b1 = (b_phi + gamma*g*b_w)
-           !    [store b1 in x]
-           x(:,i,j) = b%elem(ie)%state%phinh(i,j,1:nlev,b%tl_idx) &
+           ! step (b) construct right-hand side vector:  b1 = (b_phi + gamma*g*b_w)
+           !-------------
+           b1(:,i,j) = b%elem(ie)%state%phinh(i,j,1:nlev,b%tl_idx) &
                     + gamma*g*b%elem(ie)%state%w(i,j,1:nlev,b%tl_idx)
 
            !-------------
-           ! step (d) solve M*x_phi = b1 for x_phi via calls to DGTTRF and DGTTRS
-           !
-           ! Note: b1 is stored in x, and DGTTRS solves in-place, so after that call
-           !     x_phi is stored in x, so copy to output vector b
-           ! Note2: compute_stage_value_dirk declares Ipiv of type real(kind=real_kind),
-           !     but LAPACK expects integer type; I've fixed this here, but
-           !     compute_stage_value_dirk sends the wrong type (should be fine as long
-           !     as real_kind storage is at least as large as integer)
+           ! step (c) solve M*x_phi = b1 for x_phi via calls to DGTTRF and DGTTRS
+           !          note solution will be in b1 on output
+           !-------------
            call DGTTRF( nlev, JacL(:,i,j), JacD(:,i,j), JacU(:,i,j), JacU2(:,i,j), &
                         Ipiv(:,i,j), info(i,j) )
            call DGTTRS( 'N', nlev, 1, JacL(:,i,j), JacD(:,i,j), JacU(:,i,j), &
-                        JacU2(:,i,j), Ipiv(:,i,j), x(:,i,j), nlev, info(i,j) )
-           b%elem(ie)%state%phinh(i,j,1:nlev,b%tl_idx) = x(:,i,j)
+                        JacU2(:,i,j), Ipiv(:,i,j), b1(:,i,j), nlev, info(i,j) )
 
            !-------------
-           ! step (e) compute x_w = b_w + [x_phi - M2*x_phi]/(gamma*g)
-           !
-           ! Note: the three diagonals of M2 are stored in the arrays JacLcopy,
-           ! JacDcopy and JacUcopy, so perform this update in phases:
-           !   (1) x_w = b_w + x_phi/(gamma*g)
-           !   (2) x_w(1) = x_w(1) + [ JacDcopy(1)*x_phi(1) + JacUcopy(1)*x_phi(2) ]/(gamma*g)
-           !   (3) x_w(k) = x_w(k) + [ JacLcopy(k-1)*x_phi(k-1) + JacDcopy(k)*x_phi(k)
-           !                         + JacUcopy(k)*x_phi(k+1) ]/(gamma*g), for k=2:nlev-1
-           !   (4) x_w(nlev) = x_w(nlev) + [ JacLcopy(nlev-1)*x_phi(nlev-1)
-           !                               + JacDcopy(nlev)*x_phi(nlev) ]/(gamma*g)
-           b%elem(ie)%state%w(i,j,1:nlev,b%tl_idx) = b%elem(ie)%state%w(i,j,1:nlev,b%tl_idx) &
-                + b%elem(ie)%state%phinh(i,j,1:nlev,b%tl_idx) / (gamma*g)
-           b%elem(ie)%state%w(i,j,1,b%tl_idx) = b%elem(ie)%state%w(i,j,1,b%tl_idx) &
-                + ( JacDcopy(1,i,j) * b%elem(ie)%state%phinh(i,j,1,b%tl_idx) &
-                  + JacUcopy(1,i,j) * b%elem(ie)%state%phinh(i,j,2,b%tl_idx) ) / (gamma*g)
-           do k=2,nlev-1
-              b%elem(ie)%state%w(i,j,k,b%tl_idx) = b%elem(ie)%state%w(i,j,k,b%tl_idx) &
-                   + ( JacLcopy(k-1,i,j) * b%elem(ie)%state%phinh(i,j,k-1,b%tl_idx) &
-                     + JacDcopy(k  ,i,j) * b%elem(ie)%state%phinh(i,j,k  ,b%tl_idx) &
-                     + JacUcopy(k  ,i,j) * b%elem(ie)%state%phinh(i,j,k+1,b%tl_idx) ) / (gamma*g)
-           end do
-           b%elem(ie)%state%w(i,j,nlev,b%tl_idx) = b%elem(ie)%state%w(i,j,nlev,b%tl_idx) &
-                + ( JacLcopy(nlev-1,i,j) * b%elem(ie)%state%phinh(i,j,nlev-1,b%tl_idx) &
-                  + JacDcopy(nlev,i,j)   * b%elem(ie)%state%phinh(i,j,nlev,b%tl_idx) ) / (gamma*g)
+           ! step (d) compute x_w = [x_phi - b_phi]/(gamma*g), then copy x_phi
+           !          into b_phi (for output purposes)
+           !-------------
+           b%elem(ie)%state%w(i,j,1:nlev,b%tl_idx) = (b1(:,i,j)  - &
+              b%elem(ie)%state%phinh(i,j,1:nlev,b%tl_idx)) / (gamma*g)
+           b%elem(ie)%state%phinh(i,j,1:nlev,b%tl_idx) = b1(:,i,j)
 
            !-------------
-           ! step (f) copy x_v1 = b_v1, x_v2 = b_v2, x_theta = b_theta, x_dp3d = b_dp3d
-           !
+           ! step (e) copy x_v1 = b_v1, x_v2 = b_v2, x_theta = b_theta, x_dp3d = b_dp3d
+           !-------------
            ! Note: since the vector b stores b_* on input and x_* on output, this is already done
 
         end do  ! end j loop

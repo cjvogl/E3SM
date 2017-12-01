@@ -265,6 +265,7 @@ N_Vector N_VClone_EXT(N_Vector w)
 {
   N_Vector v;
   void *wdata, *vdata;
+  int ierr;
 
   /* initialize pointers to NULL */
   v = NULL;
@@ -279,10 +280,10 @@ N_Vector N_VClone_EXT(N_Vector w)
   wdata = NV_DATA_EXT(w);
 
   /* Call Fortran routine to allocate data */
-  FNVEXT_CLONE(wdata, vdata);
+  FNVEXT_CLONE(wdata, vdata, &ierr);
 
   /* Fail gracefully if data is still NULL */
-  if(vdata == NULL) { N_VDestroy_EXT(v); return(NULL); }
+  if(ierr != 0) { N_VDestroy_EXT(v); return(NULL); }
 
   /* Attach data */
   NV_OWN_DATA_EXT(v) = SUNTRUE;
