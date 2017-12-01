@@ -78,8 +78,8 @@ module arkode_mod
   end type parameter_list
 
   public :: parameter_list, update_arkode, get_solution_ptr, get_hvcoord_ptr
-  public :: get_RHS_vars
-  public :: max_stage_num, table_list, set_Butcher_tables, get_EWT_vars
+  public :: get_qn0, get_RHS_vars
+  public :: max_stage_num, table_list, set_Butcher_tables
 
   save
 
@@ -124,7 +124,7 @@ contains
 
   subroutine get_hvcoord_ptr(hvcoord)
     !-----------------------------------------------------------------
-    ! Description: sets pointer to NVector for specified timelevel
+    ! Description: sets pointer to current hvcoord object
     !   Arguments:
     !     hvcoord - (obj*, output) hvcoord object pointer
     !-----------------------------------------------------------------
@@ -146,10 +146,34 @@ contains
 
   !=================================================================
 
-  subroutine get_RHS_vars(imex, qn0, dt, eta_ave_w, hybrid, deriv)
+  subroutine get_qn0(qn0)
+    !-----------------------------------------------------------------
+    ! Description: obtains current qn0 value
+    !   Arguments:
+    !     qn0 - (int, output) qn0 value
+    !-----------------------------------------------------------------
+
+    !======= Declarations =========
+    implicit none
+
+    ! calling variables
+    integer, intent(out) :: qn0
+
+    !======= Internals ============
+    qn0 = qn0_save
+
+    return
+  end subroutine get_qn0
+
+  !=================================================================
+
+  subroutine get_RHS_vars(imex, dt, eta_ave_w, hybrid, deriv)
     !-----------------------------------------------------------------
     ! Description: sets variables and objects needed to compute RHS
     !   Arguments:
+    !        imex - (int, output) variable for imex specification
+    !          dt - (real, output) variable for timestep size
+    !   eta_ave_w - (real, output) variable for eta_ave_w value
     !      hybrid - (obj*, output) hybrid object pointer
     !       deriv - (obj*, output) deriv object pointer
     !-----------------------------------------------------------------
@@ -165,12 +189,11 @@ contains
     ! calling variables
     type(hybrid_t),     intent(out) :: hybrid
     type(derivative_t), intent(out) :: deriv
-    integer,            intent(out) :: imex, qn0
+    integer,            intent(out) :: imex
     real(real_kind),    intent(out) :: dt, eta_ave_w
 
     !======= Internals ============
     imex = imex_save
-    qn0 = qn0_save
     dt = dt_save
     eta_ave_w = eta_ave_w_save
     hybrid = hybrid_ptr
@@ -180,36 +203,6 @@ contains
   end subroutine get_RHS_vars
 
   !=================================================================
-
-  subroutine get_EWT_vars(atol, rtol)
-    !-----------------------------------------------------------------
-    ! Description: sets variables and objects needed to compute RHS
-    !   Arguments:
-    !    atol - (obj*, output) NVector that contains atol array
-    !    rtol - (real, output) rtol value
-    !-----------------------------------------------------------------
-
-    !======= Inclusions ===========
-    use HommeNVector, only: NVec_t
-    use kinds,        only: real_kind
-
-    !======= Declarations =========
-    implicit none
-
-    ! calling variables
-    type(NVec_t),    intent(out) :: atol
-    real(real_kind), intent(out) :: rtol
-
-    !======= Internals ============
-    atol = atol_F
-    rtol = rtol_save
-
-    return
-  end subroutine get_EWT_vars
-
-
-    !=================================================================
-
 
   subroutine update_arkode(elem, nets, nete, deriv, hvcoord, hybrid, &
                            dt, eta_ave_w, n0, qn0, arkode_parameters)
