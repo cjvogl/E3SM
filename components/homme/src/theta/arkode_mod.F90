@@ -34,6 +34,9 @@ module arkode_mod
   ! If a larger Krylov subspace is desired, timelevels should be
   ! increased.
 
+  ! flag for computing nonlinear solver stats (ARKode or native)
+  logical, public :: calc_nonlinear_stats = .true.
+
   ! data type for passing ARKode Butcher table names
   type :: table_list
     integer :: ARK324 = ARK324_ARK
@@ -47,7 +50,6 @@ module arkode_mod
     integer :: RK2    = RK2_ARK
     integer :: U35    = U35_ARK
   end type table_list
-
 
   ! data type for passing ARKode parameters
   type :: parameter_list
@@ -80,6 +82,7 @@ module arkode_mod
   public :: parameter_list, update_arkode, get_solution_ptr, get_hvcoord_ptr
   public :: get_qn0, get_RHS_vars
   public :: max_stage_num, table_list, set_Butcher_tables
+  public :: update_nonlinear_stats, finalize_nonlinear_stats
 
   save
 
@@ -89,12 +92,85 @@ module arkode_mod
   type(parameter_list), pointer :: param_ptr
   type(NVec_t), target          :: y_F(3), atol_F
   type(c_ptr)                   :: y_C(3), atol_C
-  real(real_kind)               :: dt_save, eta_ave_w_save, rtol_save
-  integer                       :: imex_save, qn0_save
-
-  logical :: initialized = .false.
+  real(real_kind)               :: dt_save, eta_ave_w_save, rtol_save, rout(40)
+  integer                       :: imex_save, qn0_save, iout(40)
+  logical                       :: initialized = .false.
+  ! variables used for nonlinear solver stats, not necessary for use of ARKode
+  integer :: total_nonlinear_iterations = 0
+  integer :: max_nonlinear_iterations = 0
+  integer :: num_timesteps = 0
 
 contains
+
+  subroutine update_nonlinear_stats(timesteps, nonlinear_iters)
+    !-----------------------------------------------------------------
+    ! Description: update ARKode performance statistics
+    !   Arguments:
+    !          timesteps - (int, input, optional) specify # of timesteps
+    !    nonlinear_iters - (int, input, optional) specify # of nonlinear iters
+    !-----------------------------------------------------------------
+
+    !======= Declarations =========
+    implicit none
+
+    ! calling variables
+    integer, intent(in), optional :: timesteps
+    integer, intent(in), optional :: nonlinear_iters
+
+    !======= Internals ============
+    if (present(timesteps)) then
+      num_timesteps = num_timesteps + timesteps
+    else
+      num_timesteps = num_timesteps + 1
+    end if
+    if (present(nonlinear_iters)) then
+      max_nonlinear_iterations = max(max_nonlinear_iterations, nonlinear_iters)
+      total_nonlinear_iterations = total_nonlinear_iterations + nonlinear_iters
+    else
+      max_nonlinear_iterations = max(max_nonlinear_iterations, iout(11))
+      total_nonlinear_iterations = total_nonlinear_iterations + iout(11)
+    end if
+    return
+  end subroutine update_nonlinear_stats
+
+  !=================================================================
+
+  subroutine finalize_nonlinear_stats(comm, my_rank, master_rank, comm_size)
+    !-----------------------------------------------------------------
+    ! Description: print ARKode performance statistics
+    !-----------------------------------------------------------------
+
+    !======= Inclusions ===========
+    use mpi
+
+    !======= Declarations =========
+    implicit none
+
+    ! calling variables
+    integer, intent(in) :: comm
+    integer, intent(in) :: my_rank
+    integer, intent(in) :: master_rank
+    integer, intent(in) :: comm_size
+
+    ! local variables
+    integer :: max_result, sum_result, ierr
+
+    !======= Internals ============
+    call MPI_Reduce(max_nonlinear_iterations, max_result, 1, MPI_INTEGER, &
+                    MPI_MAX, master_rank, comm, ierr)
+    call MPI_Reduce(total_nonlinear_iterations, sum_result, 1, MPI_INTEGER, &
+                    MPI_SUM, master_rank, comm, ierr)
+    if (my_rank == master_rank) then
+      print *, 'Nonlinear Solver Statistics:'
+      print '(2x,A,i9)','Max num nonlin iters   =', max_result
+      print '(2x,A,i9)','Total num nonlin iters =', sum_result
+      print '(2x,A,i9)','Total num timesteps    =', num_timesteps
+      print '(2x,A,f9.2)','Avg num nonlin iters   =', sum_result/float(comm_size*num_timesteps)
+    end if
+    return
+  end subroutine finalize_nonlinear_stats
+
+  !=================================================================
 
   subroutine get_solution_ptr(np1, ynp1)
     !-----------------------------------------------------------------
@@ -381,11 +457,11 @@ contains
 
     ! local variables
     type(parameter_list), pointer :: ap
-    real(real_kind)               :: rout(40), rpar(1)
+    real(real_kind)               :: rpar(1)
     real(real_kind)               :: A_C1(arkode_parameters%s*arkode_parameters%s)
     real(real_kind)               :: A_C2(arkode_parameters%s*arkode_parameters%s)
     integer(C_INT)                :: idef, iatol, ierr
-    integer(C_LONG)               :: iout(40), ipar(1)
+    integer(C_LONG)               :: ipar(1)
     integer                       :: i, j
 
     !======= Internals ============

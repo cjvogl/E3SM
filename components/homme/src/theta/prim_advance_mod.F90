@@ -106,7 +106,8 @@ contains
   subroutine prim_advance_exp(elem, deriv, hvcoord, hybrid,dt, tl,  nets, nete, compute_diagnostics)
 
     use arkode_mod,     only: parameter_list, update_arkode, get_solution_ptr, &
-                              table_list, set_Butcher_tables
+                              table_list, set_Butcher_tables, &
+                              calc_nonlinear_stats, update_nonlinear_stats
     use iso_c_binding
     implicit none
 
@@ -133,7 +134,6 @@ contains
 
     integer :: ie,nm1,n0,np1,nstep,qsplit_stage,k, qn0
     integer :: n,i,j,maxiter
-
 
     ! ARKode variables
     type(parameter_list) :: arkode_parameters
@@ -290,11 +290,12 @@ contains
       call elemstate_add(elem,statesave,nets,nete,1,n0,np1,n0,gamma,1.d0,0.d0)
 
       maxiter=10
-      itertol=1e-15
+      itertol=1e-13
       ! solve g2 = un0 + dt*gamma*n(g1)+dt*gamma*s(g2) for g2 and save at nm1
       call compute_stage_value_dirk(nm1,n0,qn0,gamma*dt,elem,hvcoord,hybrid,&
         deriv,nets,nete,maxiter,itertol)
 !      print *, 'num iters  ', maxiter
+      ie = maxiter ! using existing integer variable to store this value
 !=== End of Phase 1 ====
 ! at this point, g2 is at nm1, un0+dt*gamma*n(g1) is at n0, and dt*n(g1) is at np1
 
@@ -319,7 +320,7 @@ contains
       call elemstate_add(elem,statesave,nets,nete,3,nm1,np1,nm1,1.d0-gamma,1.d0-gamma,1.d0)
 
       maxiter=10
-      itertol=1e-15
+      itertol=1e-13
       !	solve g3 = (un0+dt*delta*n(g1))+dt*(1-delta)*n(g2)+dt*(1-gamma)*s(g2)+dt*gamma*s(g3)
       ! for g3 using (un0+dt*delta*n(g1))+dt*(1-delta)*n(g2)+dt*(1-gamma)*s(g2) as initial guess
       ! and save at np1
@@ -335,6 +336,11 @@ contains
 
       call state_read(elem,statesave,n0,nets,nete)
       call t_stopf("ARS232_timestep")
+
+      if (calc_nonlinear_stats) then
+        maxiter = max(maxiter,ie)
+        call update_nonlinear_stats(1, maxiter)
+      end if
 !======================================================================================================
     elseif (tstep_type==8) then ! SSP2 222
       call t_startf("SSP2222_timestep")
@@ -533,6 +539,9 @@ contains
       if (ierr /= 0) then
         call abortmp('farkode failed')
       endif
+      if (calc_nonlinear_stats) then
+        call update_nonlinear_stats()
+      end if
     end if
 
     ! ==============================================
@@ -1640,7 +1649,7 @@ contains
   real (kind=real_kind) :: Fn(np,np,nlev,1),x(nlev,np,np)
   real (kind=real_kind) :: pnh_i(np,np,nlevp)
   real (kind=real_kind) :: itererr,itererrtemp(np,np)
-  real (kind=real_kind) :: itererrmat,itercountmax,itererrmax
+  real (kind=real_kind) :: itererrmat,itererrmax
   real (kind=real_kind) :: norminfr0(np,np),norminfJ0(np,np)
   real (kind=real_kind) :: maxnorminfJ0r0
   real (kind=real_kind) :: alpha1(np,np),alpha2(np,np)
@@ -1650,7 +1659,7 @@ contains
 
 
 
-  integer :: i,j,k,l,ie,itercount,info(np,np)
+  integer :: i,j,k,l,ie,itercount,info(np,np),itercountmax
   itercountmax=0
   itererrmax=0.d0
 
@@ -1776,18 +1785,21 @@ contains
     end do ! end do for the do while loop
 !  the following two if-statements are for debugging/testing purposes to track the number of iterations and error attained
 !  by the Newton iteration
-!      if (itercount > itercountmax) then
-!        itercountmax=itercount
-!      end if
+    if (itercount > itercountmax) then
+      itercountmax=itercount
+    end if
 !      if (itererr > itererrmax) then
 !        itererrmax = itererr
 !      end if
+    if (itercount == maxiter) then
+      print *, 'current error:', itererr, ' error tol:', itertol
+      call abortmp('Convergence issue with nonlinear solve: max iteration # met')
+    end if
   end do ! end do for the ie=nets,nete loop
-!  maxiter=itercountmax
+  maxiter=itercountmax
 !  itertol=itererrmax
 !  print *, 'max itercount', itercountmax, 'maxitererr ', itererrmax
   call t_stopf('compute_stage_value_dirk')
-
   end subroutine compute_stage_value_dirk
 
 

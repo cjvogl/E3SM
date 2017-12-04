@@ -1,14 +1,5 @@
 #!/bin/bash
 
-if [[ $HOSTNAME == "cab"* ]]; then
-  SYSTEM=cab
-elif [[ $HOSTNAME == "quartz"* ]]; then
-  SYSTEM=quartz
-else
-  echo "ERROR: Script not implemented for this system"
-  exit -1
-fi
-
 if [[ $# -lt 1 ]]; then
   echo "ERROR: specify a tstep_type number"
   exit -1
