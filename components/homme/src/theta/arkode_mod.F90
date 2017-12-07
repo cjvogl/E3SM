@@ -93,8 +93,9 @@ module arkode_mod
   type(NVec_t), target          :: y_F(3), atol_F
   type(c_ptr)                   :: y_C(3), atol_C
   real(real_kind)               :: dt_save, eta_ave_w_save, rtol_save, rout(40)
-  integer                       :: imex_save, qn0_save, iout(40)
+  integer                       :: imex_save, qn0_save
   logical                       :: initialized = .false.
+  integer(C_LONG)               :: iout(40)
   ! variables used for nonlinear solver stats, not necessary for use of ARKode
   integer :: total_nonlinear_iterations = 0
   integer :: max_nonlinear_iterations = 0
@@ -167,6 +168,7 @@ contains
       print '(2x,A,i9)','Total num timesteps    =', num_timesteps
       print '(2x,A,f9.2)','Avg num nonlin iters   =', sum_result/float(comm_size*num_timesteps)
     end if
+
     return
   end subroutine finalize_nonlinear_stats
 
@@ -357,14 +359,6 @@ contains
     if (ierr /= 0) then
       call abortmp('farksetrin failed')
     endif
-
-    ! ! Specify user-defined error weight vector function
-    ! ! (will use current solution)
-    ! iflag = 1
-    ! call farkewtset(iflag, ierr)
-    ! if (ierr /= 0) then
-    !    call abortmp('arkode_init: farkewtset failed')
-    ! end if
 
     return
   end subroutine update_arkode

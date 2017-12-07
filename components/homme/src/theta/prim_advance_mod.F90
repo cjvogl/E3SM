@@ -295,7 +295,9 @@ contains
       call compute_stage_value_dirk(nm1,n0,qn0,gamma*dt,elem,hvcoord,hybrid,&
         deriv,nets,nete,maxiter,itertol)
 !      print *, 'num iters  ', maxiter
-      ie = maxiter ! using existing integer variable to store this value
+      if (calc_nonlinear_stats) then
+        ie = maxiter ! using existing integer variable to store this value
+      end if
 !=== End of Phase 1 ====
 ! at this point, g2 is at nm1, un0+dt*gamma*n(g1) is at n0, and dt*n(g1) is at np1
 
