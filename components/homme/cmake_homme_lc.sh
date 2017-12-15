@@ -20,7 +20,7 @@ if [[ $HOSTNAME == "cab"* ]]; then
   use hdf5-intel-parallel-mvapich2-1.10.0
   use netcdf-intel-4.3.3.1
   use netcdf-fortran-intel-4.4.2
-  export SUNDIALS=$HOME/local/sundials-2.7.0_cab_intel_opt
+  export SUNDIALS=$HOME/local/sundials-temp_cab_intel_opt
 elif [[ $HOSTNAME == "quartz"* ]]; then
   SYSTEM=quartz
   module purge

@@ -2,23 +2,36 @@
 
 import os, sys
 
-# Set MPI parameters
-num_nodes = 5
-num_procs_per_node = 36
-seconds_per_step = 3.0
+# Set MPI parameters based on machine
+hostname = os.getenv('HOSTNAME')
+if (hostname.startswith('cab')):
+  num_nodes = 12
+  num_procs_per_node = 16
+  seconds_per_step = 3.0 # probably need to adjust this number
+elif (hostname.startswith('quartz')):
+  num_nodes = 5
+  num_procs_per_node = 36
+  seconds_per_step = 3.0
+else:
+  print('\n*** SCRIPT NOT IMPLEMENTED FOR HTIS MACHINE **\n\n')
+  sys.exit()
 ###############################################################
 
 if (len(sys.argv) < 2):
-  print('usage: ./submit_jwbaroclinic.sh ./<executable name> [optional parameter name] [parameter value]')
+  print('usage: ./submit_gravitywave.sh <executable name> [optional parameter name] [parameter value]')
   sys.exit()
 
 # Set dictionary of default HOMME parameter names and values
 paramDict = {
-  'tsteptype':'5',
-  'tstep':'1.0',
-  'nmax':'300',
-  'ne':'27',
-  'nu':'5.0e8'
+  'tsteptype':          '5',
+  'tstep':            '1.0',
+  'nmax':            '3600',
+  'ne':                '27',
+  'nu':             '5.0e8',
+  'splitting':          '1',
+  'rtol':          '1.0e-8',
+  'atol':            '-1.0',
+  'calcstats':        'true'
 }
 
 # Parse command line arguments and parameter dictionary
@@ -85,12 +98,19 @@ num_io_procs           = 16
 interp_nlat            = 128
 interp_nlon            = 256
 /
+&arkode_nl
+imex_splitting         = %s
+rel_tol                = %s
+abs_tol                = %s
+calc_nonlinear_stats   = .%s.
+/
 &prof_inparm
 profile_outpe_num      = 100
 profile_single_file	   = .true.
 /""" % (paramDict['ne'], paramDict['nmax'], paramDict['tstep'],
         paramDict['tsteptype'],paramDict['nu'],paramDict['nu'],
-        suffix,output_frequency)
+        suffix,output_frequency,paramDict['splitting'],
+        paramDict['rtol'], paramDict['atol'],paramDict['calcstats'])
 os.system("echo '%s' > input_%s.nl" % (namelist, suffix))
 
 # Create job script
@@ -111,7 +131,7 @@ script = \
 #SBATCH -p pbatch # pbatch or pdebug
 #SBATCH -N %d # nodes
 #SBATCH -t %s # Max walltime (hh:mm:ss)
-#SBATCH -J jwbaroclinic_%s # Job name
+#SBATCH -J gravitywave_%s # Job name
 #SBATCH -o %s.out # stdout file
 #SBATCH -e %s.err # stderr file
 

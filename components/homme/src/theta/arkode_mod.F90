@@ -11,8 +11,9 @@
 #define ARS233_ARK 8
 #define ARS343_ARK 9
 #define ARS443_ARK 10
-#define RK2_ARK 11
-#define U35_ARK 12
+#define SSP3333A_ARK 11
+#define RK2_ARK 12
+#define U35_ARK 13
 
 module arkode_mod
 
@@ -34,21 +35,25 @@ module arkode_mod
   ! If a larger Krylov subspace is desired, timelevels should be
   ! increased.
 
-  ! flag for computing nonlinear solver stats (ARKode or native)
-  logical, public :: calc_nonlinear_stats = .true.
+  ! ARKode namelist variables
+  integer, public         :: imex_splitting = 1
+  real(real_kind), public :: rel_tol = 1.d-8
+  real(real_kind), public :: abs_tol = 1.d-8  ! val < 0 indicates array atol
+  logical, public         :: calc_nonlinear_stats = .true.
 
   ! data type for passing ARKode Butcher table names
   type :: table_list
-    integer :: ARK324 = ARK324_ARK
-    integer :: ARK436 = ARK436_ARK
-    integer :: ARK453 = ARK453_ARK
-    integer :: ARS222 = ARS222_ARK
-    integer :: ARS232 = ARS232_ARK
-    integer :: ARS233 = ARS233_ARK
-    integer :: ARS343 = ARS343_ARK
-    integer :: ARS443 = ARS443_ARK
-    integer :: RK2    = RK2_ARK
-    integer :: U35    = U35_ARK
+    integer :: ARK324   = ARK324_ARK
+    integer :: ARK436   = ARK436_ARK
+    integer :: ARK453   = ARK453_ARK
+    integer :: ARS222   = ARS222_ARK
+    integer :: ARS232   = ARS232_ARK
+    integer :: ARS233   = ARS233_ARK
+    integer :: ARS343   = ARS343_ARK
+    integer :: ARS443   = ARS443_ARK
+    integer :: SSP3333A = SSP3333A_ARK
+    integer :: RK2      = RK2_ARK
+    integer :: U35      = U35_ARK
   end type table_list
 
   ! data type for passing ARKode parameters
@@ -92,7 +97,7 @@ module arkode_mod
   type(parameter_list), pointer :: param_ptr
   type(NVec_t), target          :: y_F(3), atol_F
   type(c_ptr)                   :: y_C(3), atol_C
-  real(real_kind)               :: dt_save, eta_ave_w_save, rtol_save, rout(40)
+  real(real_kind)               :: dt_save, eta_ave_w_save, rout(40)
   integer                       :: imex_save, qn0_save
   logical                       :: initialized = .false.
   integer(C_LONG)               :: iout(40)
@@ -335,11 +340,10 @@ contains
     ! specify start time to be 0.0 so stage time available in farkefun & farkifun
     tstart = 0.d0
 
-    ! store variables for farkefun, farkifun, and farkewt
+    ! store variables for farkefun and farkifun
     dt_save = dt
     eta_ave_w_save = eta_ave_w
     imex_save = arkode_parameters%imex
-    rtol_save = arkode_parameters%rtol
     qn0_save = qn0
     hybrid_ptr => hybrid
     deriv_ptr => deriv
@@ -396,7 +400,6 @@ contains
     ap => arkode_parameters
 
     ! update rtol and atol
-    rtol_save = ap%rtol
     do ie=atol_F%nets,atol_F%nete
       atol_F%elem(ie)%state%v(:,:,1,:,atol_F%tl_idx) = ap%atol(1)
       atol_F%elem(ie)%state%v(:,:,2,:,atol_F%tl_idx) = ap%atol(2)
@@ -481,7 +484,6 @@ contains
 
     ! save rtol, set data in 4th timelevel to atol values,
     ! and 'create' NVec_t object
-    rtol_save = ap%rtol
     do i=nets,nete
       elem(i)%state%v(:,:,1,:,4) = ap%atol(1)
       elem(i)%state%v(:,:,2,:,4) = ap%atol(2)
@@ -657,7 +659,7 @@ contains
 
     select case (table_name)
 
-    case (RK2_ARK) ! TESTED: compared against HOMME version
+    case (RK2_ARK)
         ap%imex = 1 ! explicit
         ap%s = 2 ! 2 stage
         ap%q = 2 ! 2nd order
@@ -670,7 +672,7 @@ contains
         ap%ce(1:2) = (/ 0.d0, 0.5d0 /)
         ap%be(1:2) = (/ 0.d0, 1.d0 /)
 
-      case (U35_ARK) ! TESTED: compared against HOMME version
+      case (U35_ARK)
         ap%imex = 1 ! explicit
         ap%s = 5 ! 5 stage
         ap%q = 3 ! 3rd order
@@ -847,7 +849,7 @@ contains
         ap%ce(1:5) = ap%ci(1:5)
         ap%be(1:5) = (/ 1.d0/4.d0, 7.d0/4.d0, 3.d0/4.d0, -7.d0/4.d0, 0.d0 /)
 
-      case (ARK324_ARK)
+      case (ARK324_ARK) ! NOT TESTED
         ap%imex = 2 ! imex
         ap%s = 4 ! 4 stage
         ap%q = 3 ! 3rd order
@@ -886,7 +888,7 @@ contains
         ap%be2(3) = 9247589265047.d0/10645013368117.d0
         ap%be2(4) = 2193209047091.d0/5459859503100.d0
 
-      case (ARK436_ARK)
+      case (ARK436_ARK) ! NOT TESTED
         ap%imex = 2 ! imex
         ap%s = 6 ! 6 stage
         ap%q = 4 ! 4th order
@@ -929,6 +931,27 @@ contains
         ap%be2(1:6) = (/ 4586570599.d0/29645900160.d0, 0.d0, 178811875.d0/945068544.d0, &
                         814220225.d0/1159782912.d0, -3700637.d0/11593932.d0, &
                         61727.d0/225920.d0 /)
+
+      case (SSP3333A_ARK) ! NOT TESTED
+        ap%imex = 2 ! imex
+        ap%s = 3 ! 3 stage
+        ap%q = 3 ! 3rd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedded explicit method
+        ! Implicit Butcher Table (matrix)
+        ap%Ai(1:3,1:3) = 0.d0
+        ap%Ai(2,1:2) = (/      0.d0,       1.d0 /)
+        ap%Ai(3,1:3) = (/ 1.d0/6.d0, -1.d0/3.d0, 2.d0/3.d0 /)
+        ! Implicit Butcher Table (vectors)
+        ap%ci(1:3) = (/ 0.d0, 1.d0, 0.5d0 /)
+        ap%bi(1:3) = (/ 1.d0/6.d0, 1.d0/6.d0, 2.d0/3.d0 /)
+        ! Explicit Butcher Table (matrix)
+        ap%Ae(1:3,1:3) = 0.d0
+        ap%Ae(2,1) = 1.d0
+        ap%Ae(3,1:2) = (/ 0.25d0, 0.25d0 /)
+        ! Explicit Butcher Table (vectors)
+        ap%ce(1:3) = ap%ci(1:3)
+        ap%be(1:3) = ap%bi(1:3)
 
       case default
         call abortmp('Unknown ARKode Butcher table name')

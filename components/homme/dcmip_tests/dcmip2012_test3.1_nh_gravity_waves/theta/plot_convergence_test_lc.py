@@ -3,19 +3,22 @@ import matplotlib.pyplot as pyplot
 from netCDF4 import Dataset
 import numpy as np
 
-noHV = True
+noHV = False
+rtol = '1e-8'
+splitting = '1'
 
-methodDict = {'U35-ref': 5,
-                  'U35': 11,
+methodDict = {#'U35-ref': 5,
+                  #'U35': 11,
                   'ARS232-ref': 7,
-                  'ARS232': 12,
-                  'DBM453': 13,
-                  'ARS222': 14,
-                  'ARS233': 15,
-                  'ARS343': 16,
-                  'ARS443': 17,
-                  'ARK324': 18}
+                  'ARS232': 12}
+ #                 'DBM453': 13,
+ #                 'ARS222': 14,
+  #                'ARS233': 15,
+   #               'ARS343': 16,
+    #              'ARS443': 17}
+#                  'ARK324': 18}
                   #'ARK436': 19}
+#                  'SSP3333a': 20}
 
 # Load reference solution
 tsteptypeRef = 5
@@ -42,7 +45,8 @@ for m,method in enumerate(methodDict.keys()):
   solutionDict = {}
   print method
   # Load timestep and solution data
-  for fileName in glob.glob('tsteptype%d_tstep*.out' % methodDict[method]):
+  for fileName in glob.glob('tsteptype%d_tstep*_rtol%s*_splitting%s*.out' % \
+                                    (methodDict[method], rtol, splitting)):
     if ((noHV and "nu0.0" in fileName) or (not noHV and "nu0.0" not in fileName)):
       words = fileName.split('_')
       dt = words[1].replace('tstep','')

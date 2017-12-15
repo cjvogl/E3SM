@@ -58,7 +58,7 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
 
   !======= Inclusions ===========
   use arkode_mod,       only: max_stage_num, get_RHS_vars, get_hvcoord_ptr, &
-                              get_qn0
+                              get_qn0, imex_splitting
   use kinds,            only: real_kind
   use HommeNVector,     only: NVec_t
   use hybrid_mod,       only: hybrid_t
@@ -131,14 +131,17 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   !  DSS is the averaging procedure for the active and inactive nodes
   !
 
-! use this call if using the first splitting
-  call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
-       1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
-       .false., bval*eta_ave_w, scale1, scale2, scale3)
-! use this call if using the second splitting
-!  call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
-!       1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
-!       .false., bval*eta_ave_w, scale1, scale2, scale3,1.d0)
+  if (imex_splitting == 1) then
+    call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
+          1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
+          .false., bval*eta_ave_w, scale1, scale2, scale3)
+  elseif (imex_splitting == 2) then
+    call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
+          1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
+          .false., bval*eta_ave_w, scale1, scale2, scale3, 1.d0)
+  else
+    ierr = 1 ! indicate error
+  end if
 
   return
 end subroutine farkifun
@@ -162,7 +165,7 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
 
   !======= Inclusions ===========
   use arkode_mod,       only: max_stage_num, get_RHS_vars, get_hvcoord_ptr, &
-                              get_qn0
+                              get_qn0, imex_splitting
   use kinds,            only: real_kind
   use HommeNVector,     only: NVec_t
   use hybrid_mod,       only: hybrid_t
@@ -235,15 +238,17 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   !  DSS is the averaging procedure for the active and inactive nodes
   !
 
-! use this call if using the first splitting
-  call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
-       1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
-       .false., bval*eta_ave_w, scale1, scale2, scale3)
-! use this call if using the second splitting
-!  call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
-!       1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
-!       .false., bval*eta_ave_w, scale1, scale2, scale3,0.d0)
-
+  if (imex_splitting == 1) then
+    call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
+          1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
+          .false., bval*eta_ave_w, scale1, scale2, scale3)
+  elseif (imex_splitting == 2) then
+    call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
+          1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
+          .false., bval*eta_ave_w, scale1, scale2, scale3,0.d0)
+  else
+    ierr = 1 ! indicate invalid imex splitting chosen
+  endif
 
   return
 end subroutine farkefun

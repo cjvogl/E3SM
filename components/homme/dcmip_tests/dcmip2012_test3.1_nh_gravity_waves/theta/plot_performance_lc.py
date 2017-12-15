@@ -7,9 +7,9 @@ noHV = False
 
 methodDict = {#'U35-ref': 5,
                   #'U35': 11,
-                  #'ARS232-ref': 7,
-                  #'ARS232': 12,
-                  'DBM453': 13}
+                  'ARS232-ref': 7,
+                  'ARS232': 12}
+                  #'DBM453': 13}
                   #'ARS222': 14,
                   #'ARS233': 15,
                   #'ARS343': 16,
@@ -19,9 +19,13 @@ methodDict = {#'U35-ref': 5,
 
 # Iterate through methods and plot nonlinear iteration count
 f, ax1 = pyplot.subplots(figsize=(10,10))
+f, ax2 = pyplot.subplots(figsize=(10,10))
+maxPlotMax = 0
+avgPlotMax = 0.0
 for m,method in enumerate(methodDict.keys()):
   dtList = []
-  countDict = {}
+  maxCountDict = {}
+  avgCountDict = {}
   print method
   # Load timestep and solution data
   for fileName in glob.glob('tsteptype%d_tstep*.out' % methodDict[method]):
@@ -33,21 +37,37 @@ for m,method in enumerate(methodDict.keys()):
       f = open(fileName)
       lines = list(f)
       f.close
+      count = 0
       for line in reversed(lines):
-        if (line.startswith('  Max num nonlin iters')):
-          words = line.split()
-          countDict[dt] = int(words[5])
+        if (count == 2):
           break
+        elif (line.startswith('  Max num nonlin iters')):
+          words = line.split()
+          itercount = int(words[5])
+          maxCountDict[dt] = itercount
+          maxPlotMax = max(maxPlotMax,itercount)
+          count += 1
+        elif (line.startswith('  Avg num nonlin iters')):
+          words = line.split()
+          itercount = float(words[5])
+          avgCountDict[dt] = itercount
+          avgPlotMax = max(avgPlotMax,itercount)
+          count += 1
+
   # Sort values and add to plot
   dtPlot = np.sort(dtList)
-  countPlot = np.empty(len(dtPlot))
+  maxCountPlot = np.empty(len(dtPlot))
+  avgCountPlot = np.empty(len(dtPlot))
   for j,dt in enumerate(dtPlot):
-    countPlot[j] = countDict[str(dt)]
+    maxCountPlot[j] = maxCountDict[str(dt)]
+    avgCountPlot[j] = avgCountDict[str(dt)]
   if (m < 7):
     lineStyle = '-o'
   else:
     lineStyle = '-d'
-  ax1.plot(dtPlot,countPlot,lineStyle,label='%s' % method)
+  ax1.semilogx(dtPlot,maxCountPlot,lineStyle,label='%s' % method)
+  ax2.semilogx(dtPlot,avgCountPlot,lineStyle,label='%s' % method)
+
 
 #orderList = ('first', 'second', 'third')
 #for j, order in enumerate(orderList):
@@ -56,8 +76,17 @@ for m,method in enumerate(methodDict.keys()):
 #    coeff = LIPlot[0]/dtPlot[0]**(j+1)
 #    ax2.loglog(dtPlot,coeff*dtPlot**(j+1),'--',label=order)
 
-ax1.set_title('Average Nonlinear Iteration Count per Timestep')
-ax1.set_xlabel('dt')
-ax1.legend(loc='best')
+ax1.set_title('Maximum Nonlinear Iteration Count per Timestep',fontsize=16)
+ax1.set_xlabel('dt',fontsize=16)
+ax1.set_ylim(0,maxPlotMax+1)
+ax1.legend(loc='best',fontsize=16)
+ax1.tick_params(axis='both', which='major', labelsize=14)
+
+ax2.set_title('Average Nonlinear Iteration Count per Timestep',fontsize=16)
+ax2.set_xlabel('dt',fontsize=16)
+ax2.set_ylim(0,avgPlotMax+1)
+ax2.legend(loc='best',fontsize=16)
+ax2.tick_params(axis='both', which='major', labelsize=14)
+
 
 pyplot.show()

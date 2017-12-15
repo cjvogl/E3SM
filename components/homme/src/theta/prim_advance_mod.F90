@@ -107,7 +107,8 @@ contains
 
     use arkode_mod,     only: parameter_list, update_arkode, get_solution_ptr, &
                               table_list, set_Butcher_tables, &
-                              calc_nonlinear_stats, update_nonlinear_stats
+                              calc_nonlinear_stats, update_nonlinear_stats, &
+                              rel_tol, abs_tol
     use iso_c_binding
     implicit none
 
@@ -290,10 +291,13 @@ contains
       call elemstate_add(elem,statesave,nets,nete,1,n0,np1,n0,gamma,1.d0,0.d0)
 
       maxiter=10
-      itertol=1e-13
+      itertol=1e-12
       ! solve g2 = un0 + dt*gamma*n(g1)+dt*gamma*s(g2) for g2 and save at nm1
       call compute_stage_value_dirk(nm1,n0,qn0,gamma*dt,elem,hvcoord,hybrid,&
         deriv,nets,nete,maxiter,itertol)
+      if (maxiter == 10) then
+        call abortmp('Convergence issue with nonlinear solve: max iteration # met')
+      end if
 !      print *, 'num iters  ', maxiter
       if (calc_nonlinear_stats) then
         ie = maxiter ! using existing integer variable to store this value
@@ -322,12 +326,15 @@ contains
       call elemstate_add(elem,statesave,nets,nete,3,nm1,np1,nm1,1.d0-gamma,1.d0-gamma,1.d0)
 
       maxiter=10
-      itertol=1e-13
+      itertol=1e-12
       !	solve g3 = (un0+dt*delta*n(g1))+dt*(1-delta)*n(g2)+dt*(1-gamma)*s(g2)+dt*gamma*s(g3)
       ! for g3 using (un0+dt*delta*n(g1))+dt*(1-delta)*n(g2)+dt*(1-gamma)*s(g2) as initial guess
       ! and save at np1
       call compute_stage_value_dirk(np1,n0,qn0,gamma*dt,elem,hvcoord,hybrid,&
         deriv,nets,nete,maxiter,itertol)
+      if (maxiter == 10) then
+        call abortmp('Convergence issue with nonlinear solve: max iteration # met')
+      end if
 !      print *, 'num iters  ', maxiter
 !=== End of Phase 2 ===
 ! at this point, un0+dt*(1-gamma)*(n(g2)+s(g2)) is at nm1, g3 is at np1, and n0 is free
@@ -340,8 +347,7 @@ contains
       call t_stopf("ARS232_timestep")
 
       if (calc_nonlinear_stats) then
-        maxiter = max(maxiter,ie)
-        call update_nonlinear_stats(1, maxiter)
+        call update_nonlinear_stats(1, ie+maxiter)
       end if
 !======================================================================================================
     elseif (tstep_type==8) then ! SSP2 222
@@ -499,11 +505,16 @@ contains
       call set_Butcher_tables(arkode_parameters, arkode_tables%ARS443)
 
     else if (tstep_type==18) then ! ARKode Kennedy 3rd/3rd/3rd-order, 4-stage
+      ! NOT TESTED
       call set_Butcher_tables(arkode_parameters, arkode_tables%ARK324)
 
     else if (tstep_type==19) then ! ARKode Kennedy 4th/4th/4th-order, 6-stage
+      ! NOT TESTED
       call set_Butcher_tables(arkode_parameters, arkode_tables%ARK436)
 
+    else if (tstep_type==20) then ! Conde et al ssp3(3,3,3)a
+      ! NOT TESTED
+      call set_Butcher_tables(arkode_parameters, arkode_tables%SSP3333A)
 
     else
        call abortmp('ERROR: bad choice of tstep_type')
@@ -516,17 +527,23 @@ contains
       if (arkode_parameters%imex /= 1) then
         ! linear solver parameters
         arkode_parameters%useColumnSolver = .true. ! use GMRES (optimally, this could be changed at runtime)
+        ! TODO: put a conditional statement in here that only sets these if
+        !       not using the column solver
         arkode_parameters%precLR = 0 ! no preconditioning
         arkode_parameters%gstype = 1 ! classical Gram-Schmidt orthogonalization
         arkode_parameters%lintol = 0.05d0 ! multiplies NLCOV_COEF in linear conv. criteria
         ! Iteration tolerances (appear in WRMS array as rtol*|u_i| + atol_i)
-        arkode_parameters%rtol = 1.d-8
-        arkode_parameters%atol(1) = 1.d1*arkode_parameters%rtol ! assumes u ~ 1e1
-        arkode_parameters%atol(2) = 1.d1*arkode_parameters%rtol ! assumes v ~ 1e1
-        arkode_parameters%atol(3) = 1.d1*arkode_parameters%rtol ! assumes w ~ 1e1
-        arkode_parameters%atol(4) = 1.d5*arkode_parameters%rtol ! assumes phinh ~ 1e5
-        arkode_parameters%atol(5) = 1.d8*arkode_parameters%rtol ! assumes theta_dp_cp ~ 1e8
-        arkode_parameters%atol(6) = 1.d0*arkode_parameters%rtol ! assumes dp3d ~ 1e0
+        arkode_parameters%rtol = rel_tol
+        if (abs_tol < 0.d0) then
+          arkode_parameters%atol(1) = 1.d1*arkode_parameters%rtol ! assumes u ~ 1e1
+          arkode_parameters%atol(2) = 1.d1*arkode_parameters%rtol ! assumes v ~ 1e1
+          arkode_parameters%atol(3) = 1.d1*arkode_parameters%rtol ! assumes w ~ 1e1
+          arkode_parameters%atol(4) = 1.d5*arkode_parameters%rtol ! assumes phinh ~ 1e5
+          arkode_parameters%atol(5) = 1.d8*arkode_parameters%rtol ! assumes theta_dp_cp ~ 1e8
+          arkode_parameters%atol(6) = 1.d0*arkode_parameters%rtol ! assumes dp3d ~ 1e0
+        else
+          arkode_parameters%atol(:) = abs_tol
+        end if
       end if
 
       ! update ARKode solver
@@ -1793,10 +1810,6 @@ contains
 !      if (itererr > itererrmax) then
 !        itererrmax = itererr
 !      end if
-    if (itercount == maxiter) then
-      print *, 'current error:', itererr, ' error tol:', itertol
-      call abortmp('Convergence issue with nonlinear solve: max iteration # met')
-    end if
   end do ! end do for the ie=nets,nete loop
   maxiter=itercountmax
 !  itertol=itererrmax

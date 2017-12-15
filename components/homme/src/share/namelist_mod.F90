@@ -8,6 +8,7 @@ module namelist_mod
   use params_mod, only: recursive, sfcurve, SPHERE_COORDS, Z2_NO_TASK_MAPPING
   use cube_mod,   only: rotate_grid
   use physical_constants, only: rearth, rrearth, omega
+  use arkode_mod, only: imex_splitting, rel_tol, abs_tol, calc_nonlinear_stats
 
   use control_mod, only : &
     MAX_STRING_LEN,&
@@ -30,9 +31,9 @@ module namelist_mod
     restartdir,    &       ! name of the restart directory for OUTPUT
     runtype,       &
     integration,   &       ! integration method
-    theta_hydrostatic_mode,       &   
+    theta_hydrostatic_mode,       &
     use_semi_lagrange_transport , &   ! conservation or non-conservation formulaton
-    use_semi_lagrange_transport_local_conservation , &   ! local conservation vs. global 
+    use_semi_lagrange_transport_local_conservation , &   ! local conservation vs. global
     tstep_type,    &
     cubed_sphere_map, &
     qsplit,        &
@@ -212,7 +213,7 @@ module namelist_mod
       remap_type,    &             ! selected remapping option
       statefreq,     &             ! number of steps per printstate call
       integration,   &             ! integration method
-      theta_hydrostatic_mode,       &   
+      theta_hydrostatic_mode,       &
       use_semi_lagrange_transport , &
       use_semi_lagrange_transport_local_conservation , &
       tstep_type,    &
@@ -318,6 +319,12 @@ module namelist_mod
       maxits,        &
       tol,           &
       debug_level
+
+    namelist /arkode_nl/ &
+      imex_splitting, &
+      rel_tol, &
+      abs_tol, &
+      calc_nonlinear_stats
 
 
     ! ==========================
@@ -571,6 +578,13 @@ module namelist_mod
           endif
        end do
 
+       write(iulog,*)"reading arkode namelist..."
+#if defined(OSF1) || defined(_NAMELIST_FROM_FILE)
+       read(unit=7,nml=arkode_nl)
+#else
+       read(*,nml=arkode_nl)
+#endif
+
 !=======================================================================================================!
 
 #if defined(OSF1) || defined(_NAMELIST_FROM_FILE)
@@ -725,6 +739,10 @@ module namelist_mod
     call MPI_bcast(output_type , 9,MPIChar_t,par%root,par%comm,ierr)
     call MPI_bcast(infilenames ,160*MAX_INFILES ,MPIChar_t,par%root,par%comm,ierr)
 
+    call MPI_bcast(rel_tol, 1, MPIreal_t, par%root, par%comm, ierr)
+    call MPI_bcast(abs_tol, 1, MPIreal_t, par%root, par%comm, ierr)
+    call MPI_bcast(calc_nonlinear_stats, 1, MPIlogical_t, par%root, par%comm, ierr)
+
     ! sanity check on thread count
     ! HOMME will run if if nthreads > max, but gptl will print out GB of warnings.
     if (NThreads*vthreads > omp_get_max_threads()) then
@@ -805,7 +823,7 @@ module namelist_mod
           call abortmp('prescribed_wind should be either 0 or 1')
     endif
 
-    
+
     if (use_semi_lagrange_transport .and. rsplit == 0) then
        call abortmp('The semi-Lagrange Transport option requires 0 < rsplit')
     end if
@@ -975,6 +993,13 @@ module namelist_mod
              end select
           end if
        end do
+
+       ! ARKode parameters
+       write(iulog,*)""
+       write(iulog,*)"arkode: imex_splitting = ",imex_splitting
+       write(iulog,*)"arkode: rel_tol = ",rel_tol
+       write(iulog,*)"arkode: abs_tol = ",abs_tol
+       write(iulog,*)"arkode: calc_nonlinear_stats = ",calc_nonlinear_stats
 
        ! display physical constants for HOMME stand alone simulations
        write(iulog,*)""
