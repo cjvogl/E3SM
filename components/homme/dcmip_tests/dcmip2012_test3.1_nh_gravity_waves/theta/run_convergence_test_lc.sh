@@ -27,5 +27,5 @@ for n in ${!TSTEP[*]}; do
     ARGS="$ARGS nu 0.0"
   fi
 
-  ./submit_gravitywave.py ./theta $ARGS
+  ./submit_gravitywave.py ./theta-nlev20 $ARGS
 done

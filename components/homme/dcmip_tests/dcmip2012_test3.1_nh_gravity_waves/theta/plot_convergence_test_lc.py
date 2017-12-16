@@ -4,7 +4,7 @@ from netCDF4 import Dataset
 import numpy as np
 
 noHV = False
-rtol = '1e-8'
+rtol = '1e-3'
 splitting = '1'
 
 methodDict = {#'U35-ref': 5,
@@ -45,8 +45,12 @@ for m,method in enumerate(methodDict.keys()):
   solutionDict = {}
   print method
   # Load timestep and solution data
-  for fileName in glob.glob('tsteptype%d_tstep*_rtol%s*_splitting%s*.out' % \
-                                    (methodDict[method], rtol, splitting)):
+  if (methodDict[method] < 10):
+      globstr = 'tsteptype%d_tstep*.out' % methodDict[method]
+  else:
+      globstr = 'tsteptype%d_tstep*_rtol%s*_splitting%s*.out' % \
+                                        (methodDict[method], rtol, splitting)
+  for fileName in glob.glob(globstr):
     if ((noHV and "nu0.0" in fileName) or (not noHV and "nu0.0" not in fileName)):
       words = fileName.split('_')
       dt = words[1].replace('tstep','')
