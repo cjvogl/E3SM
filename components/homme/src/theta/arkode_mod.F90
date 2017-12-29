@@ -11,9 +11,10 @@
 #define ARS233_ARK 8
 #define ARS343_ARK 9
 #define ARS443_ARK 10
-#define SSP3333A_ARK 11
-#define RK2_ARK 12
-#define U35_ARK 13
+#define SSP3333B_ARK 11
+#define SSP3333C_ARK 12
+#define RK2_ARK 13
+#define U35_ARK 14
 
 module arkode_mod
 
@@ -51,7 +52,8 @@ module arkode_mod
     integer :: ARS233   = ARS233_ARK
     integer :: ARS343   = ARS343_ARK
     integer :: ARS443   = ARS443_ARK
-    integer :: SSP3333A = SSP3333A_ARK
+    integer :: SSP3333B = SSP3333B_ARK
+    integer :: SSP3333C = SSP3333C_ARK
     integer :: RK2      = RK2_ARK
     integer :: U35      = U35_ARK
   end type table_list
@@ -652,7 +654,7 @@ contains
 
     ! local variables
     type(parameter_list), pointer :: ap
-    real(real_kind) :: delta, gamma, b1, b2
+    real(real_kind) :: beta, gamma, delta, b1, b2
 
     !======= Internals ============
     ap => arkode_parameters
@@ -932,7 +934,7 @@ contains
                         814220225.d0/1159782912.d0, -3700637.d0/11593932.d0, &
                         61727.d0/225920.d0 /)
 
-      case (SSP3333A_ARK) ! NOT TESTED
+      case (SSP3333B_ARK)
         ap%imex = 2 ! imex
         ap%s = 3 ! 3 stage
         ap%q = 3 ! 3rd order
@@ -942,6 +944,29 @@ contains
         ap%Ai(1:3,1:3) = 0.d0
         ap%Ai(2,1:2) = (/      0.d0,       1.d0 /)
         ap%Ai(3,1:3) = (/ 1.d0/6.d0, -1.d0/3.d0, 2.d0/3.d0 /)
+        ! Implicit Butcher Table (vectors)
+        ap%ci(1:3) = (/ 0.d0, 1.d0, 0.5d0 /)
+        ap%bi(1:3) = (/ 1.d0/6.d0, 1.d0/6.d0, 2.d0/3.d0 /)
+        ! Explicit Butcher Table (matrix)
+        ap%Ae(1:3,1:3) = 0.d0
+        ap%Ae(2,1) = 1.d0
+        ap%Ae(3,1:2) = (/ 0.25d0, 0.25d0 /)
+        ! Explicit Butcher Table (vectors)
+        ap%ce(1:3) = ap%ci(1:3)
+        ap%be(1:3) = ap%bi(1:3)
+
+      case (SSP3333C_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 3 ! 3 stage
+        ap%q = 3 ! 3rd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedded explicit method
+        beta = sqrt(3.d0)/5.d0 + 0.5d0
+        gamma = -1.d0/8.d0*(sqrt(3.d0) + 1.d0)
+        ! Implicit Butcher Table (matrix)
+        ap%Ai(1:3,1:3) = 0.d0
+        ap%Ai(2,1:2) = (/ 4.d0*gamma + 2.d0*beta, 1.d0 - 4.d0*gamma - 2.d0*beta /)
+        ap%Ai(3,1:3) = (/   0.5d0 - beta - gamma,                         gamma, beta /)
         ! Implicit Butcher Table (vectors)
         ap%ci(1:3) = (/ 0.d0, 1.d0, 0.5d0 /)
         ap%bi(1:3) = (/ 1.d0/6.d0, 1.d0/6.d0, 2.d0/3.d0 /)

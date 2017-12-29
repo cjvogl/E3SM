@@ -10,15 +10,16 @@ splitting = '1'
 methodDict = {#'U35-ref': 5,
                   #'U35': 11,
                   'ARS232-ref': 7,
-                  'ARS232': 12}
- #                 'DBM453': 13,
- #                 'ARS222': 14,
-  #                'ARS233': 15,
-   #               'ARS343': 16,
-    #              'ARS443': 17}
+                  'ARS232': 12,
+                  'DBM453': 13,
+                  'ARS222': 14,
+                  'ARS233': 15,
+                  'ARS343': 16,
+                  'ARS443': 17,
 #                  'ARK324': 18}
                   #'ARK436': 19}
-#                  'SSP3333a': 20}
+                  'SSP3333b': 20,
+                  'SSP3333c': 21}
 
 # Load reference solution
 tsteptypeRef = 5
@@ -45,22 +46,26 @@ for m,method in enumerate(methodDict.keys()):
   solutionDict = {}
   print method
   # Load timestep and solution data
-  if (methodDict[method] < 10):
-      globstr = 'tsteptype%d_tstep*.out' % methodDict[method]
+  if (methodDict[method] < 12):
+    globstr = 'tsteptype%d_tstep*.out' % methodDict[method]
   else:
-      globstr = 'tsteptype%d_tstep*_rtol%s*_splitting%s*.out' % \
-                                        (methodDict[method], rtol, splitting)
+    globstr = 'tsteptype%d_tstep*_rtol%s*_splitting%s*.out' % \
+                                         (methodDict[method], rtol, splitting)
   for fileName in glob.glob(globstr):
     if ((noHV and "nu0.0" in fileName) or (not noHV and "nu0.0" not in fileName)):
       words = fileName.split('_')
       dt = words[1].replace('tstep','')
-      if (float(dt) > 2.0*dtRef+1e-12):
-        dtList.append(float(dt))
+      if (float(dt) > 2.0*dtRef+1e-12 and float(dt) < 10.0):
         directory = './output_'+fileName.replace('.out','')
         print 'Reading solution in ' + directory
         data = Dataset(directory+'/dcmip2012_test31.nc')
         T = data['T'][:]
-        solutionDict[dt] = T[10,:,:,:]
+        if (np.shape(T)[0] == 11):
+          dtList.append(float(dt))
+          solutionDict[dt] = T[10,:,:,:]
+        else:
+          print '... skipping due to incomplete results ...'
+
   # Compute errors from reference solution
   L2error = {}
   LIerror = {}

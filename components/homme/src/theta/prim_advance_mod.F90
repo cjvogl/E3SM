@@ -512,9 +512,11 @@ contains
       ! NOT TESTED
       call set_Butcher_tables(arkode_parameters, arkode_tables%ARK436)
 
-    else if (tstep_type==20) then ! Conde et al ssp3(3,3,3)a
-      ! NOT TESTED
-      call set_Butcher_tables(arkode_parameters, arkode_tables%SSP3333A)
+    else if (tstep_type==20) then ! Conde et al ssp3(3,3,3)a (renamed here)
+      call set_Butcher_tables(arkode_parameters, arkode_tables%SSP3333B)
+
+    else if (tstep_type==21) then ! Conde et al ssp3(3,3,3)b (renamed here)
+      call set_Butcher_tables(arkode_parameters, arkode_tables%SSP3333C)
 
     else
        call abortmp('ERROR: bad choice of tstep_type')
