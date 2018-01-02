@@ -140,7 +140,7 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
           1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
           .false., bval*eta_ave_w, scale1, scale2, scale3, 1.d0)
   else
-    ierr = 1 ! indicate error
+    ierr = 1 ! indicate invalid imex splitting chosen
   end if
 
   return

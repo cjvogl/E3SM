@@ -1,20 +1,18 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-!#define ARK232_ARK 1
-#define ARK324_ARK 2
-#define ARK436_ARK 3
-#define ARK453_ARK 4
-!#define ARK548_ARK 5
-#define ARS222_ARK 6
-#define ARS232_ARK 7
-#define ARS233_ARK 8
-#define ARS343_ARK 9
-#define ARS443_ARK 10
-#define SSP3333B_ARK 11
-#define SSP3333C_ARK 12
-#define RK2_ARK 13
-#define U35_ARK 14
+#define ARK324_ARK 1
+#define ARK436_ARK 2
+#define ARK453_ARK 3
+#define ARS222_ARK 4
+#define ARS232_ARK 5
+#define ARS233_ARK 6
+#define ARS343_ARK 7
+#define ARS443_ARK 8
+#define SSP3333B_ARK 9
+#define SSP3333C_ARK 10
+#define RK2_ARK 11
+#define U35_ARK 12
 
 module arkode_mod
 
@@ -859,14 +857,14 @@ contains
         ! Implicit Butcher Table (matrix)
         ap%Ai(1:4,1:4) = 0.d0
         ap%Ai(2,1:2) = (/ 1767732205903.d0/4055673282236.d0, &
-                            1767732205903.d0/4055673282236.d0 /)
+                          1767732205903.d0/4055673282236.d0 /)
         ap%Ai(3,1:3) = (/ 2746238789719.d0/10658868560708.d0, &
-                            -640167445237.d0/6845629431997.d0, &
-                            1767732205903.d0/4055673282236.d0 /)
+                         -640167445237.d0/6845629431997.d0, &
+                          1767732205903.d0/4055673282236.d0 /)
         ap%Ai(4,1:4) = (/ 1471266399579.d0/7840856788654.d0, &
-                            -4482444167858.d0/7529755066697.d0, &
-                            11266239266428.d0/11593286722821.d0, &
-                            1767732205903.d0/4055673282236.d0 /)
+                         -4482444167858.d0/7529755066697.d0, &
+                          11266239266428.d0/11593286722821.d0, &
+                          1767732205903.d0/4055673282236.d0 /)
         ! Implicit Butcher Table (vectors)
         ap%ci(1:4) = (/ 0.d0, 1767732205903.d0/2027836641118.d0, 3.d0/5.d0, 1.d0 /)
         ap%bi(1) = 1471266399579.d0/7840856788654.d0
@@ -880,7 +878,7 @@ contains
                           788022342437.d0/10882634858940.d0 /)
         ap%Ae(4,1:3) = (/ 6485989280629.d0/16251701735622.d0, &
                          -4246266847089.d0/9704473918619.d0, &
-                         10755448449292.d0/10357097424841.d0 /)
+                          10755448449292.d0/10357097424841.d0 /)
         ! Explicit Butcher Table (vectors)
         ap%ce(1:4) = ap%ci(1:4)
         ap%be(1:4) = ap%bi(1:4)
