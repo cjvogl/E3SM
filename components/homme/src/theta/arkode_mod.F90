@@ -849,7 +849,7 @@ contains
         ap%ce(1:5) = ap%ci(1:5)
         ap%be(1:5) = (/ 1.d0/4.d0, 7.d0/4.d0, 3.d0/4.d0, -7.d0/4.d0, 0.d0 /)
 
-      case (ARK324_ARK) ! NOT TESTED
+      case (ARK324_ARK)
         ap%imex = 2 ! imex
         ap%s = 4 ! 4 stage
         ap%q = 3 ! 3rd order
@@ -888,7 +888,7 @@ contains
         ap%be2(3) = 9247589265047.d0/10645013368117.d0
         ap%be2(4) = 2193209047091.d0/5459859503100.d0
 
-      case (ARK436_ARK) ! NOT TESTED
+      case (ARK436_ARK)
         ap%imex = 2 ! imex
         ap%s = 6 ! 6 stage
         ap%q = 4 ! 4th order

@@ -505,11 +505,9 @@ contains
       call set_Butcher_tables(arkode_parameters, arkode_tables%ARS443)
 
     else if (tstep_type==18) then ! ARKode Kennedy 3rd/3rd/3rd-order, 4-stage
-      ! NOT TESTED
       call set_Butcher_tables(arkode_parameters, arkode_tables%ARK324)
 
     else if (tstep_type==19) then ! ARKode Kennedy 4th/4th/4th-order, 6-stage
-      ! NOT TESTED
       call set_Butcher_tables(arkode_parameters, arkode_tables%ARK436)
 
     else if (tstep_type==20) then ! Conde et al ssp3(3,3,3)a (renamed here)
@@ -1229,9 +1227,9 @@ contains
   call t_startf('compute_andor_apply_rhs')
 
   if (present(scale4)) then
-    sdotscale = 1.d0
+    sdotscale = scale4
   else
-    sdotscale=scale1
+    sdotscale = scale1
   endif
 
   do ie=nets,nete
