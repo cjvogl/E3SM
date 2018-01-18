@@ -4,6 +4,8 @@ from netCDF4 import Dataset
 import numpy as np
 
 noHV = False
+rtol = '1e-3'
+splitting = '1'
 
 methodDict = {#'U35-ref': 5,
                   #'U35': 11,
@@ -28,11 +30,15 @@ for m,method in enumerate(methodDict.keys()):
   avgCountDict = {}
   print method
   # Load timestep and solution data
-  for fileName in glob.glob('tsteptype%d_tstep*.out' % methodDict[method]):
+  if (methodDict[method] < 12):
+    globstr = 'tsteptype%d_tstep*.out' % methodDict[method]
+  else:
+    globstr = 'tsteptype%d_tstep*_rtol%s*_splitting%s*.out' % \
+                                         (methodDict[method], rtol, splitting)
+  for fileName in glob.glob(globstr):
     if ((noHV and "nu0.0" in fileName) or (not noHV and "nu0.0" not in fileName)):
       words = fileName.split('_')
       dt = words[1].replace('tstep','')
-      dtList.append(float(dt))
       # obtain nonlinear iteration count
       f = open(fileName)
       lines = list(f)
@@ -44,12 +50,16 @@ for m,method in enumerate(methodDict.keys()):
         elif (line.startswith('  Max num nonlin iters')):
           words = line.split()
           itercount = int(words[5])
+          if (float(dt) not in dtList):
+            dtList.append(float(dt))
           maxCountDict[dt] = itercount
           maxPlotMax = max(maxPlotMax,itercount)
           count += 1
         elif (line.startswith('  Avg num nonlin iters')):
           words = line.split()
           itercount = float(words[5])
+          if (float(dt) not in dtList):
+            dtList.append(float(dt))
           avgCountDict[dt] = itercount
           avgPlotMax = max(avgPlotMax,itercount)
           count += 1
