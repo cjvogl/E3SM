@@ -33,6 +33,7 @@ module arkode_mod
   ! Note that 35 is an estimate, but needs to be at least > 30
   ! If a larger Krylov subspace is desired, timelevels should be
   ! increased.
+  integer, parameter :: max_niters = 10
 
   ! ARKode namelist variables
   integer, public         :: imex_splitting = 1
@@ -394,6 +395,7 @@ contains
     ! local variables
     type(parameter_list), pointer :: ap
     integer(C_INT)                :: iatol, ierr
+    integer(C_LONG)               :: ival
     integer                       :: ie
 
     !======= Internals ============
@@ -413,7 +415,14 @@ contains
     iatol = 2
     call farkreinit(tstart, y_C(n0), ap%imex, iatol, ap%rtol, atol_C, ierr)
     if (ierr /= 0) then
-      call abortmp('arkode_init: farkreinit failed')
+      call abortmp('arkode_reinit: farkreinit failed')
+    endif
+
+    ! reset max number of nonlinear iterations per stage
+    ival = max_niters
+    call farksetiin('MAX_NITERS', ival, ierr)
+    if (ierr /= 0) then
+      call abortmp('arkode_reinit: farksetinn(MAX_NITERS) failed')
     endif
 
     return
@@ -458,7 +467,7 @@ contains
     real(real_kind)               :: A_C1(arkode_parameters%s*arkode_parameters%s)
     real(real_kind)               :: A_C2(arkode_parameters%s*arkode_parameters%s)
     integer(C_INT)                :: idef, iatol, ierr
-    integer(C_LONG)               :: ipar(1)
+    integer(C_LONG)               :: ipar(1), ival
     integer                       :: i, j
 
     !======= Internals ============
@@ -619,7 +628,13 @@ contains
         !endif
 
       endif
+    endif
 
+    ! reset max number of nonlinear iterations per stage
+    ival = max_niters
+    call farksetiin('MAX_NITERS', ival, ierr)
+    if (ierr /= 0) then
+      call abortmp('arkode_reinit: farksetinn(MAX_NITERS) failed')
     endif
 
     if (par%masterproc) call farkwriteparameters(ierr)
