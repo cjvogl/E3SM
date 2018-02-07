@@ -26,8 +26,9 @@ if (len(sys.argv) < 2):
 paramDict = {
   'tsteptype':          '7',
   'tstep':            '120',
-  'ndays':             '15',
-  'ne':                '30',
+  'ndays':             '30',
+  'rsplit':             '1',
+  'ne':                '20',
   'nu':            '1.0e15',
   'splitting':          '1',
   'rtol':          '1.0e-4',
@@ -76,7 +77,7 @@ statefreq              = 60
 runtype                = 0
 mesh_file              = "/dev/null"
 tstep                  = %s
-rsplit                 = 1
+rsplit                 = %s
 qsplit                 = 1
 tstep_type             = %s
 integration            = "explicit"
@@ -118,9 +119,9 @@ imex_splitting         = %s
 rel_tol                = %s
 abs_tol                = %s
 calc_nonlinear_stats   = .%s.
-/""" % (paramDict['ne'], paramDict['ndays'], paramDict['tstep'], paramDict['tsteptype'],
-        paramDict['nu'], paramDict['nu'], paramDict['nu'], paramDict['nu'], paramDict['nu'],
-        suffix,paramDict['splitting'],
+/""" % (paramDict['ne'], paramDict['ndays'], paramDict['tstep'], paramDict['rsplit'],
+        paramDict['tsteptype'], paramDict['nu'], paramDict['nu'], paramDict['nu'], 
+        paramDict['nu'], paramDict['nu'], suffix,paramDict['splitting'],
         paramDict['rtol'], paramDict['atol'],paramDict['calcstats'])
 os.system("echo '%s' > input_%s.nl" % (namelist, suffix))
 
@@ -143,7 +144,7 @@ script = \
 #SBATCH -p pbatch # pbatch or pdebug
 #SBATCH -N %d # nodes
 #SBATCH -t %s # Max walltime (hh:mm:ss)
-#SBATCH -J gravitywave_%s # Job name
+#SBATCH -J baroclinicinstability_%s # Job name
 #SBATCH -o %s.out # stdout file
 #SBATCH -e %s.err # stderr file
 
