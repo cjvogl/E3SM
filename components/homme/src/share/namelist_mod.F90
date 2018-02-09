@@ -739,6 +739,7 @@ module namelist_mod
     call MPI_bcast(output_type , 9,MPIChar_t,par%root,par%comm,ierr)
     call MPI_bcast(infilenames ,160*MAX_INFILES ,MPIChar_t,par%root,par%comm,ierr)
 
+    call MPI_bcast(imex_splitting, 1, MPIinteger_t, par%root, par%comm, ierr)
     call MPI_bcast(rel_tol, 1, MPIreal_t, par%root, par%comm, ierr)
     call MPI_bcast(abs_tol, 1, MPIreal_t, par%root, par%comm, ierr)
     call MPI_bcast(calc_nonlinear_stats, 1, MPIlogical_t, par%root, par%comm, ierr)
