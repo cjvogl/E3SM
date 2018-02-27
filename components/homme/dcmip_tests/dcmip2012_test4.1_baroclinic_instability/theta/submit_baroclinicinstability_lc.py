@@ -29,7 +29,7 @@ paramDict = {
   'ndays':             '30',
   'rsplit':             '1',
   'ne':                '20',
-  'nu':            '1.0e15',
+  'nu':            '3.7e15',
   'splitting':          '1',
   'rtol':          '1.0e-4',
   'atol':            '-1.0',
