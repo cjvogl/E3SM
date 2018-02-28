@@ -140,6 +140,11 @@
   </compset>
 
   <compset>
+    <alias>F1850C5-CMIP6</alias>
+    <lname>1850_CAM5%CMIP6_CLM45%SPBC_CICE%PRES_DOCN%DOM_SROF_SGLC_SWAV</lname>
+  </compset>
+
+  <compset>
     <alias>FC5AV1C-01</alias>
     <lname>2000_CAM5%AV1C-01_CLM45%SPBC_CICE%PRES_DOCN%DOM_SROF_SGLC_SWAV</lname>
   </compset>
@@ -526,6 +531,16 @@
   </compset>
 
   <compset>
+    <alias>FC5AV1C-04P2-AQUAP</alias>
+    <lname>2000_CAM5%AV1C-04P2_SLND_SICE_DOCN%AQP1_SROF_SGLC_SWAV</lname>
+  </compset>
+
+  <compset>
+    <alias>FC5AV1C-L-AQUAP</alias>
+    <lname>2000_CAM5%AV1C-L_SLND_SICE_DOCN%AQP1_SROF_SGLC_SWAV</lname>
+  </compset>
+
+  <compset>
     <alias>FIDEAL</alias>
     <lname>2000_CAM%IDEAL_SLND_SICE_SOCN_SROF_SGLC_SWAV</lname>
   </compset>
@@ -655,6 +670,18 @@
     <entry id="GET_REFCASE"> 
       <values>
 	<value compset="AMIP_CAM">TRUE</value>
+      </values>
+    </entry>
+
+    <entry id="PTS_LAT">
+      <values>
+        <value compset="AR9[57]_CAM">36.6</value>
+      </values>
+    </entry>
+
+    <entry id="PTS_LON">
+      <values>
+        <value compset="AR9[57]_CAM">262.5</value>
       </values>
     </entry>
 

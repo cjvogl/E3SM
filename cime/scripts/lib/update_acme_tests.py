@@ -1,6 +1,7 @@
 import CIME.utils
 from CIME.utils import expect, convert_to_seconds, parse_test_name
 from CIME.XML.machines import Machines
+import six
 
 # Here are the tests belonging to acme suites. Format is
 # <test>.<grid>.<compset>.
@@ -42,17 +43,18 @@ _TEST_SUITES = {
                              "ERI.f09_g16.X",
                              "ERIO.f09_g16.X",
                              "SEQ_Ln9.f19_g16_rx1.A",
-                             "ERS.ne30_g16_rx1.A",
+                             ("ERS.ne30_g16_rx1.A","drv-y100k"),
                              "IRT_N2.f19_g16_rx1.A",
                              "ERR.f45_g37_rx1.A",
                              "ERP.f45_g37_rx1.A",
                              "SMS_D_Ln9.f19_g16_rx1.A",
                              "DAE.f19_f19.A",
-                             "PET_P32.f19_f19.A",
+                             "PET_P4.f19_f19.A",
                              "SMS.T42_T42.S",
                              "PRE.f19_f19.ADESP",
                              "PRE.f19_f19.ADESP_TEST",
-                             "MCC_P12.f19_g16_rx1.A")
+                             "MCC_P1.f19_g16_rx1.A",
+                             "LDSTA.f45_g37_rx1.A")
                             ),
 
     #
@@ -84,7 +86,7 @@ _TEST_SUITES = {
 
     "acme_atm_developer" : (None, None,
                             ("SMS_D_Ln5.ne4_ne4.FC5",
-                             "ERS_Ln9.ne4_ne4.FC5AV1C-L",
+                             "ERP_Ln9.ne4_ne4.FC5AV1C-L",
                              ("SMS_Ln9.ne4_ne4.FC5AV1C-L", "cam-outfrq9s"),
                              ("SMS.ne4_ne4.FC5AV1C-L", "cam-cosplite"),
                              "SMS_R_Ld5.T42_T42.FSCM5A97",
@@ -93,7 +95,7 @@ _TEST_SUITES = {
 
     "acme_atm_integration" : (None, None,
                               ("ERS_Ln9.ne4_ne4.FC5" ,
-                               "ERP_Ln9.ne4_ne4.FC5AQUAP",
+                               "ERP_Ln9.ne4_ne4.FC5AV1C-L-AQUAP",
                                "PET_Ln5.ne4_ne4.FC5AV1C-L",
                                "PEM_Ln5.ne4_ne4.FC5AV1C-L",
                                ("SMS_D_Ln5.ne4_ne4.FC5AV1C-L", "cam-cosplite_nhtfrq5"),
@@ -105,13 +107,13 @@ _TEST_SUITES = {
                           "ERS_Ld31.ne4_ne4.FC5AV1C-L",
                           "ERP_Lm3.ne4_ne4.FC5AV1C-L",
                           "SMS_D_Ln5.ne30_ne30.FC5AV1C-L",
-                          ("ERP_Ln5.ne30_ne30.FC5AV1C-L"),                          
+                          ("ERP_Ln5.ne30_ne30.FC5AV1C-L"),
                           "SMS_Ly1.ne4_ne4.FC5AV1C-L")
                          ),
     #atmopheric tests for hi-res
     "acme_atm_hi_res" : (None, "01:30:00",
                          (
-                          "SMS.ne120_ne120.FC5AV1C-L",
+                          "SMS.ne120_ne120.FC5AV1C-H01A",
                          )),
     #atmopheric tests to mimic low res production runs
     "acme_atm_prod" : (None, None,
@@ -137,10 +139,16 @@ _TEST_SUITES = {
                          "ERS.f09_g16_g.MPASLISIA",
                          "SMS.T62_oQU120_ais20.MPAS_LISIO_TEST",
                          "SMS.f09_g16_a.IGCLM45_MLI"
+                        ,("SMS_P12x2.ne4_oQU240.A_WCYCL1850","mach_mods")
                         )),
+
+    "acme_test_me" : (None, "01:00:00",
+                      ("ERP_Ld3.ne30_oECv3_ICG.A_WCYCL1850S",
+                      )),
 
     "acme_integration" : (("acme_developer", "acme_atm_integration"),"03:00:00",
                           ("ERS.ne11_oQU240.A_WCYCL1850",
+                           "ERS_Ln9.ne4_ne4.FC5AV1C-L",
                           #"ERT_Ld31.ne16_g37.B1850C5",#add this line back in with the new correct compset
                            "PET.f19_g16.X",
                            "PET.f45_g37_rx1.A",
@@ -190,27 +198,27 @@ def get_test_suite(suite, machine=None, compiler=None):
     tests = []
     for item in tests_raw:
         test_mod = None
-        if (isinstance(item, str)):
+        if (isinstance(item, six.string_types)):
             test_name = item
         else:
             expect(isinstance(item, tuple), "Bad item type for item '{}'".format(str(item)))
             expect(len(item) in [2, 3], "Expected two or three items in item '{}'".format(str(item)))
-            expect(isinstance(item[0], str), "Expected string in first field of item '{}'".format(str(item)))
-            expect(isinstance(item[1], str), "Expected string in second field of item '{}'".format(str(item)))
+            expect(isinstance(item[0], six.string_types), "Expected string in first field of item '{}'".format(str(item)))
+            expect(isinstance(item[1], six.string_types), "Expected string in second field of item '{}'".format(str(item)))
 
             test_name = item[0]
             if (len(item) == 2):
                 test_mod = item[1]
             else:
-                expect(type(item[2]) in [str, tuple], "Expected string or tuple for third field of item '{}'".format(str(item)))
-                test_mod_machines = [item[2]] if isinstance(item[2], str) else item[2]
+                expect(type(item[2]) in [six.string_types, tuple], "Expected string or tuple for third field of item '{}'".format(str(item)))
+                test_mod_machines = [item[2]] if isinstance(item[2], six.string_types) else item[2]
                 if (machine in test_mod_machines):
                     test_mod = item[1]
 
         tests.append(CIME.utils.get_full_test_name(test_name, machine=machine, compiler=compiler, testmod=test_mod))
 
     if (inherits_from is not None):
-        inherits_from = [inherits_from] if isinstance(inherits_from, str) else inherits_from
+        inherits_from = [inherits_from] if isinstance(inherits_from, six.string_types) else inherits_from
         for inherits in inherits_from:
             inherited_tests = get_test_suite(inherits, machine, compiler)
 
@@ -223,7 +231,7 @@ def get_test_suite(suite, machine=None, compiler=None):
 ###############################################################################
 def get_test_suites():
 ###############################################################################
-    return _TEST_SUITES.keys()
+    return list(_TEST_SUITES.keys())
 
 ###############################################################################
 def infer_machine_name_from_tests(testargs):
@@ -314,10 +322,10 @@ def get_recommended_test_time(test_full_name):
     >>> get_recommended_test_time("ERP_Ln9.ne30_ne30.FC5.melvin_gun.cam-outfrq9s")
     '0:45:00'
 
-    >>> get_recommended_test_time("PET_Ln9.ne30_ne30.FC5.skybridge_intel.cam-outfrq9s")
+    >>> get_recommended_test_time("PET_Ln9.ne30_ne30.FC5.sandiatoss3_intel.cam-outfrq9s")
     '03:00:00'
 
-    >>> get_recommended_test_time("PET_Ln20.ne30_ne30.FC5.skybridge_intel.cam-outfrq9s")
+    >>> get_recommended_test_time("PET_Ln20.ne30_ne30.FC5.sandiatoss3_intel.cam-outfrq9s")
     >>>
     """
     _, _, _, _, machine, compiler, _ = CIME.utils.parse_test_name(test_full_name)
@@ -329,14 +337,14 @@ def get_recommended_test_time(test_full_name):
         _, rec_time, tests_raw = _TEST_SUITES[suite]
         for item in tests_raw:
             test_mod = None
-            if (isinstance(item, str)):
+            if (isinstance(item, six.string_types)):
                 test_name = item
             else:
                 test_name = item[0]
                 if (len(item) == 2):
                     test_mod = item[1]
                 else:
-                    test_mod_machines = [item[2]] if isinstance(item[2], str) else item[2]
+                    test_mod_machines = [item[2]] if isinstance(item[2], six.string_types) else item[2]
                     if (machine in test_mod_machines):
                         test_mod = item[1]
 
@@ -362,11 +370,13 @@ def sort_by_time(test_one, test_two):
     """
     rec1, rec2 = get_recommended_test_time(test_one), get_recommended_test_time(test_two)
     if rec1 == rec2:
-        return cmp(test_one, test_two)
+        return (test_one > test_two) - (test_two < test_one)
     else:
         if rec2 is None:
             return -1
         elif rec1 is None:
             return 1
         else:
-            return cmp(convert_to_seconds(rec2), convert_to_seconds(rec1))
+            a = convert_to_seconds(rec2)
+            b = convert_to_seconds(rec1)
+            return (a < b) - (b < a)

@@ -26,7 +26,6 @@ module control_mod
   integer, public  :: ftype = 0                                ! Forcing Type
                                                                ! ftype = 0  HOMME ApplyColumn() type forcing process split
                                                                ! ftype = -1   ignore forcing  (used for testing energy balance)
-  integer, public  :: energy_fixer = 0    !  not used anymore
                                               
   integer, public :: qsplit = 1           ! ratio of dynamics tsteps to tracer tsteps
   integer, public :: rsplit = 0           ! for vertically lagrangian dynamics, apply remap
@@ -35,7 +34,8 @@ module control_mod
                                           ! interspace a lf-trapazoidal step every LFTfreq leapfrogs    
                                           ! 0 = disabled
 
-! vert_remap_q_alg:    0  default value, Zerroukat monotonic splines
+! vert_remap_q_alg:   -1  remap without monotone filter, used for some test cases
+!                      0  default value, Zerroukat monotonic splines
 !                      1  PPM vertical remap with mirroring at the boundaries
 !                         (solid wall bc's, high-order throughout)
 !                      2  PPM vertical remap without mirroring at the boundaries
@@ -71,14 +71,11 @@ module control_mod
   character(len=MAX_STRING_LEN)    , public :: topology       ! options: "cube" is supported
   character(len=MAX_STRING_LEN)    , public :: test_case      ! options: if cube: "swtc1","swtc2",or "swtc6"  
   integer              , public :: tasknum
-  integer              , public :: remapfreq      ! remap frequency of synopsis of system state (steps)
-  character(len=MAX_STRING_LEN) :: remap_type     ! selected remapping option
   integer              , public :: statefreq      ! output frequency of synopsis of system state (steps)
   integer              , public :: restartfreq
   integer              , public :: runtype 
   integer              , public :: timerdetail 
   integer              , public :: numnodes 
-  integer              , public :: multilevel
   logical              , public :: uselapi
   character(len=MAX_STRING_LEN)    , public :: restartfile 
   character(len=MAX_STRING_LEN)    , public :: restartdir

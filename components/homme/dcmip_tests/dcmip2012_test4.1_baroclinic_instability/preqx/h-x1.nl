@@ -2,7 +2,6 @@
 theta_hydrostatic_mode = .true.
 dcmip4_moist  = 0
 dcmip4_X      = 1.0
-vert_num_threads = 1
 NThreads=1
 partmethod    = 4
 topology      = "cube"
@@ -19,7 +18,6 @@ tstep=300
 rsplit=3
 qsplit = 1
 tstep_type = 5
-energy_fixer  = -1
 integration   = "explicit"
 smooth        = 0
 nu=1e15
@@ -33,8 +31,8 @@ limiter_option = 8
 vert_remap_q_alg = 0
 hypervis_scaling=0
 hypervis_order = 2
-hypervis_subcycle=3
-hypervis_subcycle=3
+hypervis_subcycle = 1
+hypervis_subcycle = 1
 /
 &vert_nl
 vform         = "ccm"

@@ -74,3 +74,4 @@ fi
 
 # build HOMME
 make -j$1 theta || exit -1
+#make -j$1 theta-l || exit -1

@@ -3,6 +3,9 @@
 /* Energy Diagnostics */
 #cmakedefine ENERGY_DIAGNOSTICS
 
+/* Lorenz model */
+#define MODEL_THETA_C
+
 /* Using PRIMITIVE */
 #define _PRIM
 
@@ -53,9 +56,6 @@
 
 /* Zoltan partitioning library */
 #cmakedefine01 HAVE_ZOLTAN
-
-/* Enable persistent MPI comm */
-#cmakedefine MPI_PERSISTENT
 
 /* Using Accelerator */
 #cmakedefine IS_ACCELERATOR

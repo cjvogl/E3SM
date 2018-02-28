@@ -1,7 +1,25 @@
 import CIME.wait_for_tests
 from CIME.utils import expect
+from CIME.case import Case
 
 import os, shutil, glob, signal, logging
+
+###############################################################################
+def cleanup_queue(test_root, test_id):
+###############################################################################
+    """
+    Delete all jobs left in the queue
+    """
+    for teststatus_file in glob.iglob("{}/*{}*/TestStatus".format(test_root, test_id)):
+        case_dir = os.path.dirname(teststatus_file)
+        with Case(case_dir, read_only=True) as case:
+            jobmap = case.get_job_info()
+            jobkills = []
+            for jobname, jobid in jobmap.items():
+                logging.warning("Found leftover batch job {} ({}) that need to be deleted".format(jobid, jobname))
+                jobkills.append(jobid)
+
+            case.cancel_batch_jobs(jobkills)
 
 ###############################################################################
 def jenkins_generic_job(generate_baselines, submit_to_cdash, no_batch,
@@ -10,7 +28,7 @@ def jenkins_generic_job(generate_baselines, submit_to_cdash, no_batch,
                         arg_test_suite,
                         cdash_build_group, baseline_compare,
                         scratch_root, parallel_jobs, walltime,
-                        machine, compiler):
+                        machine, compiler, real_baseline_name):
 ###############################################################################
     """
     Return True if all tests passed
@@ -53,7 +71,7 @@ def jenkins_generic_job(generate_baselines, submit_to_cdash, no_batch,
         shutil.rmtree("Testing")
 
     # Remove the old build/run dirs
-    test_id_root = "jenkins_{}".format(baseline_name)
+    test_id_root = "jenkins_{}_{}".format(baseline_name, test_suite)
     for old_dir in glob.glob("{}/*{}*{}*".format(scratch_root, mach_comp, test_id_root)):
         shutil.rmtree(old_dir)
 
@@ -71,9 +89,9 @@ def jenkins_generic_job(generate_baselines, submit_to_cdash, no_batch,
     test_id = "%s_%s" % (test_id_root, CIME.utils.get_timestamp())
     create_test_args = [test_suite, "--test-root %s" % test_root, "-t %s" % test_id, "--machine %s" % machine.get_machine_name(), "--compiler %s" % compiler]
     if (generate_baselines):
-        create_test_args.append("-g -b " + baseline_name)
+        create_test_args.append("-g -b " + real_baseline_name)
     elif (baseline_compare):
-        create_test_args.append("-c -b " + baseline_name)
+        create_test_args.append("-c -b " + real_baseline_name)
 
     if scratch_root != machine.get_value("CIME_OUTPUT_ROOT"):
         create_test_args.append("--output-root=" + scratch_root)
@@ -118,5 +136,9 @@ def jenkins_generic_job(generate_baselines, submit_to_cdash, no_batch,
                                                  cdash_build_name=cdash_build_name,
                                                  cdash_project=cdash_project,
                                                  cdash_build_group=cdash_build_group)
+
+    if use_batch and CIME.wait_for_tests.SIGNAL_RECEIVED:
+        # Cleanup
+        cleanup_queue(test_root, test_id)
 
     return tests_passed

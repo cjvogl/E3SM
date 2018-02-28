@@ -1,4 +1,6 @@
-import os, time, threading, Queue, socket, signal, distutils.spawn, shutil, glob
+#pylint: disable=import-error
+from six.moves import queue
+import os, time, threading, socket, signal, distutils.spawn, shutil, glob
 import logging
 import xml.etree.ElementTree as xmlet
 
@@ -6,6 +8,7 @@ import CIME.utils
 from CIME.utils import expect, Timeout, run_cmd_no_fail
 from CIME.XML.machines import Machines
 from CIME.test_status import *
+
 
 SIGNAL_RECEIVED           = False
 ACME_MAIN_CDASH           = "ACME_Climate"
@@ -52,7 +55,7 @@ def create_cdash_test_xml(results, cdash_build_name, cdash_build_group, utc_time
     # We assume all cases were created from the same code repo
     first_result_case = os.path.dirname(results.iteritems().next()[1][0])
     try:
-        srcroot = run_cmd_no_fail("./xmlquery --value SRCROOT", from_dir=first_result_case)
+        srcroot = run_cmd_no_fail("./xmlquery --value CIMEROOT", from_dir=first_result_case)
     except:
         # Use repo containing this script as last resort
         srcroot = CIME.utils.get_cime_root()
@@ -154,7 +157,7 @@ def create_cdash_upload_xml(results, cdash_build_name, cdash_build_group, utc_ti
 
         need_to_upload = False
 
-        for test_name, test_data in results.iteritems():
+        for test_name, test_data in results.items():
             test_path, test_status = test_data
 
             if (test_status not in [TEST_PASS_STATUS, NAMELIST_FAIL_STATUS]):
@@ -307,7 +310,7 @@ def wait_for_test(test_path, results, wait, check_throughput, check_memory, igno
 ###############################################################################
 def wait_for_tests_impl(test_paths, no_wait=False, check_throughput=False, check_memory=False, ignore_namelists=False, ignore_memleak=False):
 ###############################################################################
-    results = Queue.Queue()
+    results = queue.Queue()
 
     for test_path in test_paths:
         t = threading.Thread(target=wait_for_test, args=(test_path, results, not no_wait, check_throughput, check_memory, ignore_namelists, ignore_memleak))
@@ -356,7 +359,7 @@ def wait_for_tests(test_paths,
         test_results = wait_for_tests_impl(test_paths, no_wait, check_throughput, check_memory, ignore_namelists, ignore_memleak)
 
     all_pass = True
-    for test_name, test_data in sorted(test_results.iteritems()):
+    for test_name, test_data in sorted(test_results.items()):
         test_path, test_status = test_data
         logging.info("Test '{}' finished with status '{}'".format(test_name, test_status))
         logging.info("    Path: {}".format(test_path))
