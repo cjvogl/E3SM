@@ -30,6 +30,8 @@ paramDict = {
   'rsplit':             '1',
   'ne':                '20',
   'nu':            '3.7e15',
+  'limiter':            '8',
+  'hv_subcycle':        '3',
   'splitting':          '1',
   'rtol':          '1.0e-4',
   'atol':            '-1.0',
@@ -88,11 +90,11 @@ nu_q                   = %s
 nu_s                   = %s
 nu_top                 = 0
 se_ftype               = 0
-limiter_option         = 8
+limiter_option         = %s
 vert_remap_q_alg       = 0
 hypervis_scaling       = 0
 hypervis_order         = 2
-hypervis_subcycle      = 3
+hypervis_subcycle      = %s
 /
 &vert_nl
 vform                  = "ccm"
@@ -121,7 +123,8 @@ abs_tol                = %s
 calc_nonlinear_stats   = .%s.
 /""" % (paramDict['ne'], paramDict['ndays'], paramDict['tstep'], paramDict['rsplit'],
         paramDict['tsteptype'], paramDict['nu'], paramDict['nu'], paramDict['nu'], 
-        paramDict['nu'], paramDict['nu'], suffix,paramDict['splitting'],
+        paramDict['nu'], paramDict['nu'], paramDict['limiter'],paramDict['hv_subcycle'], 
+        suffix, paramDict['splitting'], 
         paramDict['rtol'], paramDict['atol'],paramDict['calcstats'])
 os.system("echo '%s' > input_%s.nl" % (namelist, suffix))
 
