@@ -7,20 +7,20 @@ splitting = '2'
 
 methodDict = {#'U35-ref': 5,
                   #'U35': 11,
-                  'ARS232-ref': 7,
-                  'KGS242': 8,
-                  'KGS252': 9,
-                  'KGS262': 10,
-                  'KGS272': 11}
-#                  'ARS232': 12,
-#                  'DBM453': 13,
-#                  'ARS222': 14,
-#                  'ARS233': 15,
-#                  'ARS343': 16,
-#                  'ARS443': 17,
-#                  'ARK324': 18,
-#                  'ARK436': 19,
-#                  'SSP3333b': 20,
+                  'ARS232-native': 7,
+                  'KGS242-native': 8,
+                  'KGS252-native': 9,
+                  'KGS262-native': 10,
+                  'KGS272-native': 11,
+                  'ARS232': 22,
+                  'DBM453': 23,
+                  'ARS222': 24,
+                  'ARS233': 25,
+                  'ARS343': 26,
+                  'ARS443': 27,
+                  'ARK324': 28,
+                  'ARK436': 29,
+                  'SSP3333b': 30}
 #                  'SSP3333c': 21}
 
 
@@ -30,11 +30,11 @@ for m,method in enumerate(methodDict.keys()):
   maxsizeDict[method] = -np.inf
   print method
   # Load timestep and solution data
-  if (methodDict[method] < 12):
-    globstr = 'tsteptype%d_tstep*.out' % methodDict[method]
-  else:
-    globstr = 'tsteptype%d_tstep*_splitting%s*.out' % \
-                                         (methodDict[method], splitting)
+#  if (methodDict[method] < 12):
+  globstr = 'tsteptype%d_tstep*.out' % methodDict[method]
+#  else:
+#    globstr = 'tsteptype%d_tstep*_splitting%s*.out' % \
+#                                         (methodDict[method], splitting)
   for fileName in glob.glob(globstr):
     print "reading " + fileName
     words = fileName.split('_')
@@ -48,4 +48,6 @@ for m,method in enumerate(methodDict.keys()):
           maxsizeDict[method] = float(dt)
         break
 
-print maxsizeDict
+print ""
+for key in maxsizeDict.keys():
+  print key, methodDict[key], maxsizeDict[key]

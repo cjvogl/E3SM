@@ -320,6 +320,9 @@ contains
       call elemstate_add(elem,statesave,nets,nete,1,nm1,n0,n0,1d0,0.d0,0.d0)
       call compute_stage_value_dirk(nm1,qn0,gamma*dt,elem,hvcoord,hybrid,&
         deriv,nets,nete,maxiter,itertol)
+      if (maxiter == 10) then
+        call abortmp('Convergence issue with nonlinear solve: max iteration # met')
+      end if
 !      print *, 'num iters  ', maxiter
 !=== End of Phase 1 ====
 ! at this point, g2 is at nm1, un0+dt*gamma*n(g1) is at n0, and dt*n(g1) is at np1
@@ -352,6 +355,10 @@ contains
       call elemstate_add(elem,statesave,nets,nete,1,np1,n0,n0,1d0,0d0,0d0)
       call compute_stage_value_dirk(np1,qn0,gamma*dt,elem,hvcoord,hybrid,&
         deriv,nets,nete,maxiter,itertol)
+      if (maxiter == 10) then
+        call abortmp('Convergence issue with nonlinear solve: max iteration # met')
+      end if
+
 !      print *, 'num iters  ', maxiter
 !=== End of Phase 2 ===
 ! at this point, un0+dt*(1-gamma)*(n(g2)+s(g2)) is at nm1, g3 is at np1, and n0 is free
@@ -383,6 +390,10 @@ contains
       ! solve k2 = u(n) + dt*a1*n(k1) + dt*dhat1*s(k2) and store solution at np1
       call compute_stage_value_dirk(np1,qn0,dhat1*dt,elem,hvcoord,hybrid,&
         deriv,nets,nete,maxiter,itertol)
+      if (maxiter == 10) then
+        call abortmp('Convergence issue with nonlinear solve: max iteration # met')
+      end if
+
 !================= end of phase 1 =========================================
 
      ! compute u(n)+dt*a2*n(k2) and store at np1
@@ -394,6 +405,10 @@ contains
       ! solve k3 = u(n) + dt*a2*n(k2) + dt*ahat2*s(k2) + dt*dhat2*s(k3) and store solution at np1
       call compute_stage_value_dirk(np1,qn0,dhat2*dt,elem,hvcoord,hybrid,&
         deriv,nets,nete,maxiter,itertol)
+      if (maxiter == 10) then
+        call abortmp('Convergence issue with nonlinear solve: max iteration # met')
+      end if
+
 ! ================ end of phase 2 ========================================
 
      ! compute u(n+1) = k4 =  u(n)+dt*(a3*n(k3)+ahat3*s(k3)) and store at np1
@@ -429,6 +444,10 @@ contains
       itertol=1e-12
       call compute_stage_value_dirk(np1,qn0,dhat1*dt,elem,hvcoord,hybrid,&
         deriv,nets,nete,maxiter,itertol)
+      if (maxiter == 10) then
+        call abortmp('Convergence issue with nonlinear solve: max iteration # met')
+      end if
+
  !     print *, maxiter
  !     print *, itertol
 
@@ -443,6 +462,9 @@ contains
       itertol=1e-12
       call compute_stage_value_dirk(np1,qn0,dhat2*dt,elem,hvcoord,hybrid,&
         deriv,nets,nete,maxiter,itertol)
+      if (maxiter == 10) then
+        call abortmp('Convergence issue with nonlinear solve: max iteration # met')
+      end if
  !     print *, maxiter
  !     print *, itertol
 
@@ -484,6 +506,9 @@ contains
       itertol=1e-12
       call compute_stage_value_dirk(np1,qn0,dhat1*dt,elem,hvcoord,hybrid,&
         deriv,nets,nete,maxiter,itertol)
+      if (maxiter == 10) then
+        call abortmp('Convergence issue with nonlinear solve: max iteration # met')
+      end if
  !     print *, maxiter
  !     print *, itertol
     ! ========== end of stage 3 =================================
@@ -497,6 +522,9 @@ contains
       itertol=1e-12
       call compute_stage_value_dirk(np1,qn0,dhat2*dt,elem,hvcoord,hybrid,&
         deriv,nets,nete,maxiter,itertol)
+      if (maxiter == 10) then
+        call abortmp('Convergence issue with nonlinear solve: max iteration # met')
+      end if
 !      print *, maxiter
 !      print *, itertol
 
@@ -536,6 +564,9 @@ contains
       itertol=1e-12
       call compute_stage_value_dirk(np1,qn0,dhat1*dt,elem,hvcoord,hybrid,&
         deriv,nets,nete,maxiter,itertol)
+      if (maxiter == 10) then
+        call abortmp('Convergence issue with nonlinear solve: max iteration # met')
+      end if
  !     print *, maxiter
  !     print *, itertol
 
@@ -545,6 +576,9 @@ contains
       itertol=1e-12
       call compute_stage_value_dirk(np1,qn0,dhat2*dt,elem,hvcoord,hybrid,&
         deriv,nets,nete,maxiter,itertol)
+      if (maxiter == 10) then
+        call abortmp('Convergence issue with nonlinear solve: max iteration # met')
+      end if
 !      print *, maxiter
 !      print *, itertol
 

@@ -32,7 +32,7 @@ paramDict = {
   'nu':            '3.7e15',
   'splitting':          '1',
   'rtol':          '1.0e-4',
-  'atol':            '-1.0',
+  'atol':              '-1',
   'calcstats':        'true'
 }
 
