@@ -882,9 +882,9 @@ subroutine FNVExtWrmsNorm(x_C, w_C, cval)
   ! accumulate sum using wrap_repro_sum and then copy to cval and divide
   ! note that if all x_C entries are alpha and all w_C entries are 1/beta,
   ! then ||x_C||_wrms < 1 implies that alpha < beta, because
-  ! sum_i smp(i)*[x(i)*w(i)]^2 = 4*pi*nlev*6*alpha^2/beta^2)
+  ! sum_i smp(i)*[x(i)*w(i)]^2 = 4*pi*(nlev*6+2)*alpha^2/beta^2)
   call wrap_repro_sum(nvars=1, comm=par_ptr%comm)
-  cval = sqrt(global_shared_sum(1)/4.d0/dd_pi/6.d0/nlev)
+  cval = sqrt(global_shared_sum(1)/(4.d0*dd_pi*(6.d0*nlev+2.d0)))
 
   return
 end subroutine FNVExtWrmsNorm
