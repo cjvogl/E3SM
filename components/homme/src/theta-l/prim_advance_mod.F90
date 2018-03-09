@@ -1834,6 +1834,9 @@ contains
      k=nlevp
      elem(ie)%state%w_i(:,:,k,np1)    = elem(ie)%spheremp(:,:)*(scale3 * elem(ie)%state%w_i(:,:,k,nm1)   &
           + dt2*w_tens(:,:,k))
+     elem(ie)%state%phinh_i(:,:,k,np1)   = elem(ie)%spheremp(:,:)*(scale3 * elem(ie)%state%phinh_i(:,:,k,nm1) &
+          + dt2*phi_tens(:,:,k))
+
 
 
      kptr=0
@@ -1881,6 +1884,7 @@ contains
      end do
      k=nlevp
      elem(ie)%state%w_i(:,:,k,np1)    =elem(ie)%rspheremp(:,:)*elem(ie)%state%w_i(:,:,k,np1)
+     elem(ie)%state%phinh_i(:,:,k,np1)=elem(ie)%rspheremp(:,:)*elem(ie)%state%phinh_i(:,:,k,np1)
 
 
      ! now we can compute the correct dphn_dp_i() at the surface:
@@ -2108,7 +2112,7 @@ contains
       ! update iteration count and error measure
       itercount=itercount+1
     end do ! end do for the do while loop
-    
+
     if (itercount >= maxiter) then
       call abortmp('Error: nonlinear solver failed b/c max iteration count was met')
     end if
