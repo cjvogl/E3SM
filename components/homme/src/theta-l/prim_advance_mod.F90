@@ -2108,7 +2108,7 @@ contains
       ! update iteration count and error measure
       itercount=itercount+1
     end do ! end do for the do while loop
-    
+
     if (itercount >= maxiter) then
       call abortmp('Error: nonlinear solver failed b/c max iteration count was met')
     end if
