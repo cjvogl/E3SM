@@ -707,6 +707,7 @@ contains
       if (calc_nonlinear_stats) then
         call update_nonlinear_stats()
       end if
+      call enforce_BCs(elem, np1, nets, nete)
     end if
 
 
@@ -1296,8 +1297,35 @@ contains
 
   end subroutine advance_physical_vis
 
+  subroutine enforce_BCs(elem, n, nets, nete)
 
+    type(element_t),  intent(inout) :: elem(:)
+    integer,          intent(in)    :: n
+    integer,          intent(in)    :: nets
+    integer,          intent(in)    :: nete
 
+    integer :: ie
+    real(kind=real_kind) :: dpnh_dp_i_m1(np,np)
+
+    do ie=nets,nete
+      ! solve for dpnh_dp_i-1
+      dpnh_dp_i_m1(:,:) = &
+           ((elem(ie)%state%v(:,:,1,nlev,n)*elem(ie)%derived%gradphis(:,:,1) + &
+           elem(ie)%state%v(:,:,2,nlev,n)*elem(ie)%derived%gradphis(:,:,2))/g - &
+           elem(ie)%state%w_i(:,:,nlevp,n)) / &
+           (g + ( elem(ie)%derived%gradphis(:,:,1)**2 + &
+           elem(ie)%derived%gradphis(:,:,2)**2)/(2*g))
+
+      ! update solution with new dpnh_dp_i-1 value:
+      elem(ie)%state%w_i(:,:,nlevp,n) = elem(ie)%state%w_i(:,:,nlevp,n) +&
+           g*dpnh_dp_i_m1(:,:)
+      elem(ie)%state%v(:,:,1,nlev,n) =  elem(ie)%state%v(:,:,1,nlev,n) -&
+           dpnh_dp_i_m1(:,:)*elem(ie)%derived%gradphis(:,:,1)/2
+      elem(ie)%state%v(:,:,2,nlev,n) =  elem(ie)%state%v(:,:,2,nlev,n) -&
+           dpnh_dp_i_m1(:,:)*elem(ie)%derived%gradphis(:,:,2)/2
+    end do
+
+  end subroutine enforce_BCs
 
 
 !============================ stiff and or non-stiff ============================================
@@ -1392,6 +1420,7 @@ contains
   call t_startf('compute_andor_apply_rhs')
 
   do ie=nets,nete
+    ! check boundary condition if using nonhydrostatic mode
      if (.not. theta_hydrostatic_mode) then
         temp(:,:,1) =  (elem(ie)%state%v(:,:,1,nlev,n0)*elem(ie)%derived%gradphis(:,:,1) + &
              elem(ie)%state%v(:,:,2,nlev,n0)*elem(ie)%derived%gradphis(:,:,2))/g
@@ -1401,9 +1430,6 @@ contains
            write(iulog,*) 'val2 = ',elem(ie)%state%w_i(:,:,nlevp,n0)
            write(iulog,*) 'diff: ',temp(:,:,1)-elem(ie)%state%w_i(:,:,nlevp,n0)
         endif
-        ! w boundary condition. just in case:
-        elem(ie)%state%w_i(:,:,nlevp,n0) = (elem(ie)%state%v(:,:,1,nlev,n0)*elem(ie)%derived%gradphis(:,:,1) + &
-             elem(ie)%state%v(:,:,2,nlev,n0)*elem(ie)%derived%gradphis(:,:,2))/g
      endif
 
      dp3d  => elem(ie)%state%dp3d(:,:,:,n0)
@@ -1883,7 +1909,7 @@ contains
      elem(ie)%state%w_i(:,:,k,np1)    =elem(ie)%rspheremp(:,:)*elem(ie)%state%w_i(:,:,k,np1)
 
 
-     ! now we can compute the correct dphn_dp_i() at the surface:
+     ! now we can compute the correct dphn_dp_i() at the surface and enforce BC:
      if (.not. theta_hydrostatic_mode) then
         ! solve for (dpnh_dp_i-1)
         dpnh_dp_i(:,:,nlevp) = 1 + &

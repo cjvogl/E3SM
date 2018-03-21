@@ -63,6 +63,7 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   use HommeNVector,     only: NVec_t
   use hybrid_mod,       only: hybrid_t
   use derivative_mod,   only: derivative_t
+  use dimensions_mod,   only: nlevp
   use hybvcoord_mod,    only: hvcoord_t
   use prim_advance_mod, only: compute_andor_apply_rhs
   use iso_c_binding
@@ -84,8 +85,8 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   type(hvcoord_t)       :: hvcoord
   type(NVec_t), pointer :: y => NULL()
   type(NVec_t), pointer :: fy => NULL()
-  real (real_kind)      :: dt, eta_ave_w, bval, cval, scale1, scale2, scale3
-  integer               :: imex, qn0
+  real (real_kind)      :: dt, eta_ave_w, bval, cval, scale1, scale2
+  integer               :: imex, qn0, ie
 
   !======= Internals ============
   call get_hvcoord_ptr(hvcoord)
@@ -103,7 +104,6 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
     scale1 = 0.d0
     scale2 = 1.d0
   end if
-  scale3 = 0.d0
 
   ! set return value to success
   ierr = 0
@@ -134,7 +134,7 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   if (imex_splitting == 1) then
     call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
           1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
-          .false., bval*eta_ave_w, scale1, scale2, scale3)
+          .false., bval*eta_ave_w, scale1, scale2, 0.d0)
 !  elseif (imex_splitting == 2) then
 !    call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
 !          1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
@@ -142,6 +142,11 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   else
     ierr = 1 ! indicate invalid imex splitting chosen
   end if
+
+  ! Zero out RHS vector elements to maintain (d/dt)phinh_i(nlevp) = 0
+  do ie=fy%nets,fy%nete
+    fy%elem(ie)%state%phinh_i(:,:,nlevp,fy%tl_idx) = 0.d0
+  end do
 
   return
 end subroutine farkifun
@@ -170,6 +175,7 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   use HommeNVector,     only: NVec_t
   use hybrid_mod,       only: hybrid_t
   use derivative_mod,   only: derivative_t
+  use dimensions_mod,   only: nlevp
   use hybvcoord_mod,    only: hvcoord_t
   use prim_advance_mod, only: compute_andor_apply_rhs
   use iso_c_binding
@@ -191,8 +197,8 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   type(hvcoord_t)       :: hvcoord
   type(NVec_t), pointer :: y => NULL()
   type(NVec_t), pointer :: fy => NULL()
-  real(real_kind)       :: dt, eta_ave_w, bval, cval, scale1, scale2, scale3
-  integer               :: imex, qn0
+  real(real_kind)       :: dt, eta_ave_w, bval, cval, scale1, scale2
+  integer               :: imex, qn0, ie
 
   !======= Internals ============
   call get_hvcoord_ptr(hvcoord)
@@ -210,7 +216,6 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
     scale1 = 1.d0
     scale2 = 0.d0
   end if
-  scale3 = 0.d0
 
   ! set return value to success
   ierr = 0
@@ -241,7 +246,7 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   if (imex_splitting == 1) then
     call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
           1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
-          .false., bval*eta_ave_w, scale1, scale2, scale3)
+          .false., bval*eta_ave_w, scale1, scale2, 0.d0)
 !  elseif (imex_splitting == 2) then
 !    call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
 !          1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
@@ -249,6 +254,11 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   else
     ierr = 1 ! indicate invalid imex splitting chosen
   endif
+
+  ! Zero out RHS vector elements to maintain (d/dt)phinh_i(nlevp) = 0
+  do ie=fy%nets,fy%nete
+    fy%elem(ie)%state%phinh_i(:,:,nlevp,fy%tl_idx) = 0.d0
+  end do
 
   return
 end subroutine farkefun

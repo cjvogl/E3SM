@@ -108,7 +108,7 @@ interp_gridtype        = 2
 output_timeunits       = 1
 output_frequency       = 1
 output_start_time      = 7
-output_varnames1       = 'ps','zeta','u','v','T'
+output_varnames1       = 'ps','zeta','u','v','w','T'
 num_io_procs           = 16
 output_type            = 'netcdf'
 output_prefix          = "nonhydro-X1-"
@@ -126,7 +126,7 @@ calc_nonlinear_stats   = .%s.
 os.system("echo '%s' > input_%s.nl" % (namelist, suffix))
 
 # Create job script
-steps_per_day = 60*60*24/int(paramDict['tstep'])
+steps_per_day = int(60*60*24/float(paramDict['tstep']))
 runtime = seconds_per_step*steps_per_day*float(paramDict['ndays'])
 runtime = min(60*60*24,int(runtime))
 hours = runtime/3600
