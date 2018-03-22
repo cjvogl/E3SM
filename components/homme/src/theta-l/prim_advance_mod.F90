@@ -320,7 +320,13 @@ contains
       call elemstate_add(elem,statesave,nets,nete,1,nm1,n0,n0,1d0,0.d0,0.d0)
       call compute_stage_value_dirk(nm1,qn0,gamma*dt,elem,hvcoord,hybrid,&
         deriv,nets,nete,maxiter,itertol)
-!      print *, 'num iters  ', maxiter
+      if (maxiter == 10) then
+        call abortmp('Convergence issue with nonlinear solve: max iteration # met')
+      end if
+      if (calc_nonlinear_stats) then
+        ie = maxiter ! using existing integer variable to store this value
+      end if
+
 !=== End of Phase 1 ====
 ! at this point, g2 is at nm1, un0+dt*gamma*n(g1) is at n0, and dt*n(g1) is at np1
 
@@ -352,7 +358,9 @@ contains
       call elemstate_add(elem,statesave,nets,nete,1,np1,n0,n0,1d0,0d0,0d0)
       call compute_stage_value_dirk(np1,qn0,gamma*dt,elem,hvcoord,hybrid,&
         deriv,nets,nete,maxiter,itertol)
-!      print *, 'num iters  ', maxiter
+      if (maxiter == 10) then
+        call abortmp('Convergence issue with nonlinear solve: max iteration # met')
+      end if
 !=== End of Phase 2 ===
 ! at this point, un0+dt*(1-gamma)*(n(g2)+s(g2)) is at nm1, g3 is at np1, and n0 is free
 
@@ -362,6 +370,10 @@ contains
 
       call state_read(elem,statesave,n0,nets,nete)
       call t_stopf("ARS232_timestep")
+
+      if (calc_nonlinear_stats) then
+        call update_nonlinear_stats(1, ie+maxiter)
+      end if
 !======================================================================================================
     elseif (tstep_type==8) then ! kgs242
       call t_startf("KGS242_timestep")
@@ -707,7 +719,6 @@ contains
       if (calc_nonlinear_stats) then
         call update_nonlinear_stats()
       end if
-      call enforce_BCs(elem, np1, nets, nete)
     end if
 
 
@@ -1296,37 +1307,6 @@ contains
   call t_stopf('advance_physical_vis')
 
   end subroutine advance_physical_vis
-
-  subroutine enforce_BCs(elem, n, nets, nete)
-
-    type(element_t),  intent(inout) :: elem(:)
-    integer,          intent(in)    :: n
-    integer,          intent(in)    :: nets
-    integer,          intent(in)    :: nete
-
-    integer :: ie
-    real(kind=real_kind) :: dpnh_dp_i_m1(np,np)
-
-    do ie=nets,nete
-      ! solve for dpnh_dp_i-1
-      dpnh_dp_i_m1(:,:) = &
-           ((elem(ie)%state%v(:,:,1,nlev,n)*elem(ie)%derived%gradphis(:,:,1) + &
-           elem(ie)%state%v(:,:,2,nlev,n)*elem(ie)%derived%gradphis(:,:,2))/g - &
-           elem(ie)%state%w_i(:,:,nlevp,n)) / &
-           (g + ( elem(ie)%derived%gradphis(:,:,1)**2 + &
-           elem(ie)%derived%gradphis(:,:,2)**2)/(2*g))
-
-      ! update solution with new dpnh_dp_i-1 value:
-      elem(ie)%state%w_i(:,:,nlevp,n) = elem(ie)%state%w_i(:,:,nlevp,n) +&
-           g*dpnh_dp_i_m1(:,:)
-      elem(ie)%state%v(:,:,1,nlev,n) =  elem(ie)%state%v(:,:,1,nlev,n) -&
-           dpnh_dp_i_m1(:,:)*elem(ie)%derived%gradphis(:,:,1)/2
-      elem(ie)%state%v(:,:,2,nlev,n) =  elem(ie)%state%v(:,:,2,nlev,n) -&
-           dpnh_dp_i_m1(:,:)*elem(ie)%derived%gradphis(:,:,2)/2
-    end do
-
-  end subroutine enforce_BCs
-
 
 !============================ stiff and or non-stiff ============================================
 
@@ -2140,14 +2120,14 @@ contains
     end if
 !  the following two if-statements are for debugging/testing purposes to track the number of iterations and error attained
 !  by the Newton iteration
-!      if (itercount > itercountmax) then
-!        itercountmax=itercount
-!      end if
+    if (itercount > itercountmax) then
+      itercountmax=itercount
+    end if
 !      if (itererr > itererrmax) then
 !        itererrmax = itererr
 !      end if
   end do ! end do for the ie=nets,nete loop
-!  maxiter=itercountmax
+  maxiter=itercountmax
 !  itertol=itererrmax
 !  print *, 'max itercount', itercountmax, 'maxitererr ', itererrmax
   call t_stopf('compute_stage_value_dirk')
