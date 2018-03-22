@@ -320,9 +320,6 @@ contains
       call elemstate_add(elem,statesave,nets,nete,1,nm1,n0,n0,1d0,0.d0,0.d0)
       call compute_stage_value_dirk(nm1,qn0,gamma*dt,elem,hvcoord,hybrid,&
         deriv,nets,nete,maxiter,itertol)
-      if (maxiter == 10) then
-        call abortmp('Convergence issue with nonlinear solve: max iteration # met')
-      end if
       if (calc_nonlinear_stats) then
         ie = maxiter ! using existing integer variable to store this value
       end if
@@ -358,9 +355,6 @@ contains
       call elemstate_add(elem,statesave,nets,nete,1,np1,n0,n0,1d0,0d0,0d0)
       call compute_stage_value_dirk(np1,qn0,gamma*dt,elem,hvcoord,hybrid,&
         deriv,nets,nete,maxiter,itertol)
-      if (maxiter == 10) then
-        call abortmp('Convergence issue with nonlinear solve: max iteration # met')
-      end if
 !=== End of Phase 2 ===
 ! at this point, un0+dt*(1-gamma)*(n(g2)+s(g2)) is at nm1, g3 is at np1, and n0 is free
 
