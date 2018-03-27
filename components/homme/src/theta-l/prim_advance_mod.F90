@@ -592,7 +592,7 @@ contains
       call t_stopf("KGS252_explicit_timestep")
 !=================================================================================================
     elseif (tstep_type == 14) then
-      call t_startf("KGS262_explicit_timestep")
+      call t_startf("KGS254_explicit_timestep")
      a1 = 1./4.
      a2 = 1.0/6.0
      a3 = 3.0/8.0
@@ -608,7 +608,7 @@ contains
         deriv,nets,nete,.false.,eta_ave_w*a4,1d0,1d0,1d0)
      call compute_andor_apply_rhs(np1,n0,np1,qn0,dt*a5,elem,hvcoord,hybrid,&
        deriv,nets,nete,.false.,eta_ave_w*a5,1d0,1d0,1d0)
-      call t_stopf("KGS262_explicit_timestep")
+      call t_stopf("KGS254_explicit_timestep")
 !=================================================================================================
     elseif (tstep_type == 15) then
      call t_startf("KGS272_explicit_timestep")
