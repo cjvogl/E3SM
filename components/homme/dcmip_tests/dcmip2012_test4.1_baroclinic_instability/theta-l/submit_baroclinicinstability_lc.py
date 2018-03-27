@@ -24,12 +24,14 @@ if (len(sys.argv) < 2):
 
 # Set dictionary of default HOMME parameter names and values
 paramDict = {
+  'dcmip':     '2012_test4',   
   'tsteptype':          '7',
   'tstep':            '120',
   'ndays':             '30',
-  'rsplit':            '10',
+  'rsplit':             '1',
   'ne':                '20',
   'nu':            '3.7e15',
+  'hypersub':           '3',             
   'splitting':          '1',
   'rtol':          '1.0e-4',
   'atol':              '-1',
@@ -67,7 +69,7 @@ dcmip4_X               = 1.0
 NThreads               = 1
 partmethod             = 4
 topology               = "cube"
-test_case              = "dcmip2012_test4"
+test_case              = "dcmip%s"
 u_perturb              = 1
 rotate_grid            = 0
 ne                     = %s
@@ -92,7 +94,7 @@ limiter_option         = 9
 vert_remap_q_alg       = 0
 hypervis_scaling       = 0
 hypervis_order         = 2
-hypervis_subcycle      = 1
+hypervis_subcycle      = %s
 /
 &vert_nl
 vform                  = "ccm"
@@ -107,7 +109,7 @@ profile_single_file	   = .true.
 interp_gridtype        = 2
 output_timeunits       = 1
 output_frequency       = 1
-output_start_time      = 7
+output_start_time      = 0
 output_varnames1       = 'ps','zeta','u','v','w','T'
 num_io_procs           = 16
 output_type            = 'netcdf'
@@ -119,10 +121,11 @@ imex_splitting         = %s
 rel_tol                = %s
 abs_tol                = %s
 calc_nonlinear_stats   = .%s.
-/""" % (paramDict['ne'], paramDict['ndays'], paramDict['tstep'], paramDict['rsplit'],
-        paramDict['tsteptype'], paramDict['nu'], paramDict['nu'], paramDict['nu'], 
-        paramDict['nu'], paramDict['nu'], suffix,paramDict['splitting'],
-        paramDict['rtol'], paramDict['atol'],paramDict['calcstats'])
+/""" % (paramDict['dcmip'], paramDict['ne'], paramDict['ndays'], paramDict['tstep'], 
+        paramDict['rsplit'], paramDict['tsteptype'], 
+        paramDict['nu'], paramDict['nu'], paramDict['nu'], paramDict['nu'], paramDict['nu'], 
+        paramDict['hypersub'], suffix, 
+        paramDict['splitting'], paramDict['rtol'], paramDict['atol'],paramDict['calcstats'])
 os.system("echo '%s' > input_%s.nl" % (namelist, suffix))
 
 # Create job script
