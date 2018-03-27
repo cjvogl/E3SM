@@ -645,25 +645,25 @@ subroutine dcmip2012_test4p_init(elem,hybrid,hvcoord,nets,nete)
     do k=1,nlev
       pressure=hvcoord%hyam(k)*hvcoord%ps0 + hvcoord%hybm(k)*ps_test
       do j=1,np; do i=1,np
-        call get_coordinates(lat,lon,hyam,hybm, i,j,k,elem(ie),hvcoord)
+        !call get_coordinates(lat,lon,hyam,hybm, i,j,k,elem(ie),hvcoord)
+        lon  = elem(ie)%spherep(i,j)%lon
+        lat  = elem(ie)%spherep(i,j)%lat
 
         !test4_baroclinic_wave(moist,X,lon,lat,p,z,zcoords,u,v,w,t,phis,ps,rho,q,q1,q2)
         !moist 0 or 1, X is Earth scale factor, zcoord=0, q is vapor, q1, q2
         call test4_baroclinic_wave(dcmip4_moist,dcmip4_X,lon,lat,&
                                    pressure,z,zcoords,u,v,w,T,phis,ps,rho,q,q1,q2)
+        ! add perturbation for "acceptable solution" test
+        call perturb_vals(u,v,w,T)
+
         qarray(1)=q; qarray(2)=q1; qarray(3)=q2;
-        dp = pressure_thickness(ps,k,hvcoord)
+        !dp = pressure_thickness(ps,k,hvcoord)
+        dp = (hvcoord%hyai(k+1)-hvcoord%hyai(k))*p0 + (hvcoord%hybi(k+1)-hvcoord%hybi(k))*ps
         call set_state(u,v,w,T,ps,phis,pressure,dp,z,g, i,j,k,elem(ie),1,nt)
 
         !init only <=qsize tracers
         qs = min(qsize,3)
         call set_tracers(qarray(1:qs),qs, dp,i,j,k,lat,lon,elem(ie))
-
-        ! add perturbation for "acceptable solution" test
-        call perturb_field(elem(ie)%state%v(i,j,1,k,1:nt))
-        call perturb_field(elem(ie)%state%v(i,j,2,k,1:nt))
-        call perturb_field(elem(ie)%state%theta_dp_cp(i,j,k,1:nt))
-        call perturb_field(elem(ie)%state%dp3d(i,j,k,1:nt))
 
       enddo; enddo; enddo;
 
@@ -671,36 +671,41 @@ subroutine dcmip2012_test4p_init(elem,hybrid,hvcoord,nets,nete)
     do k=1,nlevp
       pressure=hvcoord%hyai(k)*hvcoord%ps0 + hvcoord%hybi(k)*ps_test
       do j=1,np; do i=1,np
-        call get_coordinates(lat,lon,hyai,hybi, i,j,k,elem(ie),hvcoord)
+        !call get_coordinates(lat,lon,hyai,hybi, i,j,k,elem(ie),hvcoord)
+        lon  = elem(ie)%spherep(i,j)%lon
+        lat  = elem(ie)%spherep(i,j)%lat
 
         !test4_baroclinic_wave(moist,X,lon,lat,p,z,zcoords,u,v,w,t,phis,ps,rho,q,q1,q2)
         !moist 0 or 1, X is Earth scale factor, zcoord=0, q is vapor, q1, q2
         call test4_baroclinic_wave(dcmip4_moist,dcmip4_X,lon,lat,&
                                    pressure,z,zcoords,u,v,w,T,phis,ps,rho,q,q1,q2)
-        qarray(1)=q; qarray(2)=q1; qarray(3)=q2;
-        dp = pressure_thickness(ps,k,hvcoord)
-        call set_state_i(u,v,w,T,ps,phis,pressure,dp,z,g, i,j,k,elem(ie),1,nt)
-
         ! add perturbation for "acceptable solution" test
-        call perturb_field(elem(ie)%state%w_i(i,j,k,1:nt))
-        call perturb_field(elem(ie)%state%phinh_i(i,j,k,1:nt))
+        call perturb_vals(u,v,w,T)
+
+        qarray(1)=q; qarray(2)=q1; qarray(3)=q2;
+        !dp = pressure_thickness(ps,k,hvcoord)
+        if (k <= nlev) then
+          dp = (hvcoord%hyai(k+1)-hvcoord%hyai(k))*p0 + (hvcoord%hybi(k+1)-hvcoord%hybi(k))*ps
+        else
+          dp = (hvcoord%hyai(k)-hvcoord%hyai(k-1))*p0 + (hvcoord%hybi(k)-hvcoord%hybi(k-1))*ps
+        endif
+        call set_state_i(u,v,w,T,ps,phis,pressure,dp,z,g, i,j,k,elem(ie),1,nt)
 
       enddo; enddo; enddo;
 
 
-    call tests_finalize(elem(ie),hvcoord,1,nt)
+    call tests_finalize(elem(ie),hvcoord,1,nt,perturbed=.true.)
   enddo ! ie loop
 end subroutine dcmip2012_test4p_init
 
 !_____________________________________________________________________
-subroutine perturb_field(val)
-! perturbs the value in field
-!
-! input: val - array with all elements assumed to be the same value
-! output: val - array with all elemets set to be the same perturbed value
+subroutine perturb_vals(val1,val2,val3,val4)
+! perturbs the value in all input parameters
 
-  real(rl), intent(inout) :: val(:)
-  real(kind=4) :: uniform_val1, uniform_val2, normal_val, sigma
+  real(rl), intent(inout) :: val1
+  real(rl), optional, intent(inout) :: val2, val3, val4
+
+  real(kind=4) :: sigma, perturbation!, normal_rand
 
   ! seed if first time calling this subroutine
   if (.not.seeded) then
@@ -708,17 +713,42 @@ subroutine perturb_field(val)
     seeded = .true.
   endif
 
-  ! set perturbation strength to 1e11 * (machine epsilon)
-  sigma = epsilon(sigma)*1.d11
+  ! set perturbation strength to 1e3 * (machine epsilon)
+  sigma = epsilon(sigma)*1.d3
+  ! perturb values
+  perturbation = normal_rand(sigma)
+  val1 = val1 + max(perturbation*abs(val1), perturbation)
+  if (present(val2)) then
+    perturbation = normal_rand(sigma)
+    val2 = val2 + max(perturbation*abs(val2), perturbation)
+  end if
+  if (present(val3)) then
+    perturbation = normal_rand(sigma)
+    val3 = val3 + max(perturbation*abs(val3), perturbation)
+  end if
+  if (present(val4)) then
+    perturbation = normal_rand(sigma)
+    val4 = val4 + max(perturbation*abs(val4), perturbation)
+  end if
+
+end subroutine
+
+!_____________________________________________________________________
+function normal_rand(sigma) result(normal_val)
+! returns normally distributed random variable with standard deviation of sigma
+
+  real(kind=4), intent(in) :: sigma
+
+  real(kind=4) :: uniform_val1, uniform_val2, normal_val
+
   ! obtain 2 uniformly distributed random values
   call random_number(uniform_val1)
   call random_number(uniform_val2)
   ! obtain a normally distributed value and scale appropriately
   normal_val = sigma*sqrt(-2.d0*log(uniform_val1))*cos(2.d0*pi*uniform_val2)
-  ! perturb value and set all
-  val(1) = val(1) + max(normal_val*abs(val(1)),normal_val)
-  val(2:) = val(1)
-end subroutine
+
+  return
+end function normal_rand
 
 !_____________________________________________________________________
 subroutine get_evenly_spaced_z(zi,zm, zb,zt)
