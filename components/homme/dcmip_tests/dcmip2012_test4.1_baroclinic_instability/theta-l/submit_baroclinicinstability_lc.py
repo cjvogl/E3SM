@@ -31,7 +31,8 @@ paramDict = {
   'rsplit':             '1',
   'ne':                '20',
   'nu':            '3.7e15',
-  'hypersub':           '3',             
+  'hypersub':           '3',
+  'hydrostatic':    'false',
   'splitting':          '1',
   'rtol':          '1.0e-4',
   'atol':              '-1',
@@ -56,14 +57,23 @@ if (not userList):
 # Set naming suffix
 suffix = ''
 for i,word in enumerate(userList):
-  suffix += word + paramDict[word]
+  if (word == 'hydrostatic'):
+    if (paramDict[word] == 'true'):
+      suffix += 'hydrostatic'
+    elif (paramDict[word] == 'false'):
+      suffix += 'nonhydrostatic'
+    else:
+      print('\n*** INVALID OPTION FOR HYDROSTATIC MODE ***\n\n')
+      sys.exit()
+  else:
+    suffix += word + paramDict[word]
   if (i < len(userList)-1):
     suffix += '_'
 
 # Create input namelist file text
 namelist = \
 """&ctl_nl
-theta_hydrostatic_mode = .false.
+theta_hydrostatic_mode = .%s.
 dcmip4_moist           = 0
 dcmip4_X               = 1.0
 NThreads               = 1
@@ -121,8 +131,8 @@ imex_splitting         = %s
 rel_tol                = %s
 abs_tol                = %s
 calc_nonlinear_stats   = .%s.
-/""" % (paramDict['dcmip'], paramDict['ne'], paramDict['ndays'], paramDict['tstep'], 
-        paramDict['rsplit'], paramDict['tsteptype'], 
+/""" % (paramDict['hydrostatic'], paramDict['dcmip'], paramDict['ne'], paramDict['ndays'], 
+        paramDict['tstep'], paramDict['rsplit'], paramDict['tsteptype'], 
         paramDict['nu'], paramDict['nu'], paramDict['nu'], paramDict['nu'], paramDict['nu'], 
         paramDict['hypersub'], suffix, 
         paramDict['splitting'], paramDict['rtol'], paramDict['atol'],paramDict['calcstats'])
