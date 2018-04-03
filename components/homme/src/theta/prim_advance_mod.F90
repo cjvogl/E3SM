@@ -380,6 +380,7 @@ contains
       call compute_andor_apply_rhs(np1,n0,np1,qn0,a2*dt,elem,hvcoord,hybrid,&
         deriv,nets,nete,.false.,eta_ave_w/2,1d0,ahat2/a2,1d0)
 
+      ! solve k4 = u(n)+dt*a3*n(k3)+dt*ahat3*s(k3)+dt*dhat2*s(k4) and store at np1
       maxiter=10
       itertol=1e-12
       ! solve k3 = u(n) + dt*a2*n(k2) + dt*ahat2*s(k2) + dt*dhat2*s(k3) and store solution at np1
@@ -497,7 +498,7 @@ contains
        deriv,nets,nete,.false.,eta_ave_w*a5,1d0,1d0,1d0)
 
       call t_stopf("KGS262_timestep")
-!=========================================================================================
+
     else if (tstep_type==20) then ! ARKode RK2
       call set_Butcher_tables(arkode_parameters, arkode_tables%RK2)
 
@@ -1242,6 +1243,7 @@ contains
 
   real (kind=real_kind), dimension(np,np,nlev) :: p, vgrad_p
 
+
   call t_startf('compute_andor_apply_rhs')
 
   if (present(scale4)) then
@@ -1418,7 +1420,11 @@ contains
         ! w-vorticity correction term added to u momentum equation for E conservation
         vtemp(:,:,:)  = gradient_sphere(elem(ie)%state%w(:,:,k,n0),deriv,elem(ie)%Dinv)
 
+<<<<<<< HEAD
         temp(:,:,k) = (elem(ie)%state%w(:,:,k,n0)**2)/2
+=======
+        temp(:,:,k) = (elem(ie)%state%w(:,:,k,n0)**2)/2
+>>>>>>> nonhydro/homme/lorenz2
         wvor(:,:,:,k) = gradient_sphere(temp(:,:,k),deriv,elem(ie)%Dinv)
         wvor(:,:,1,k) = wvor(:,:,1,k) - elem(ie)%state%w(:,:,k,n0)*vtemp(:,:,1)
         wvor(:,:,2,k) = wvor(:,:,2,k) - elem(ie)%state%w(:,:,k,n0)*vtemp(:,:,2)
