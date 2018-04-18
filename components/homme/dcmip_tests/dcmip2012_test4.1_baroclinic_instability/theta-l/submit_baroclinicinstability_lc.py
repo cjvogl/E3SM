@@ -24,7 +24,6 @@ if (len(sys.argv) < 2):
 
 # Set dictionary of default HOMME parameter names and values
 paramDict = {
-  'dcmip':     '2012_test4',   
   'tsteptype':          '7',
   'tstep':            '120',
   'ndays':             '30',
@@ -79,7 +78,7 @@ dcmip4_X               = 1.0
 NThreads               = 1
 partmethod             = 4
 topology               = "cube"
-test_case              = "dcmip%s"
+test_case              = "dcmip2012_test4"
 u_perturb              = 1
 rotate_grid            = 0
 ne                     = %s
@@ -120,7 +119,7 @@ interp_gridtype        = 2
 output_timeunits       = 1
 output_frequency       = 1
 output_start_time      = 0
-output_varnames1       = 'ps','zeta','u','v','w','T'
+output_varnames1       = 'ps','zeta','u','v','w','T','geo'
 num_io_procs           = 16
 output_type            = 'netcdf'
 output_prefix          = "nonhydro-X1-"
@@ -131,7 +130,7 @@ imex_splitting         = %s
 rel_tol                = %s
 abs_tol                = %s
 calc_nonlinear_stats   = .%s.
-/""" % (paramDict['hydrostatic'], paramDict['dcmip'], paramDict['ne'], paramDict['ndays'], 
+/""" % (paramDict['hydrostatic'], paramDict['ne'], paramDict['ndays'], 
         paramDict['tstep'], paramDict['rsplit'], paramDict['tsteptype'], 
         paramDict['nu'], paramDict['nu'], paramDict['nu'], paramDict['nu'], paramDict['nu'], 
         paramDict['hypersub'], suffix, 
