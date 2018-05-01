@@ -58,7 +58,7 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
 
   !======= Inclusions ===========
   use arkode_mod,       only: max_stage_num, get_RHS_vars, get_hvcoord_ptr, &
-                              get_qn0, imex_splitting
+                              get_qn0
   use kinds,            only: real_kind
   use HommeNVector,     only: NVec_t
   use hybrid_mod,       only: hybrid_t
@@ -112,7 +112,7 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   call c_f_pointer(y_C, y)
   call c_f_pointer(fy_C, fy)
 
-  ! TODO: obtain b value for current 'stage number'
+  ! TODO: obtain b value for current 'stage number' (only affect tracers)
   bval = 1.d0/max_stage_num
 
   ! The function call to compute_andor_apply_rhs is as follows:
@@ -131,17 +131,9 @@ subroutine farkifun(t, y_C, fy_C, ipar, rpar, ierr)
   !  DSS is the averaging procedure for the active and inactive nodes
   !
 
-  if (imex_splitting == 1) then
-    call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
-          1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
-          .false., bval*eta_ave_w, scale1, scale2, 0.d0)
-!  elseif (imex_splitting == 2) then
-!    call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
-!          1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
-!          .false., bval*eta_ave_w, scale1, scale2, scale3, 1.d0)
-  else
-    ierr = 1 ! indicate invalid imex splitting chosen
-  end if
+  call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
+        1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
+        .false., bval*eta_ave_w, scale1, scale2, 0.d0)
 
   ! Zero out RHS vector elements to maintain (d/dt)phinh_i(nlevp) = 0
   do ie=fy%nets,fy%nete
@@ -170,7 +162,7 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
 
   !======= Inclusions ===========
   use arkode_mod,       only: max_stage_num, get_RHS_vars, get_hvcoord_ptr, &
-                              get_qn0, imex_splitting
+                              get_qn0
   use kinds,            only: real_kind
   use HommeNVector,     only: NVec_t
   use hybrid_mod,       only: hybrid_t
@@ -224,7 +216,7 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   call c_f_pointer(y_C, y)
   call c_f_pointer(fy_C, fy)
 
-  ! TODO: obtain b value for current 'stage number'
+  ! TODO: obtain b value for current 'stage number' (only affects tracers)
   bval = 1.d0/max_stage_num
 
   ! The function call to compute_andor_apply_rhs is as follows:
@@ -243,17 +235,9 @@ subroutine farkefun(t, y_C, fy_C, ipar, rpar, ierr)
   !  DSS is the averaging procedure for the active and inactive nodes
   !
 
-  if (imex_splitting == 1) then
-    call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
-          1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
-          .false., bval*eta_ave_w, scale1, scale2, 0.d0)
-!  elseif (imex_splitting == 2) then
-!    call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
-!          1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
-!          .false., bval*eta_ave_w, scale1, scale2, scale3,0.d0)
-  else
-    ierr = 1 ! indicate invalid imex splitting chosen
-  endif
+  call compute_andor_apply_rhs(fy%tl_idx, fy%tl_idx, y%tl_idx, qn0, &
+        1.d0, y%elem, hvcoord, hybrid, deriv, y%nets, y%nete, &
+        .false., bval*eta_ave_w, scale1, scale2, 0.d0)
 
   ! Zero out RHS vector elements to maintain (d/dt)phinh_i(nlevp) = 0
   do ie=fy%nets,fy%nete

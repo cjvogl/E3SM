@@ -8,7 +8,7 @@ module namelist_mod
   use params_mod, only: recursive, sfcurve, SPHERE_COORDS, Z2_NO_TASK_MAPPING
   use cube_mod,   only: rotate_grid
   use physical_constants, only: rearth, rrearth, omega
-  use arkode_mod, only: imex_splitting, rel_tol, abs_tol, calc_nonlinear_stats
+  use arkode_mod, only: rel_tol, abs_tol, calc_nonlinear_stats
 
   use control_mod, only : &
     MAX_STRING_LEN,&
@@ -312,7 +312,6 @@ module namelist_mod
       debug_level
 
     namelist /arkode_nl/ &
-      imex_splitting, &
       rel_tol, &
       abs_tol, &
       calc_nonlinear_stats
@@ -723,7 +722,6 @@ module namelist_mod
     call MPI_bcast(output_type , 9,MPIChar_t,par%root,par%comm,ierr)
     call MPI_bcast(infilenames ,160*MAX_INFILES ,MPIChar_t,par%root,par%comm,ierr)
 
-    call MPI_bcast(imex_splitting, 1, MPIinteger_t, par%root, par%comm, ierr)
     call MPI_bcast(rel_tol, 1, MPIreal_t, par%root, par%comm, ierr)
     call MPI_bcast(abs_tol, 1, MPIreal_t, par%root, par%comm, ierr)
     call MPI_bcast(calc_nonlinear_stats, 1, MPIlogical_t, par%root, par%comm, ierr)
@@ -991,7 +989,6 @@ module namelist_mod
 
        ! ARKode parameters
        write(iulog,*)""
-       write(iulog,*)"arkode: imex_splitting = ",imex_splitting
        write(iulog,*)"arkode: rel_tol = ",rel_tol
        write(iulog,*)"arkode: abs_tol = ",abs_tol
        write(iulog,*)"arkode: calc_nonlinear_stats = ",calc_nonlinear_stats

@@ -12,7 +12,13 @@
 #define SSP3333B_ARK 9
 #define SSP3333C_ARK 10
 #define RK2_ARK 11
-#define U35_ARK 12
+#define KGU35_ARK 12
+#define KGS232_ARK 13
+#define KGS242_ARK 14
+#define KGS243_ARK 15
+#define KGS252_ARK 16
+#define KGS253_ARK 17
+#define KGS254_ARK 18
 
 module arkode_mod
 
@@ -36,7 +42,6 @@ module arkode_mod
   integer, parameter :: max_niters = 10
 
   ! ARKode namelist variables
-  integer, public         :: imex_splitting = 1
   real(real_kind), public :: rel_tol = 1.d-8
   real(real_kind), public :: abs_tol = 1.d-8  ! val < 0 indicates array atol
   logical, public         :: calc_nonlinear_stats = .true.
@@ -54,7 +59,13 @@ module arkode_mod
     integer :: SSP3333B = SSP3333B_ARK
     integer :: SSP3333C = SSP3333C_ARK
     integer :: RK2      = RK2_ARK
-    integer :: U35      = U35_ARK
+    integer :: KGU35    = KGU35_ARK
+    integer :: KGS232   = KGS232_ARK
+    integer :: KGS242   = KGS242_ARK
+    integer :: KGS243   = KGS243_ARK
+    integer :: KGS252   = KGS252_ARK
+    integer :: KGS253   = KGS253_ARK
+    integer :: KGS254   = KGS254_ARK
   end type table_list
 
   ! data type for passing ARKode parameters
@@ -687,7 +698,7 @@ contains
         ap%ce(1:2) = (/ 0.d0, 0.5d0 /)
         ap%be(1:2) = (/ 0.d0, 1.d0 /)
 
-      case (U35_ARK)
+      case (KGU35_ARK)
         ap%imex = 1 ! explicit
         ap%s = 5 ! 5 stage
         ap%q = 3 ! 3rd order
@@ -990,6 +1001,157 @@ contains
         ! Explicit Butcher Table (vectors)
         ap%ce(1:3) = ap%ci(1:3)
         ap%be(1:3) = ap%bi(1:3)
+
+      case (KGS232_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 4 ! 4 stage
+        ap%q = 2 ! 2nd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedded explicit method
+        ! Implicit Butcher Table (matrix)
+        ap%Ai(1:4,1:4) = 0.d0
+        ap%Ai(2,1:2) = (/ 0.d0,  7.d0/5.d0 /)
+        ap%Ai(3,1:3) = (/ 0.d0, -7.d0/4.d0, 9.d0/4.d0 /)
+        ap%Ai(4,1:4) = (/ 0.d0,       0.d0,      1.d0,  0.d0 /)
+        ! Implicit Butcher Table (vectors)
+        ap%ci(1:4) = (/ 0.d0, 7.d0/5.d0, 0.5d0, 1.d0 /)
+        ap%bi(1:4) = (/ 0.d0, 0.d0, 1.d0, 0.d0 /)
+        ! Explicit Butcher Table (matrix)
+        ap%Ae(1:4,1:4) = 0.d0
+        ap%Ae(2,1) = 0.5d0
+        ap%Ae(3,1:2) = (/ 0.d0, 0.5d0 /)
+        ap%Ae(4,1:3) = (/ 0.d0,  0.d0, 1.d0 /)
+        ! Explicit Butcher Table (vectors)
+        ap%ce(1:4) = (/ 0.d0, 0.5d0, 0.5d0, 1.d0 /)
+        ap%be(1:4) = ap%bi(1:4)
+
+      case (KGS242_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 5 ! 5 stage
+        ap%q = 2 ! 2nd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedded explicit method
+        ! Implicit Butcher Table (matrix)
+        ap%Ai(1:5,1:5) = 0.d0
+        ap%Ai(3,1:3) = (/ 0.d0, 0.d0,  7.d0/5.d0 /)
+        ap%Ai(4,1:4) = (/ 0.d0, 0.d0, -7.d0/4.d0, 9.d0/4.d0 /)
+        ap%Ai(5,1:5) = (/ 0.d0, 0.d0,       0.d0,      1.d0, 0.d0 /)
+        ! Implicit Butcher Table (vectors)
+        ap%ci(1:5) = (/ 0.d0, 0.d0, 7.d0/5.d0, 0.5d0, 1.d0 /)
+        ap%bi(1:5) = (/ 0.d0, 0.d0, 0.d0, 1.d0, 0.d0 /)
+        ! Explicit Butcher Table (matrix)
+        ap%Ae(1:5,1:5) = 0.d0
+        ap%Ae(2,1) = 1.d0/4.d0
+        ap%Ae(3,1:2) = (/ 0.d0, 1.d0/3.d0 /)
+        ap%Ae(4,1:3) = (/ 0.d0,      0.d0, 0.5d0 /)
+        ap%Ae(5,1:4) = (/ 0.d0,      0.d0,  0.d0, 1.d0 /)
+        ! Explicit Butcher Table (vectors)
+        ap%ce(1:5) = (/ 0.d0, 1.d0/4.d0, 1.d0/3.d0, 0.5d0, 1.d0 /)
+        ap%be(1:5) = ap%bi(1:5)
+
+      case (KGS243_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 5 ! 5 stage
+        ap%q = 2 ! 2nd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedded explicit method
+        ! Implicit Butcher Table (matrix)
+        ap%Ai(1:5,1:5) = 0.d0
+        ap%Ai(2,1:2) = (/ 0.d0, 1.d0 /)
+        ap%Ai(3,1:3) = (/ 0.d0, 2.d0,  1.d0 /)
+        ap%Ai(4,1:4) = (/ 0.d0, 0.d0, -0.5d0, 1.d0 /)
+        ap%Ai(5,1:5) = (/ 0.d0, 0.d0,   0.d0, 1.d0, 0.d0 /)
+        ! Implicit Butcher Table (vectors)
+        ap%ci(1:5) = (/ 0.d0, 1.d0, 3.d0, 0.5d0, 1.d0 /)
+        ap%bi(1:5) = (/ 0.d0, 0.d0, 0.d0, 1.d0, 0.d0 /)
+        ! Explicit Butcher Table (matrix)
+        ap%Ae(1:5,1:5) = 0.d0
+        ap%Ae(2,1) = 1.d0/4.d0
+        ap%Ae(3,1:2) = (/ 0.d0, 1.d0/3.d0 /)
+        ap%Ae(4,1:3) = (/ 0.d0,      0.d0, 0.5d0 /)
+        ap%Ae(5,1:4) = (/ 0.d0,      0.d0,  0.d0, 1.d0 /)
+        ! Explicit Butcher Table (vectors)
+        ap%ce(1:5) = (/ 0.d0, 1.d0/4.d0, 1.d0/3.d0, 0.5d0, 1.d0 /)
+        ap%be(1:5) = ap%bi(1:5)
+
+      case (KGS252_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 6 ! 6 stage
+        ap%q = 2 ! 2nd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedded explicit method
+        ! Implicit Butcher Table (matrix)
+        ap%Ai(1:6,1:6) = 0.d0
+        ap%Ai(4,1:4) = (/ 0.d0, 0.d0, 0.d0,  7.d0/5.d0 /)
+        ap%Ai(5,1:5) = (/ 0.d0, 0.d0, 0.d0, -7.d0/4.d0, 9.d0/4.d0 /)
+        ap%Ai(6,1:6) = (/ 0.d0, 0.d0, 0.d0,       0.d0,      1.d0, 0.d0 /)
+        ! Implicit Butcher Table (vectors)
+        ap%ci(1:6) = (/ 0.d0, 0.d0, 0.d0, 7.d0/5.d0, 0.5d0, 1.d0 /)
+        ap%bi(1:6) = (/ 0.d0, 0.d0, 0.d0, 0.d0, 1.d0, 0.d0 /)
+        ! Explicit Butcher Table (matrix)
+        ap%Ae(1:6,1:6) = 0.d0
+        ap%Ae(2,1) = 1.d0/4.d0
+        ap%Ae(3,1:2) = (/ 0.d0, 1.d0/6.d0 /)
+        ap%Ae(4,1:3) = (/ 0.d0,      0.d0, 3.d0/8.d0 /)
+        ap%Ae(5,1:4) = (/ 0.d0,      0.d0,  0.d0, 0.5d0 /)
+        ap%Ae(6,1:5) = (/ 0.d0,      0.d0,  0.d0, 0.0d0, 1.d0 /)
+        ! Explicit Butcher Table (vectors)
+        ap%ce(1:6) = (/ 0.d0, 1.d0/4.d0, 1.d0/6.d0, 3.d0/8.d0, 0.5d0, 1.d0 /)
+        ap%be(1:6) = ap%bi(1:6)
+
+      case (KGS253_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 6 ! 6 stage
+        ap%q = 2 ! 2nd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedded explicit method
+        ! Implicit Butcher Table (matrix)
+        ap%Ai(1:6,1:6) = 0.d0
+        ap%Ai(3,1:3) = (/ 0.d0, 0.d0, 1.d0 /)
+        ap%Ai(4,1:4) = (/ 0.d0, 0.d0, 2.d0,  1.d0 /)
+        ap%Ai(5,1:5) = (/ 0.d0, 0.d0, 0.d0, -0.5d0, 1.d0 /)
+        ap%Ai(6,1:6) = (/ 0.d0, 0.d0, 0.d0,   0.d0, 1.d0, 0.d0 /)
+        ! Implicit Butcher Table (vectors)
+        ap%ci(1:6) = (/ 0.d0, 0.d0, 1.d0, 3.d0, 0.5d0, 1.d0 /)
+        ap%bi(1:6) = (/ 0.d0, 0.d0, 0.d0, 0.d0, 1.d0, 0.d0 /)
+        ! Explicit Butcher Table (matrix)
+        ap%Ae(1:6,1:6) = 0.d0
+        ap%Ae(2,1) = 1.d0/4.d0
+        ap%Ae(3,1:2) = (/ 0.d0, 1.d0/6.d0 /)
+        ap%Ae(4,1:3) = (/ 0.d0,      0.d0, 3.d0/8.d0 /)
+        ap%Ae(5,1:4) = (/ 0.d0,      0.d0,  0.d0, 0.5d0 /)
+        ap%Ae(6,1:5) = (/ 0.d0,      0.d0,  0.d0, 0.0d0, 1.d0 /)
+        ! Explicit Butcher Table (vectors)
+        ap%ce(1:6) = (/ 0.d0, 1.d0/4.d0, 1.d0/6.d0, 3.d0/8.d0, 0.5d0, 1.d0 /)
+        ap%be(1:6) = ap%bi(1:6)
+
+      case (KGS254_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 6 ! 6 stage
+        ap%q = 2 ! 2nd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedded explicit method
+        ! Implicit Butcher Table (matrix)
+        ap%Ai(1:6,1:6) = 0.d0
+        ap%Ai(2,1:2) = (/ 0.d0, 2.d0/3.d0 /)
+        ap%Ai(3,1:3) = (/ 0.d0, -1.d0/3.d0,   2.d0/3.d0 /)
+        ap%Ai(4,1:4) = (/ 0.d0,      0.d0, 10.d0/63.d0,  2.d0/3.d0  /)
+        ap%Ai(5,1:5) = (/ 0.d0,      0.d0,        0.d0, -7.d0/3.d0, 17.d0/6.d0 /)
+        ap%Ai(6,1:6) = (/ 0.d0,      0.d0,       0.d0,       0.d0,        1.d0, 0.d0 /)
+        ! Implicit Butcher Table (vectors)
+        ap%ci(1:6) = (/ 0.d0, 2.d0/3.d0, 1.d0/3.d0, 52.d0/63.d0, 0.5d0, 1.d0 /)
+        ap%bi(1:6) = (/ 0.d0, 0.d0, 0.d0, 0.d0, 1.d0, 0.d0 /)
+        ! Explicit Butcher Table (matrix)
+        ap%Ae(1:6,1:6) = 0.d0
+        ap%Ae(2,1) = 1.d0/4.d0
+        ap%Ae(3,1:2) = (/ 0.d0, 1.d0/6.d0 /)
+        ap%Ae(4,1:3) = (/ 0.d0,      0.d0, 3.d0/8.d0 /)
+        ap%Ae(5,1:4) = (/ 0.d0,      0.d0,  0.d0, 0.5d0 /)
+        ap%Ae(6,1:5) = (/ 0.d0,      0.d0,  0.d0, 0.0d0, 1.d0 /)
+        ! Explicit Butcher Table (vectors)
+        ap%ce(1:6) = (/ 0.d0, 1.d0/4.d0, 1.d0/6.d0, 3.d0/8.d0, 0.5d0, 1.d0 /)
+        ap%be(1:6) = ap%bi(1:6)
+
 
       case default
         call abortmp('Unknown ARKode Butcher table name')

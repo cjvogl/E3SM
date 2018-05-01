@@ -797,8 +797,8 @@ contains
     else if (tstep_type==20) then ! ARKode RK2
       call set_Butcher_tables(arkode_parameters, arkode_tables%RK2)
 
-    else if (tstep_type==21) then ! ARKode Ullrich 3rd-order, 5-stage
-      call set_Butcher_tables(arkode_parameters, arkode_tables%U35)
+    else if (tstep_type==21) then ! ARKode Kinnmark, Gray, Ullrich 3rd-order, 5-stage
+      call set_Butcher_tables(arkode_parameters, arkode_tables%KGU35)
 
     else if (tstep_type==22) then ! ARKode Ascher 2nd/2nd/2nd-order, 3-stage
       call set_Butcher_tables(arkode_parameters, arkode_tables%ARS232)
@@ -824,11 +824,27 @@ contains
     else if (tstep_type==29) then ! ARKode Kennedy 4th/4th/4th-order, 6-stage
       call set_Butcher_tables(arkode_parameters, arkode_tables%ARK436)
 
-    else if (tstep_type==30) then ! Conde et al ssp3(3,3,3)a (renamed here)
+    else if (tstep_type==30) then ! ARKode Conde et al ssp3(3,3,3)a (renamed here)
       call set_Butcher_tables(arkode_parameters, arkode_tables%SSP3333B)
 
-    else if (tstep_type==31) then ! Conde et al ssp3(3,3,3)b (renamed here)
+    else if (tstep_type==31) then ! ARKode Conde et al ssp3(3,3,3)b (renamed here)
       call set_Butcher_tables(arkode_parameters, arkode_tables%SSP3333C)
+
+    else if (tstep_type==32) then ! ARKode KGS 2nd-order, 4 stage
+      call set_Butcher_tables(arkode_parameters, arkode_tables%KGS232)
+
+    else if (tstep_type==33) then ! ARKode KGS 2nd-order, 5 stage
+      call set_Butcher_tables(arkode_parameters, arkode_tables%KGS242)
+
+    else if (tstep_type==34) then ! ARKode KGS 2nd-order, 5 stage
+      call set_Butcher_tables(arkode_parameters, arkode_tables%KGS243)
+
+    else if (tstep_type==35) then ! ARKode KGS 2nd-order, 6 stage
+      call set_Butcher_tables(arkode_parameters, arkode_tables%KGS252)
+
+    else if (tstep_type==36) then ! ARKode KGS 2nd-order, 6 stage
+      call set_Butcher_tables(arkode_parameters, arkode_tables%KGS254)
+
     else
        call abortmp('ERROR: bad choice of tstep_type')
     endif
