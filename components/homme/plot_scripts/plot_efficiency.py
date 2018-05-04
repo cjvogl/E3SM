@@ -7,14 +7,11 @@ import os
 
 noHV = False
 rtol = '1e-3'
+splitting = '1'
 
 matplotlib.rcParams.update({'font.size':22})
 
-methodDict = {'KGU35-native': 5,
-              'ARS232-native':  7,
-              'KGS252-native':  9,
-              'KGS254-native': 14,
-              'KGU35': 21,
+methodDict = {'KGU35': 21,
               'ARS232': 22,
               'DBM453': 23,
               'ARS222': 24,
@@ -98,7 +95,6 @@ elif ('baroclinicinstability_test' in os.getcwd()):
     directory = './output_tsteptype5_tstep%2.0f_hydrostatic/%s.nc' \
                 % (dtRef, testName)
 
-
 print 'Reading reference solution from ' + directory
 data = Dataset(directory)
 qRef = data[varRef][:]
@@ -114,6 +110,7 @@ f2, ax2 = pyplot.subplots(figsize=(10,10))
 for m,method in enumerate(methodDict.keys()):
   dtList = []
   solutionDict = {}
+  walltimeDict = {}
   print method
   globstr = 'tsteptype%d_tstep*.out' % methodDict[method]
   for fileName in glob.glob(globstr):
@@ -121,7 +118,7 @@ for m,method in enumerate(methodDict.keys()):
       words = fileName.split('_')
       dt = words[1].replace('tstep','')
       dt = dt.replace('.out','')
-      if (float(dt) > dtRef + 1e-12):
+      if (float(dt) > dtRef+1e-12):
         directory = './output_'+fileName.replace('.out','')
         print 'Reading solution in ' + directory
         data = Dataset(directory+'/'+testName+'.nc')
@@ -132,6 +129,15 @@ for m,method in enumerate(methodDict.keys()):
           solutionDict[dt] = q[indRef,:,:,:]
         else:
           print '... skipping due to incomplete results ...'
+          continue
+        f = open(fileName.replace('.out','.err'))
+        lines = list(f)
+        f.close()
+        words = lines[1].split()
+        word = words[1] # ignore the word 'real'
+        words = word.split(('m'))
+        seconds = int(words[0])*60 + float(words[1].replace('s',''))
+        walltimeDict[dt] = seconds
 
   # if no solutions were found, goto next method
   if (len(dtList) == 0):
@@ -146,13 +152,16 @@ for m,method in enumerate(methodDict.keys()):
     dtDict[float(dt)] = dt
     L2error[dt] = np.sqrt(np.sum((q-qRef)**2)/numElements)
     LIerror[dt] = np.amax(abs(q-qRef))
+
   # Sort values and add to plot
   dtPlot = np.sort(dtDict.keys())
   L2Plot = np.empty(len(dtPlot))
   LIPlot = np.empty(len(dtPlot))
+  walltimePlot = np.empty(len(dtPlot))
   for j,dt in enumerate(dtPlot):
     L2Plot[j] = L2error[dtDict[dt]]
     LIPlot[j] = LIerror[dtDict[dt]]
+    walltimePlot[j] = walltimeDict[dtDict[dt]]
   if (orderDict[method] == 2):
     lineStyle = '-'
   elif (orderDict[method] == 3):
@@ -162,9 +171,6 @@ for m,method in enumerate(methodDict.keys()):
   else:
     print '... need to add linestyle for order %d ...' % orderDict[method]
     exit()
-
-  if ("native" in method):
-    lineStyle = lineStyle + 'k'
 
   if (istageDict[method] == 0):
     lineStyle = lineStyle + 'o'
@@ -182,29 +188,21 @@ for m,method in enumerate(methodDict.keys()):
     print '... need to add linestyle for istage %s ...' % istageDict[method]
     exit()
 
-  if (len(dtList) > 1):
-    orderL2 = np.log(L2Plot[1:]/L2Plot[0:-1])/np.log(dtPlot[1:]/dtPlot[0:-1])
-    orderLI = np.log(LIPlot[1:]/LIPlot[0:-1])/np.log(dtPlot[1:]/dtPlot[0:-1])
-  else:
-    orderL2 = (0.0,)
-    orderLI = (0.0,)
-  ax1.loglog(dtPlot,L2Plot,lineStyle,label='%s (final=%3.2f, best=%3.2f)' % (method,orderL2[0],np.amax(orderL2)), linewidth=3, markersize=12)
-  ax2.loglog(dtPlot,LIPlot,lineStyle,label='%s (final=%3.2f, best=%3.2f)' % (method,orderLI[0],np.amax(orderLI)), linewidth=3, markersize=12)
+  ax1.loglog(walltimePlot, L2Plot, lineStyle, label=method, linewidth=2, markersize=12)
+  ax2.loglog(walltimePlot, LIPlot, lineStyle, label=method, linewidth=2, markersize=12)
 
 ax1.set_ylabel('L2 Error', fontsize='xx-large')
-ax1.set_xlabel('dt', fontsize='xx-large')
-ax1.axis('equal')
+ax1.set_xlabel('wall time (s)', fontsize='xx-large')
 ax2.set_ylabel('LI Error', fontsize='xx-large')
-ax2.set_xlabel('dt', fontsize='xx-large')
-ax2.axis('equal')
+ax2.set_xlabel('wall time (s)', fontsize='xx-large')
 
 f1.tight_layout()
-f1.savefig('errorL2.png')
+f1.savefig('efficiencyL2.png')
 f2.tight_layout()
-f2.savefig('errorLI.png')
+f2.savefig('efficiencyLI.png')
 
 ax1.legend(loc='best')
 ax2.legend(loc='best')
-f1.savefig('errorL2_legend.png')
-f2.savefig('errorLI_legend.png')
+f1.savefig('efficiencyL2_legend.png')
+f2.savefig('efficiencyLI_legend.png')
 pyplot.show()

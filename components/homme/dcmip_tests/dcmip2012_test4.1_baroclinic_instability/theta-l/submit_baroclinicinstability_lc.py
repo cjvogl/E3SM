@@ -24,15 +24,12 @@ if (len(sys.argv) < 2):
 
 # Set dictionary of default HOMME parameter names and values
 paramDict = {
+  'dcmip4_X':           '1.0',
   'tsteptype':          '7',
+  'ndays':             '15',
   'tstep':            '120',
-  'ndays':             '30',
-  'rsplit':             '1',
-  'ne':                '20',
-  'nu':            '3.7e15',
-  'hypersub':           '3',
   'hydrostatic':    'false',
-  'splitting':          '1',
+  'nu':            '3.7e15',
   'rtol':          '1.0e-4',
   'atol':              '-1',
   'calcstats':        'true'
@@ -49,6 +46,30 @@ for j in range(2,len(sys.argv),2):
     print('\n*** PARAMETER %s NOT VALID ***\n\n' % current)
     sys.exit()
 
+# Compute quantities that for modified Earth radius (if necessary)
+if ('dcmip4_X' in userList):
+  # modify ndays = ndays/X if using default values
+  if ('ndays' not in userList):
+    paramDict['ndays'] = float(paramDict['ndays'])/float(paramDict['dcmip4_X'])
+  # modify tstep = tstep/X if using default values
+  if ('tstep' not in userList):
+    paramDict['tstep'] = float(paramDict['tstep'])/float(paramDict['dcmip4_X'])
+  # modify nu = nu/X**3 if using default values
+  if ('nu' not in userList):
+    paramDict['nu'] = float(paramDict['nu'])/float(paramDict['dcmip4_X'])**3
+
+# Sanity check simulation length and timestep
+num_steps = float(paramDict['ndays'])*3600*24/float(paramDict['tstep'])
+if (abs(num_steps - int(num_steps)) > 1e-10):
+  print('\n*** TSTEP %s DOES NOT EVENLY DIVIDE %s DAYS***\n\n' % (paramDict['tstep'], paramDict['ndays']))
+  sys.exit()
+paramDict['nmax'] = int(num_steps)
+
+# Compute output frequencies
+outputfreq = paramDict['nmax']/15
+if (abs(outputfreq - paramDict['nmax']/15.0) > 1e-10):
+  print('\n*** NMAX %s DOES NOT EVENLY DIVIDE BY 15***\n\n' % paramDict['nmax'])
+
 # Use tstep_type if no user defined parameters given
 if (not userList):
   userList = ['tsteptype']
@@ -57,13 +78,7 @@ if (not userList):
 suffix = ''
 for i,word in enumerate(userList):
   if (word == 'hydrostatic'):
-    if (paramDict[word] == 'true'):
-      suffix += 'hydrostatic'
-    elif (paramDict[word] == 'false'):
-      suffix += 'nonhydrostatic'
-    else:
-      print('\n*** INVALID OPTION FOR HYDROSTATIC MODE ***\n\n')
-      sys.exit()
+    suffix += word
   else:
     suffix += word + paramDict[word]
   if (i < len(userList)-1):
@@ -74,21 +89,21 @@ namelist = \
 """&ctl_nl
 theta_hydrostatic_mode = .%s.
 dcmip4_moist           = 0
-dcmip4_X               = 1.0
+dcmip4_X               = %s
 NThreads               = 1
 partmethod             = 4
 topology               = "cube"
 test_case              = "dcmip2012_test4"
 u_perturb              = 1
 rotate_grid            = 0
-ne                     = %s
+ne                     = 20
 qsize                  = 0
-ndays                  = %s
-statefreq              = 60
+nmax                   = %s
+statefreq              = 100
 runtype                = 0
 mesh_file              = "/dev/null"
 tstep                  = %s
-rsplit                 = %s
+rsplit                 = 1
 qsplit                 = 1
 tstep_type             = %s
 integration            = "explicit"
@@ -103,7 +118,7 @@ limiter_option         = 9
 vert_remap_q_alg       = 0
 hypervis_scaling       = 0
 hypervis_order         = 2
-hypervis_subcycle      = %s
+hypervis_subcycle      = 3
 /
 &vert_nl
 vform                  = "ccm"
@@ -116,30 +131,26 @@ profile_single_file	   = .true.
 /
 &analysis_nl
 interp_gridtype        = 2
-output_timeunits       = 1
-output_frequency       = 1
+output_timeunits       = 0
+output_frequency       = %s
 output_start_time      = 0
-output_varnames1       = 'ps','zeta','u','v','w','T','geo'
+output_varnames1       = 'u','v','w','T','geo'
 num_io_procs           = 16
 output_type            = 'netcdf'
-output_prefix          = "nonhydro-X1-"
 output_dir             = "./output_%s/"
 /
 &arkode_nl
-imex_splitting         = %s
 rel_tol                = %s
 abs_tol                = %s
 calc_nonlinear_stats   = .%s.
-/""" % (paramDict['hydrostatic'], paramDict['ne'], paramDict['ndays'], 
-        paramDict['tstep'], paramDict['rsplit'], paramDict['tsteptype'], 
-        paramDict['nu'], paramDict['nu'], paramDict['nu'], paramDict['nu'], paramDict['nu'], 
-        paramDict['hypersub'], suffix, 
-        paramDict['splitting'], paramDict['rtol'], paramDict['atol'],paramDict['calcstats'])
+/""" % (paramDict['hydrostatic'], paramDict['dcmip4_X'], paramDict['nmax'],
+        paramDict['tstep'], paramDict['tsteptype'],
+        paramDict['nu'], paramDict['nu'], paramDict['nu'], paramDict['nu'], paramDict['nu'],
+        outputfreq, suffix, paramDict['rtol'], paramDict['atol'], paramDict['calcstats'])
 os.system("echo '%s' > input_%s.nl" % (namelist, suffix))
 
 # Create job script
-steps_per_day = int(60*60*24/float(paramDict['tstep']))
-runtime = seconds_per_step*steps_per_day*float(paramDict['ndays'])
+runtime = seconds_per_step*num_steps
 runtime = min(60*60*24,int(runtime))
 hours = runtime/3600
 runtime = runtime % 3600
