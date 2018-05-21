@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Path to HOMME
-export HOMME_ROOT=$HOME/workspace/acme/components/homme
+export HOMME_ROOT=$PWD
 
 # Set build type ("new", "test", or "update" with default being "update")
 if [[ $# -gt 4 ]]; then

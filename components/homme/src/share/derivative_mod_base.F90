@@ -1362,11 +1362,10 @@ contains
 !   the second deta(i) factor below.  But if this routine is used for
 !   variables like u or theta and not multiplied by eta_dot_dpdn, this will need some work
 !
-    integer :: ncomp
     real(kind=real_kind), intent(in) :: v(np,np,ncomp,nlev)
     real(kind=real_kind), intent(out):: laplace(np,np,ncomp,nlev)
     real(kind=real_kind), intent(in) :: etam(nlev)
-
+    integer :: ncomp
 
     ! local
     integer k,n
@@ -1397,9 +1396,9 @@ contains
 !   This routine is currently only used for the supercell test, which uses equally spaced
 !   levels ( dz=20km/nlev ) so currently only a constant dz is supported
 !
-    integer :: ncomp
-    real(kind=real_kind), intent(in) :: v(np,np,ncomp,nlev)
-    real(kind=real_kind), intent(out):: laplace(np,np,ncomp,nlev)
+    integer :: ncomp,nk
+    real(kind=real_kind), intent(in) :: v(np,np,ncomp,nk)
+    real(kind=real_kind), intent(out):: laplace(np,np,ncomp,nk)
     real(kind=real_kind), intent(in) :: dz
 
 
