@@ -78,7 +78,7 @@ MODULE seq_infodata_mod
      private     ! This type is opaque
 
      !--- set via namelist and held fixed ----
-     character(SHR_KIND_CS)  :: cime_model      ! acme or cesm
+     character(SHR_KIND_CS)  :: cime_model      ! e3sm or cesm
      character(SHR_KIND_CL)  :: start_type      ! Type of startup
      character(SHR_KIND_CL)  :: case_name       ! Short case identification
      character(SHR_KIND_CL)  :: case_desc       ! Long description of this case
@@ -312,7 +312,7 @@ CONTAINS
     integer :: unitn              ! Namelist unit number to read
 
     !------ namelist -----
-    character(SHR_KIND_CS) :: cime_model         ! acme or cesm
+    character(SHR_KIND_CS) :: cime_model         ! e3sm or cesm
     character(SHR_KIND_CL) :: case_desc          ! Case long description
     character(SHR_KIND_CL) :: case_name          ! Case short name
     character(SHR_KIND_CL) :: model_version      ! Model version
@@ -979,7 +979,7 @@ CONTAINS
     ! !INPUT/OUTPUT PARAMETERS:
 
     type(seq_infodata_type),          intent(IN)  :: infodata                ! Input CCSM structure
-    character(len=*),       optional, intent(OUT) :: cime_model              ! CIME model (acme or cesm)
+    character(len=*),       optional, intent(OUT) :: cime_model              ! CIME model (e3sm or cesm)
     character(len=*),       optional, intent(OUT) :: start_type              ! Start type
     character(len=*),       optional, intent(OUT) :: case_name               ! Short case identification
     character(len=*),       optional, intent(OUT) :: case_desc               ! Long case description
@@ -1551,7 +1551,7 @@ CONTAINS
     ! !INPUT/OUTPUT PARAMETERS:
 
     type(seq_infodata_type),          intent(INOUT) :: infodata                ! Input CCSM structure
-    character(len=*),       optional, intent(IN)    :: cime_model              ! CIME model (acme or cesm)
+    character(len=*),       optional, intent(IN)    :: cime_model              ! CIME model (e3sm or cesm)
     character(len=*),       optional, intent(IN)    :: start_type              ! Start type
     character(len=*),       optional, intent(IN)    :: case_name               ! Short case identification
     character(len=*),       optional, intent(IN)    :: case_desc               ! Long case description
@@ -1974,7 +1974,7 @@ CONTAINS
     integer(SHR_KIND_IN),   optional, intent(IN)    :: comp_ny         ! nx,ny 2d grid size global
     integer(SHR_KIND_IN),   optional, intent(IN)    :: comp_phase
     logical,                optional, intent(IN)    :: histavg_comp
-    character(SHR_KIND_CL), optional, intent(IN) :: comp_resume(:)
+    character(SHR_KIND_CL), optional, intent(IN)    :: comp_resume(:)
 
     !EOP
 
@@ -2141,7 +2141,6 @@ CONTAINS
     !EOP
 
     !----- local -----
-    integer :: ind
 
     !-------------------------------------------------------------------------------
     ! Notes:
@@ -2671,8 +2670,8 @@ CONTAINS
     !-------------------------------------------------------------------------------
 
     ! --- CIME model ------
-    if ( trim(infodata%cime_model) /= 'acme' .and. trim(infodata%cime_model) /= 'cesm') then
-       call shr_sys_abort( subname//': cime_model must be set to acme or cesm, aborting')
+    if ( trim(infodata%cime_model) /= 'e3sm' .and. trim(infodata%cime_model) /= 'cesm') then
+       call shr_sys_abort( subname//': cime_model must be set to e3sm or cesm, aborting')
     end if
 
     ! --- Case name ------
@@ -2858,8 +2857,8 @@ CONTAINS
     write(logunit,F0L) subname,'flux_albav               = ', infodata%flux_albav
     write(logunit,F0L) subname,'flux_diurnal             = ', infodata%flux_diurnal
     write(logunit,F0L) subname,'coldair_outbreak_mod            = ', infodata%coldair_outbreak_mod
-    write(logunit,F0L) subname,'flux_convergence         = ', infodata%flux_convergence
-    write(logunit,F0L) subname,'flux_max_iteration       = ', infodata%flux_max_iteration
+    write(logunit,F0R) subname,'flux_convergence         = ', infodata%flux_convergence
+    write(logunit,F0I) subname,'flux_max_iteration       = ', infodata%flux_max_iteration
     write(logunit,F0R) subname,'gust_fac                 = ', infodata%gust_fac
     write(logunit,F0A) subname,'glc_renormalize_smb      = ', trim(infodata%glc_renormalize_smb)
     write(logunit,F0R) subname,'wall_time_limit          = ', infodata%wall_time_limit

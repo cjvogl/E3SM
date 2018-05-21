@@ -2705,14 +2705,17 @@ contains
     ! Spinup state
     !--------------------------------
 
-    if (carbon_type == 'c12') then
+    if (carbon_type == 'c12'  .or. carbon_type == 'c14') then
         if (flag == 'write') then
            idata = spinup_state
         end if
+        if (carbon_type == 'c12' .or. (carbon_type == 'c14' .and. flag == 'read')) then
         call restartvar(ncid=ncid, flag=flag, varname='spinup_state', xtype=ncd_int,  &
              long_name='Spinup state of the model that wrote this restart file: ' &
              // ' 0 = normal model mode, 1 = AD spinup', units='', &
              interpinic_flag='copy', readvar=readvar,  data=idata)
+        end if
+
         if (flag == 'read') then
            if (readvar) then
               restart_file_spinup_state = idata
@@ -2757,10 +2760,10 @@ contains
                  do j = 1, nlevdecomp
 		    if ( exit_spinup ) then
 		       m = decomp_cascade_con%spinup_factor(k)
-                       if (decomp_cascade_con%spinup_factor(k) > 1 .and. nu_com .eq. 'RD') m = m / cnstate_vars%scalaravg_col(c,j)
+                       if (decomp_cascade_con%spinup_factor(k) > 1) m = m / cnstate_vars%scalaravg_col(c,j)
                     else if ( enter_spinup ) then 
 		       m = 1. / decomp_cascade_con%spinup_factor(k)
-		       if (decomp_cascade_con%spinup_factor(k) > 1 .and. nu_com .eq. 'RD') m = m * cnstate_vars%scalaravg_col(c,j)
+		       if (decomp_cascade_con%spinup_factor(k) > 1) m = m * cnstate_vars%scalaravg_col(c,j)
 		    end if
                     this%decomp_cpools_vr_col(c,j,k) = this%decomp_cpools_vr_col(c,j,k) * m
                  end do
