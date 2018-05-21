@@ -6,7 +6,6 @@ import numpy as np
 import os
 
 noHV = False
-rtol = '1e-3'
 
 matplotlib.rcParams.update({'font.size':22})
 
@@ -88,14 +87,14 @@ if ('gravitywave_test' in os.getcwd()):
                 % (dtRef, nmax, testName)
 elif ('baroclinicinstability_test' in os.getcwd()):
   testName = 'dcmip2012_test41'
-  dtRef = 10
+  dtRef = 0.01
   indRef = 15
-  varRef = 'u'
+  varRef = 'w'
   if (noHV):
     directory = './output_tsteptype5_tstep%2.0f_hydrostatic_nu0.0/%s.nc' \
                 % (dtRef, testName)
   else:
-    directory = './output_tsteptype5_tstep%2.0f_hydrostatic/%s.nc' \
+    directory = './output_tsteptype5_tstep%3.2f_dcmip4_X100/%s.nc' \
                 % (dtRef, testName)
 
 
@@ -115,7 +114,7 @@ for m,method in enumerate(methodDict.keys()):
   dtList = []
   solutionDict = {}
   print method
-  globstr = 'tsteptype%d_tstep*.out' % methodDict[method]
+  globstr = 'tsteptype%d_tstep*_dcmip4_X100.out' % methodDict[method]
   for fileName in glob.glob(globstr):
     if ((noHV and "nu0.0" in fileName) or (not noHV and "nu0.0" not in fileName)):
       words = fileName.split('_')
