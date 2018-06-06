@@ -7,10 +7,10 @@ import os
 
 matplotlib.rcParams.update({'font.size':22})
 
-methodDict = {'KGU35-native': 5,
-              'ARS232-native':  7,
-              'KGS252-native':  9,
-              'KGS254-native': 14,
+methodDict = {#'KGU35-native': 5,
+              #'ARS232-native':  7,
+              #'KGS252-native':  9,
+              #'KGS254-native': 14,
               'KGU35': 21,
               'ARS232': 22,
               'DBM453': 23,
@@ -70,95 +70,60 @@ istageDict = {'KGU35-native': 0,
               'KGS252': 2,
               'KGS254': 4}
 
-# Load reference solution
-if ('gravitywave_test' in os.getcwd()):
-  testName = 'dcmip2012_test31'
-  dtRef = 0.000390625
-  nmax = 768000
-  indRef = 10
-  varRef = 'T'
-  if (noHV):
-    directory = './output_tsteptype5_tstep%10.9f_nmax%d_nu0.0/%s.nc' \
-                % (dtRef, nmax, testName)
-  else:
-    directory = './output_tsteptype5_tstep%10.9f_nmax%d/%s.nc' \
-                % (dtRef, nmax, testName)
-elif ('baroclinicinstability_test' in os.getcwd()):
-  testName = 'dcmip2012_test41'
-  dtRef = 10
-  indRef = 15
-  varRef = 'u'
-  if (noHV):
-    directory = './output_tsteptype5_tstep%2.0f_hydrostatic_nu0.0/%s.nc' \
-                % (dtRef, testName)
-  else:
-    directory = './output_tsteptype5_tstep%2.0f_hydrostatic/%s.nc' \
-                % (dtRef, testName)
-
-print 'Reading reference solution from ' + directory
-data = Dataset(directory)
-qRef = data[varRef][:]
-qRef = qRef[indRef,:,:,:]
-tRef = data['time'][:]
-tRef = tRef[indRef]
-shape = np.shape(qRef)
-numElements = shape[0]*shape[1]*shape[2]
-
-# Iterate through methods and plot convergence test
-f1, ax1 = pyplot.subplots(figsize=(10,10))
-f2, ax2 = pyplot.subplots(figsize=(10,10))
+# Iterate through methods and plot energy efficiency test
+f, ax = pyplot.subplots(figsize=(10,10))
+f.set_tight_layout(True)
 for m,method in enumerate(methodDict.keys()):
-  solutionDict = {}
+  relErrorDict = {}
   walltimeDict = {}
   print method
-  globstr = 'tsteptype%d_tstep*.out' % methodDict[method]
+  globstr = 'tsteptype%d_tstep*_X100.out' % methodDict[method]
   for fileName in glob.glob(globstr):
     words = fileName.split('_')
     dt = words[1].replace('tstep','')
     dt = dt.replace('.out','')
-    if (float(dt) > dtRef+1e-12):
-      directory = './output_'+fileName.replace('.out','')
-      print 'Reading solution in ' + directory
-      data = Dataset(directory+'/'+testName+'.nc')
-      q = data[varRef][:]
-      t = data['time'][:]
-      if (len(t) > indRef and abs(t[indRef] - tRef) < 1e-10):
-        solutionDict[dt] = q[indRef,:,:,:]
-      else:
-        print '... skipping due to incomplete results ...'
-        continue
-      f = open(fileName.replace('.out','.err'))
-      lines = list(f)
-      f.close()
-      words = lines[1].split()
-      word = words[1] # ignore the word 'real'
-      words = word.split(('m'))
-      seconds = int(words[0])*60 + float(words[1].replace('s',''))
-      walltimeDict[dt] = seconds
+    print 'Reading diagnostics in ' + fileName
+    fileObj = open(fileName)
+    lines = list(fileObj)
+    fileObj.close()
+    flag = False
+    for line in reversed(lines):
+      if ('Finished main timestepping loop' in line):
+        flag = True
+      if (flag and '(E-E0)/E0' in line):
+        words = line.split()
+        relError = float(words[1])
+        if (relError < 1e-5):
+          relErrorDict[dt] = relError
+        break
+    if (not flag):
+      print '... skipping due to incomplete results ...'
+      continue
+    fileObj = open(fileName.replace('.out','.err'))
+    lines = list(fileObj)
+    fileObj.close()
+    words = lines[1].split()
+    word = words[1] # ignore the word 'real'
+    words = word.split(('m'))
+    seconds = int(words[0])*60 + float(words[1].replace('s',''))
+    walltimeDict[dt] = seconds
 
   # if no solutions were found, goto next method
-  dtList = solutionDict.keys()
+  dtList = relErrorDict.keys()
   if (len(dtList) == 0):
     continue
 
-  # Compute errors from reference solution
+  # need dictionary to map strings to floats
   dtDict = {}
-  L2error = {}
-  LIerror = {}
   for dt in dtList:
-    q = solutionDict[dt]
     dtDict[float(dt)] = dt
-    L2error[dt] = np.sqrt(np.sum((q-qRef)**2)/numElements)
-    LIerror[dt] = np.amax(abs(q-qRef))
 
   # Sort values and add to plot
   dtPlot = np.sort(dtDict.keys())
-  L2Plot = np.empty(len(dtPlot))
-  LIPlot = np.empty(len(dtPlot))
+  relErrorPlot = np.empty(len(dtPlot))
   walltimePlot = np.empty(len(dtPlot))
   for j,dt in enumerate(dtPlot):
-    L2Plot[j] = L2error[dtDict[dt]]
-    LIPlot[j] = LIerror[dtDict[dt]]
+    relErrorPlot[j] = abs(relErrorDict[dtDict[dt]])
     walltimePlot[j] = walltimeDict[dtDict[dt]]
   if (orderDict[method] == 2):
     lineStyle = '-'
@@ -186,21 +151,13 @@ for m,method in enumerate(methodDict.keys()):
     print '... need to add linestyle for istage %s ...' % istageDict[method]
     exit()
 
-  ax1.loglog(walltimePlot, L2Plot, lineStyle, label=method, linewidth=2, markersize=12)
-  ax2.loglog(walltimePlot, LIPlot, lineStyle, label=method, linewidth=2, markersize=12)
+  ax.loglog(walltimePlot, relErrorPlot, lineStyle, label=method, linewidth=2, markersize=12)
 
-ax1.set_ylabel('L2 Error', fontsize='xx-large')
-ax1.set_xlabel('wall time (s)', fontsize='xx-large')
-ax2.set_ylabel('LI Error', fontsize='xx-large')
-ax2.set_xlabel('wall time (s)', fontsize='xx-large')
+ax.set_ylabel('Relative Energy Error', fontsize='xx-large')
+ax.set_xlabel('wall time (s)', fontsize='xx-large')
 
-f1.tight_layout()
-f1.savefig('efficiencyL2.png')
-f2.tight_layout()
-f2.savefig('efficiencyLI.png')
+f.savefig('efficiencyEnergy.png')
 
-ax1.legend(loc='best')
-ax2.legend(loc='best')
-f1.savefig('efficiencyL2_legend.png')
-f2.savefig('efficiencyLI_legend.png')
+ax.legend(loc='best')
+f.savefig('efficiencyEnergy_legend.png')
 pyplot.show()
