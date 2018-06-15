@@ -2647,6 +2647,12 @@ Choice of cloud fraction scheme for simple macrophysics
 Default: 1
 </entry>
 
+<entry id="rkz_partition_num" type="integer" category="physc_test"
+       group="phys_ctl_nl" valid_values="" >
+Number of subgrid reconstruction partitions
+Default: 0
+</entry>
+
 <entry id="rkz_term_A_opt" type="integer" category="physc_test"
        group="phys_ctl_nl" valid_values="" >
 Choice of numerical implementation for term A in the RKZ simple macrophysics scheme 
