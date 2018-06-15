@@ -2038,6 +2038,7 @@ subroutine tphysbc (ztodt,               &
 
     integer :: simple_macrop_opt = -1   ! -1 = NOT using simple macrophysics schemes
     integer :: rkz_cldfrc_opt
+    integer :: rkz_partition_num
     integer :: rkz_term_A_opt
     integer :: rkz_term_B_opt
     integer :: rkz_term_C_opt
@@ -2080,6 +2081,7 @@ subroutine tphysbc (ztodt,               &
                       ,l_rad_out              = l_rad              &
                       ,simple_macrop_opt_out  = simple_macrop_opt  &
                       ,rkz_cldfrc_opt_out     = rkz_cldfrc_opt &
+                      ,rkz_partition_num_out  = rkz_partition_num &
                       ,rkz_term_A_opt_out     = rkz_term_A_opt &
                       ,rkz_term_B_opt_out     = rkz_term_B_opt &
                       ,rkz_term_C_opt_out     = rkz_term_C_opt &
@@ -2532,6 +2534,7 @@ end if
                call simple_RKZ_tend( state, ptend, tcwat, qcwat, lcwat, ast, qmeold, astwat, dfacdRH, &
                                      cld_macmic_ztodt, ixcldliq, &
                                      rkz_cldfrc_opt, &
+                                     rkz_partition_num, &
                                      rkz_term_A_opt, &
                                      rkz_term_B_opt, &
                                      rkz_term_C_opt, &

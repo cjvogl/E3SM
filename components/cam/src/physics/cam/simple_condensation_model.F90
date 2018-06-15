@@ -108,6 +108,7 @@ contains
   subroutine simple_RKZ_tend(state, ptend, tcwat, qcwat, lcwat, ast, qmeold, astwat, dfacdRH,&
                              dtime, ixcldliq, &
                              rkz_cldfrc_opt, &
+                             rkz_partition_num, &
                              rkz_term_A_opt, &
                              rkz_term_B_opt, &
                              rkz_term_C_opt, &
@@ -152,6 +153,7 @@ contains
   integer,  intent(in) :: ixcldliq            ! constituent index 
 
   integer,  intent(in) :: rkz_cldfrc_opt       ! cloud fraction scheme 
+  integer,  intent(in) :: rkz_partition_num
   integer,  intent(in) :: rkz_term_A_opt
   integer,  intent(in) :: rkz_term_B_opt
   integer,  intent(in) :: rkz_term_C_opt
@@ -303,263 +305,321 @@ contains
      call outfld('RKZ_Av', qtend, pcols, lchnk)
      call outfld('RKZ_Al', ltend, pcols, lchnk)
      call outfld('RKZ_AT', ttend, pcols, lchnk)
-     
-     !------------------------------------------------------------------------------------
-     ! Term A: condensation in cloudy portion of a grid box, weighted by cloud fraction
-
-     select case (rkz_term_A_opt) 
-     case(0) ! omit this term
-        term_A(:ncol,:pver) = 0._r8
-
-     case(1)
-        term_A(:ncol,:pver) = ast(:ncol,:pver)     &
-                           *( qtend(:ncol,:pver) - dqsatdT(:ncol,:pver)*ttend(:ncol,:pver) ) &
-                           /( 1._r8 + gam(:ncol,:pver) )
-     case(21)
-     !use the RK98 formula,the first part on the right side of equation.           
-     !note that gam=alpha*beta
-        term_A(:ncol,:pver) = ast(:ncol,:pver)     &
-                           *( qtend(:ncol,:pver) - dqsatdT(:ncol,:pver)*ast(:ncol,:pver)*ttend(:ncol,:pver) ) &
-                           /( 1._r8 + ast(:ncol,:pver)*gam(:ncol,:pver))
-
-     case default
-         write(iulog,*) "Unrecognized value of rkz_term_A_opt:",rkz_term_A_opt,". Abort."
-         call endrun
-     end select
-
-     !--------------------------------------------------------------------------------------
-     ! Term B: condensation in cloud-free portion of a grid box in response to cloud liquid tencendy
-     ! caused by other processes.
-
-     select case (rkz_term_B_opt) 
-     case(0) ! omit this term
-        term_B(:ncol,:pver) = 0._r8
-
-     case(1) 
-     ! Following Zhang et al. (2003), assume the in-cloud A_l equals the grid-box mean A_l.
-     ! Hence, - (\overline{A_l} - f \hat{A_l}) = - (1-f)\overline{A_l}.
-
-        term_B(:ncol,:pver) = - (1._r8 - ast(:ncol,:pver))*ltend(:ncol,:pver)
-
-     case(2) 
-     ! For testing only: term B = - 0.5*\overline{A_l}
-
-        term_B(:ncol,:pver) = - 0.5_r8*ltend(:ncol,:pver)
 
 
-     case(3)
-     ! For testing only: Following Zhang et al. (2003), assume the in-cloud A_l
-     ! equals the grid-box mean A_l.! Hence, - (\overline{A_l} - f \hat{A_l}) =
-     ! - (1-f)\overline{A_l}.However, if overline{A_l} <0, term_B=0.0
-
-        term_B(:ncol,:pver) = - (1._r8 - ast(:ncol,:pver))*ltend(:ncol,:pver)
-  
-        where( ltend(:ncol,:pver) .lt. 0._r8)
-          term_B(:ncol,:pver) = 0._r8
-        end where
-
-     case(12)
-     ! For testing only: replace Al with a*Av to investigate the impact of 
-     ! the intrisic properties of Al on the convergence rate. Al is noisier
-     ! than Av, and may not continuous at the moment when cloudy-clear/clear-cloud
-     ! conversion happens. here, we let a=0.1
-        term_B(:ncol,:pver) = - (1._r8 - ast(:ncol,:pver))*qtend(:ncol,:pver)*0.1_r8
-
-     case(13)
-     ! For testing only: replace Al with a*Av to investigate the impact of 
-     ! the intrisic properties of Al on the convergence rate. Al is noisier
-     ! than Av, and may not continuous at the moment when cloudy-clear/clear-cloud
-     ! conversion happens. here we let a=0.5 
-        term_B(:ncol,:pver) = - (1._r8 -ast(:ncol,:pver))*qtend(:ncol,:pver)*0.5_r8
-
-     case(20) 
-     !!Origionally, there are only two terms on the right side of RK98 formula, 
-     !!thus, term B should be always zero at any time
-        term_B(:ncol,:pver) = 0._r8
-
-     case default
-         write(iulog,*) "Unrecognized value of rkz_term_B_opt:",rkz_term_B_opt,". Abort."
-         call endrun
-     end select
-
-     !---------------------------------------------------------------------------------------------
-     ! Term C: condensation in cloud-free portion of a grid box, related to cloud expansion/erosion 
-
-     ! Calculate in-cloud liquid concentration:
-     ! 1 or 11: ql_incld=constant      , only for testing
-     ! 3 or 13: ql_incld=qv            , only for testing
-     ! 4 or 14: ql_incld=ql            , only for testing
-     ! 7 or 17: ql_incld=ql/max(f,fmin)
-
-     SELECT CASE (rkz_term_C_ql_opt)
-     CASE (1,11)
-       ql_incld(:ncol,:pver) = 1e-5_r8
-
-     CASE (3,13)
-       ql_incld(:ncol,:pver) = state%q(:ncol,:pver,1)
-
-     CASE (4,14)
-       ql_incld(:ncol,:pver) = state%q(:ncol,:pver,ixcldliq)
-
-     CASE (5,15)
-       ql_incld(:ncol,:pver) = 0.5_r8*state%q(:ncol,:pver,ixcldliq)
-
-     CASE (6,16)
-       ql_incld(:ncol,:pver) = 2.0_r8*state%q(:ncol,:pver,ixcldliq)
-
-     CASE (7,17)
-       ql_incld(:ncol,:pver) = state%q(:ncol,:pver,ixcldliq)/max(ast(:ncol,:pver),rkz_term_C_fmin)
-
-     CASE (8,18)
-       ql_incld(:ncol,:pver) = lcwat(:ncol,:pver)/max(ast(:ncol,:pver),rkz_term_C_fmin)
-
-     CASE (9,19)
-       ql_incld(:ncol,:pver) = lcwat(:ncol,:pver)/max(astwat(:ncol,:pver),rkz_term_C_fmin)
-
-     CASE (27)
-       !!if cloud fraction f < fmin theb ql_incld = 0.0 else ql_incld=ql_bar/f
-       where (ast(:ncol,:pver).gt.rkz_term_C_fmin)
-        ql_incld(:ncol,:pver) = state%q(:ncol,:pver,ixcldliq)/ast(:ncol,:pver)
-       elsewhere
-        ql_incld(:ncol,:pver) = 0._r8
-       end where
-       
-     CASE (29)
-       !!if cloud fraction f < fmin theb ql_incld = 0.0 else ql_incld=ql_bar/f
-       where (astwat(:ncol,:pver).gt.rkz_term_C_fmin)
-        ql_incld(:ncol,:pver) = state%q(:ncol,:pver,ixcldliq)/astwat(:ncol,:pver)
-       elsewhere
-        ql_incld(:ncol,:pver) = 0._r8
-       end where
-
-     CASE DEFAULT
-       write(iulog,*) "Unrecognized value of rkz_term_C_ql_opt:",rkz_term_C_ql_opt,". Abort."
-       call endrun
-     END SELECT
-
-     ! term C = ql_incld * df/dt (or, term C = ql * dln(f)/dt if rkz_term_C_opt = 4)
-
-     select case (rkz_term_C_opt)
-     case(0)  ! omit this term
-        term_C(:ncol,:pver) = 0._r8
-
-     case(1) ! Use simple finite-difference to approximate df/dt
-        term_C(:ncol,:pver) = ql_incld(:ncol,:pver)* rdtime*( ast(:ncol,:pver) - ast_old(:ncol,:pver) )
-
-     case(2) ! Use chain rule: df/dt = df/dRH * dRH/dt = df/dRH * (dRH/dqv + dRH/dT)
-
-        ! zforcing is the "forcing" term, i.e., grid box cooling and/or moistening caused by 
-        ! processes other than condensation. It appears on the nominator of the expression 
-        ! for the grid-box-mean condensation rate. Using the notation of Zhang et al. (2003),
-        !
-        !     zforcing = C_alpha * A_v - C_beta * A_T
-        !
-        ! Using the definition of C_alpha and C_beta, we have
-        !
-        !     zforcing = 1/qsat * ( A_v - RH * d(qsat)/dT * A_T)
-        !
-        ! Note that A_v = qtend in this subr., and A_T = ttend. 
+     if (rkz_partition_num > 0) then
         
-        zforcing(:ncol,:pver) = ( qtend(:ncol,:pver)  &
-                                 -ttend(:ncol,:pver)*rhgbm(:ncol,:pver)*dqsatdT(:ncol,:pver) ) &
-                               /qsat(:ncol,:pver)
+        select case (rkz_partition_num)
+        
+        case(1)
+        !------------------------------------------------------------------------------------
+        ! One-Partition Reconstruction
+        ! qme = max{ -ql^dyco, (qv^dyco - qsat - dqsat/dT * AT) / (1 + Lv/cp*dqsat/dT) }
+           term_A(:ncol,:pver) = state%q(:ncol,:pver,ixcldliq) 
+           term_B(:ncol,:pver) = ( state%q(:ncol,:pver,1) - qsat(:ncol,:pver) &
+                                    - dqsatdT(:ncol,:pver)*ttend(:ncol,:pver) ) &
+                                 / ( 1._r8 + gam(:ncol,:pver) )
+           where( -term_A(:ncol,:pver) > term_B(:ncol,:pver) )
+              qme = -term_A
+           elsewhere
+              qme = term_B
+           endwhere
 
-        ! zc3 is the term C_gamma in Zhang et al. (2003). It appears as part of the denominator
-        ! of the final expression for total grid-box-mean condensation rate (i.e., qme in this subr.)
-        !
-        ! C_gamma = 1/qsat + Lv/Cp * (qv/qsat^2) * d(qsat)/dT
-        !         = 1/qsat * [ 1 + (Lv/Cp) * RH * d(qsat)/dT ]
-        !         = 1/qsat * [ 1 + RH * gam ]                   ! gam in this subr. = Lv/Cp * d(qsat)/dT
+        case(2)
+        !-----------------------------------------------------------------------------------
+        ! Two-Partition Reconstruction
+        ! qme(k) = (1-f) * max{ -Al, 
+        !            ( Av - dqsat/dT*AT - (qsat-qv)/(1-f) ) / (1 + Lv/cp*dqsat/dT) }
+        !          + f * max{  -Al - ql/f, (Av - dqsat/dT*AT)/(1 + Lv/cp*dqsat/dT) }
+           term_A(:ncol,:pver) = (1._r8 - ast(:ncol,:pver)) * ltend(:ncol,:pver)
+           term_B(:ncol,:pver) = ( (1._r8 - ast(:ncol,:pver)) * &
+                                     (qtend(:ncol,:pver) &
+                                       - dqsatdT(:ncol,:pver)*ttend(:ncol,:pver) ) &
+                                     - (qsat(:ncol,:pver) - qcwat(:ncol,:pver)) ) &
+                                 / ( 1._r8 + gam(:ncol,:pver) )
+           where ( -term_A(:ncol,:pver) > term_B(:ncol,:pver) )
+              qme = -term_A
+           elsewhere
+              qme = term_B
+           endwhere
+ 
+           term_A(:ncol,:pver) = ast(:ncol,:pver) * ltend(:ncol,:pver) + lcwat(:ncol,:pver)
+           term_B(:ncol,:pver) = ast(:ncol,:pver) * &
+                                     (qtend(:ncol,:pver) &
+                                        - dqsatdT(:ncol,:pver)*ttend(:ncol,:pver) ) &
+                                     / ( 1._r8 + gam(:ncol,:pver) )
+           where ( -term_A(:ncol,:pver) > term_B(:ncol,:pver) )
+              qme = qme - term_A
+           elsewhere
+              qme = qme + term_B
+           endwhere          
+  
+        case default
+           write(iulog,*) "Unimplemented partition number:",rkz_partition_num,". Abort."
+           call endrun
+    
+        end select
 
-        zc3(:ncol,:pver) = ( 1._r8 + rhgbm(:ncol,:pver)*gam(:ncol,:pver) )/qsat(:ncol,:pver)
+     else
+   
+        !------------------------------------------------------------------------------------
+        ! Term A: condensation in cloudy portion of a grid box, weighted by cloud fraction
+   
+        select case (rkz_term_A_opt) 
+        case(0) ! omit this term
+           term_A(:ncol,:pver) = 0._r8
+   
+        case(1)
+           term_A(:ncol,:pver) = ast(:ncol,:pver)     &
+                              *( qtend(:ncol,:pver) - dqsatdT(:ncol,:pver)*ttend(:ncol,:pver) ) &
+                              /( 1._r8 + gam(:ncol,:pver) )
+        case(21)
+        !use the RK98 formula,the first part on the right side of equation.           
+        !note that gam=alpha*beta
+           term_A(:ncol,:pver) = ast(:ncol,:pver)     &
+                              *( qtend(:ncol,:pver) - dqsatdT(:ncol,:pver)*ast(:ncol,:pver)*ttend(:ncol,:pver) ) &
+                              /( 1._r8 + ast(:ncol,:pver)*gam(:ncol,:pver))
+   
+        case default
+            write(iulog,*) "Unrecognized value of rkz_term_A_opt:",rkz_term_A_opt,". Abort."
+            call endrun
+        end select
+   
+        !--------------------------------------------------------------------------------------
+        ! Term B: condensation in cloud-free portion of a grid box in response to cloud liquid tencendy
+        ! caused by other processes.
+   
+        select case (rkz_term_B_opt) 
+        case(0) ! omit this term
+           term_B(:ncol,:pver) = 0._r8
+   
+        case(1) 
+        ! Following Zhang et al. (2003), assume the in-cloud A_l equals the grid-box mean A_l.
+        ! Hence, - (\overline{A_l} - f \hat{A_l}) = - (1-f)\overline{A_l}.
+   
+           term_B(:ncol,:pver) = - (1._r8 - ast(:ncol,:pver))*ltend(:ncol,:pver)
+   
+        case(2) 
+        ! For testing only: term B = - 0.5*\overline{A_l}
+   
+           term_B(:ncol,:pver) = - 0.5_r8*ltend(:ncol,:pver)
+   
+   
+        case(3)
+        ! For testing only: Following Zhang et al. (2003), assume the in-cloud A_l
+        ! equals the grid-box mean A_l.! Hence, - (\overline{A_l} - f \hat{A_l}) =
+        ! - (1-f)\overline{A_l}.However, if overline{A_l} <0, term_B=0.0
+   
+           term_B(:ncol,:pver) = - (1._r8 - ast(:ncol,:pver))*ltend(:ncol,:pver)
+     
+           where( ltend(:ncol,:pver) .lt. 0._r8)
+             term_B(:ncol,:pver) = 0._r8
+           end where
+   
+        case(12)
+        ! For testing only: replace Al with a*Av to investigate the impact of 
+        ! the intrisic properties of Al on the convergence rate. Al is noisier
+        ! than Av, and may not continuous at the moment when cloudy-clear/clear-cloud
+        ! conversion happens. here, we let a=0.1
+           term_B(:ncol,:pver) = - (1._r8 - ast(:ncol,:pver))*qtend(:ncol,:pver)*0.1_r8
+   
+        case(13)
+        ! For testing only: replace Al with a*Av to investigate the impact of 
+        ! the intrisic properties of Al on the convergence rate. Al is noisier
+        ! than Av, and may not continuous at the moment when cloudy-clear/clear-cloud
+        ! conversion happens. here we let a=0.5 
+           term_B(:ncol,:pver) = - (1._r8 -ast(:ncol,:pver))*qtend(:ncol,:pver)*0.5_r8
+   
+        case(20) 
+        !!Origionally, there are only two terms on the right side of RK98 formula, 
+        !!thus, term B should be always zero at any time
+           term_B(:ncol,:pver) = 0._r8
+   
+        case default
+            write(iulog,*) "Unrecognized value of rkz_term_B_opt:",rkz_term_B_opt,". Abort."
+            call endrun
+        end select
+   
+        !---------------------------------------------------------------------------------------------
+        ! Term C: condensation in cloud-free portion of a grid box, related to cloud expansion/erosion 
+   
+        ! Calculate in-cloud liquid concentration:
+        ! 1 or 11: ql_incld=constant      , only for testing
+        ! 3 or 13: ql_incld=qv            , only for testing
+        ! 4 or 14: ql_incld=ql            , only for testing
+        ! 7 or 17: ql_incld=ql/max(f,fmin)
+   
+        SELECT CASE (rkz_term_C_ql_opt)
+        CASE (1,11)
+          ql_incld(:ncol,:pver) = 1e-5_r8
+   
+        CASE (3,13)
+          ql_incld(:ncol,:pver) = state%q(:ncol,:pver,1)
+   
+        CASE (4,14)
+          ql_incld(:ncol,:pver) = state%q(:ncol,:pver,ixcldliq)
+   
+        CASE (5,15)
+          ql_incld(:ncol,:pver) = 0.5_r8*state%q(:ncol,:pver,ixcldliq)
+   
+        CASE (6,16)
+          ql_incld(:ncol,:pver) = 2.0_r8*state%q(:ncol,:pver,ixcldliq)
+   
+        CASE (7,17)
+          ql_incld(:ncol,:pver) = state%q(:ncol,:pver,ixcldliq)/max(ast(:ncol,:pver),rkz_term_C_fmin)
+   
+        CASE (8,18)
+          ql_incld(:ncol,:pver) = lcwat(:ncol,:pver)/max(ast(:ncol,:pver),rkz_term_C_fmin)
+   
+        CASE (9,19)
+          ql_incld(:ncol,:pver) = lcwat(:ncol,:pver)/max(astwat(:ncol,:pver),rkz_term_C_fmin)
+   
+        CASE (27)
+          !!if cloud fraction f < fmin theb ql_incld = 0.0 else ql_incld=ql_bar/f
+          where (ast(:ncol,:pver).gt.rkz_term_C_fmin)
+           ql_incld(:ncol,:pver) = state%q(:ncol,:pver,ixcldliq)/ast(:ncol,:pver)
+          elsewhere
+           ql_incld(:ncol,:pver) = 0._r8
+          end where
+          
+        CASE (29)
+          !!if cloud fraction f < fmin theb ql_incld = 0.0 else ql_incld=ql_bar/f
+          where (astwat(:ncol,:pver).gt.rkz_term_C_fmin)
+           ql_incld(:ncol,:pver) = state%q(:ncol,:pver,ixcldliq)/astwat(:ncol,:pver)
+          elsewhere
+           ql_incld(:ncol,:pver) = 0._r8
+          end where
+   
+        CASE DEFAULT
+          write(iulog,*) "Unrecognized value of rkz_term_C_ql_opt:",rkz_term_C_ql_opt,". Abort."
+          call endrun
+        END SELECT
+   
+        ! term C = ql_incld * df/dt (or, term C = ql * dln(f)/dt if rkz_term_C_opt = 4)
+   
+        select case (rkz_term_C_opt)
+        case(0)  ! omit this term
+           term_C(:ncol,:pver) = 0._r8
+   
+        case(1) ! Use simple finite-difference to approximate df/dt
+           term_C(:ncol,:pver) = ql_incld(:ncol,:pver)* rdtime*( ast(:ncol,:pver) - ast_old(:ncol,:pver) )
+   
+        case(2) ! Use chain rule: df/dt = df/dRH * dRH/dt = df/dRH * (dRH/dqv + dRH/dT)
+   
+           ! zforcing is the "forcing" term, i.e., grid box cooling and/or moistening caused by 
+           ! processes other than condensation. It appears on the nominator of the expression 
+           ! for the grid-box-mean condensation rate. Using the notation of Zhang et al. (2003),
+           !
+           !     zforcing = C_alpha * A_v - C_beta * A_T
+           !
+           ! Using the definition of C_alpha and C_beta, we have
+           !
+           !     zforcing = 1/qsat * ( A_v - RH * d(qsat)/dT * A_T)
+           !
+           ! Note that A_v = qtend in this subr., and A_T = ttend. 
+           
+           zforcing(:ncol,:pver) = ( qtend(:ncol,:pver)  &
+                                    -ttend(:ncol,:pver)*rhgbm(:ncol,:pver)*dqsatdT(:ncol,:pver) ) &
+                                  /qsat(:ncol,:pver)
+   
+           ! zc3 is the term C_gamma in Zhang et al. (2003). It appears as part of the denominator
+           ! of the final expression for total grid-box-mean condensation rate (i.e., qme in this subr.)
+           !
+           ! C_gamma = 1/qsat + Lv/Cp * (qv/qsat^2) * d(qsat)/dT
+           !         = 1/qsat * [ 1 + (Lv/Cp) * RH * d(qsat)/dT ]
+           !         = 1/qsat * [ 1 + RH * gam ]                   ! gam in this subr. = Lv/Cp * d(qsat)/dT
+   
+           zc3(:ncol,:pver) = ( 1._r8 + rhgbm(:ncol,:pver)*gam(:ncol,:pver) )/qsat(:ncol,:pver)
+   
+           ! Now calculate the denominator of the grid-box mean condensation rate.
+           ! rdenom = 1/denominator.
+   
+           rdenom(:ncol,:pver) = 1._r8/( 1._r8 + ql_incld(:ncol,:pver)*dastdRH(:ncol,:pver)*zc3(:ncol,:pver) )
+   
+           ! Calculate term C, then use the same denominator to re-scale all three terms (A, B, and C). 
+   
+           term_C(:ncol,:pver) = ql_incld(:ncol,:pver)*dastdRH(:ncol,:pver)*zforcing(:ncol,:pver)
+   
+           term_C(:ncol,:pver) = term_C(:ncol,:pver)*rdenom(:ncol,:pver) 
+           term_A(:ncol,:pver) = term_A(:ncol,:pver)*rdenom(:ncol,:pver) 
+           term_B(:ncol,:pver) = term_B(:ncol,:pver)*rdenom(:ncol,:pver) 
+   
+        case(3) ! df/dt = df/dRH * dRH/dt = df/dRH * (C_alpha * A_V - C_beta * A_T + C_gamma*Qbar_old(in tn-1 step)) 
+           zforcing(:ncol,:pver) = ( qtend(:ncol,:pver)  &
+                                   -ttend(:ncol,:pver)*rhgbm(:ncol,:pver)*dqsatdT(:ncol,:pver) ) &
+                                   /qsat(:ncol,:pver) !C_alpha * A_V - C_beta * A_T
+           zc3(:ncol,:pver) = ( 1._r8 + rhgbm(:ncol,:pver)*gam(:ncol,:pver))/qsat(:ncol,:pver) !C_gamma
+           term_C(:ncol,:pver) = ql_incld(:ncol,:pver)*dastdRH(:ncol,:pver)* &
+                                 (zforcing(:ncol,:pver) - zc3(:ncol,:pver)*qmeold(:ncol,:pver))
+   
+        case(4) ! test only for a different formula for df/dRH 
+        !!!here we use dlnf/dRH instead of df/dRH to make termC smoother 
+           zforcing(:ncol,:pver) = ( qtend(:ncol,:pver)  &
+                                    -ttend(:ncol,:pver)*rhgbm(:ncol,:pver)*dqsatdT(:ncol,:pver)) &
+                                  /qsat(:ncol,:pver)
+           zc3(:ncol,:pver)    = ( 1._r8 + rhgbm(:ncol,:pver)*gam(:ncol,:pver))/qsat(:ncol,:pver)
+           rdenom(:ncol,:pver) = 1._r8/( 1._r8 + state%q(:ncol,:pver,ixcldliq)*dlnastdRH(:ncol,:pver)*zc3(:ncol,:pver) )
+           term_C(:ncol,:pver) = state%q(:ncol,:pver,ixcldliq)*dlnastdRH(:ncol,:pver)*zforcing(:ncol,:pver)
+           term_C(:ncol,:pver) = term_C(:ncol,:pver)*rdenom(:ncol,:pver)
+           term_A(:ncol,:pver) = term_A(:ncol,:pver)*rdenom(:ncol,:pver)
+           term_B(:ncol,:pver) = term_B(:ncol,:pver)*rdenom(:ncol,:pver)
+   
+        case(5) ! The same as case (2) except that df/dRH is estimated after the condensation model
+           zforcing(:ncol,:pver) = ( qtend(:ncol,:pver)  &
+                                    -ttend(:ncol,:pver)*rhgbm(:ncol,:pver)*dqsatdT(:ncol,:pver) ) &
+                                  /qsat(:ncol,:pver)
+   
+           zc3(:ncol,:pver) = ( 1._r8 + rhgbm(:ncol,:pver)*gam(:ncol,:pver) )/qsat(:ncol,:pver)
+   
+           rdenom(:ncol,:pver) = 1._r8/( 1._r8 + ql_incld(:ncol,:pver)*dfacdRH(:ncol,:pver)*zc3(:ncol,:pver) )
+   
+           term_C(:ncol,:pver) = ql_incld(:ncol,:pver)*dfacdRH(:ncol,:pver)*zforcing(:ncol,:pver)
+   
+           term_C(:ncol,:pver) = term_C(:ncol,:pver)*rdenom(:ncol,:pver)
+           term_A(:ncol,:pver) = term_A(:ncol,:pver)*rdenom(:ncol,:pver)
+           term_B(:ncol,:pver) = term_B(:ncol,:pver)*rdenom(:ncol,:pver)
+   
+        case(21) !!term C for RK98 scheme with the finite difference method the same as case (1)
+           ! use the finite difference to estimate df/dt, which is (fnew-fold)/(tn+1-tn)
+           ! term_C = ql_incld*(df/dt)/(1+f*alpha*beta)
+            term_C(:ncol,:pver) = ql_incld(:ncol,:pver)*rdtime*( ast(:ncol,:pver) - ast_old(:ncol,:pver) ) &
+                                 /( 1._r8 + ast(:ncol,:pver)*gam(:ncol,:pver) )
+   
+        case(22) !!term C for RK98 scheme with analytical method the same as case (2) 
+           ! df/dt = df/dRH * dRH/dt = df/dRH * (dRH/dqv + dRH/dT) 
+           ! The zforcing and zc3 are exactly the same as those in case (2) Copy and use them here
+           ! Refer to case(2) part for detailed information for these two variables 
+           zforcing(:ncol,:pver) = ( qtend(:ncol,:pver)  &
+                                    -ttend(:ncol,:pver)*rhgbm(:ncol,:pver)*dqsatdT(:ncol,:pver)) &
+                                  /qsat(:ncol,:pver)
+   
+           zc3(:ncol,:pver) = ( 1._r8 + rhgbm(:ncol,:pver)*gam(:ncol,:pver) )/qsat(:ncol,:pver)
+   
+           ! Now calculate the denominator of the grid-box mean condensation rate.
+           ! rdenom = 1/denominator. Note that this term is different to that in case(2)
+           rdenom(:ncol,:pver) = 1._r8/( 1._r8 + ql_incld(:ncol,:pver)*dastdRH(:ncol,:pver)*zc3(:ncol,:pver) &
+                                                 /(1._r8 + ast(:ncol,:pver)*gam(:ncol,:pver)) )
+           ! Calculate term C, then use the same denominator to re-scale all
+           ! three terms (A, B, and C). 
+   
+           term_C(:ncol,:pver) = ql_incld(:ncol,:pver)*dastdRH(:ncol,:pver)*zforcing(:ncol,:pver) &
+                                /(1._r8 + ast(:ncol,:pver)*gam(:ncol,:pver))
+   
+           term_C(:ncol,:pver) = term_C(:ncol,:pver)*rdenom(:ncol,:pver)
+           term_A(:ncol,:pver) = term_A(:ncol,:pver)*rdenom(:ncol,:pver)
+           term_B(:ncol,:pver) = term_B(:ncol,:pver)*rdenom(:ncol,:pver)
+   
+        case default
+            write(iulog,*) "Unrecognized value of rkz_term_C_opt:",rkz_term_C_opt,". Abort."
+            call endrun
+        end select
+   
+        !------------------------------------------------------------------
+        ! Sum up all three contributors to the grid-box mean condensation.
+        !------------------------------------------------------------------
+        qme(:ncol,:pver) = term_A(:ncol,:pver) + term_B(:ncol,:pver) + term_C(:ncol,:pver)
 
-        ! Now calculate the denominator of the grid-box mean condensation rate.
-        ! rdenom = 1/denominator.
-
-        rdenom(:ncol,:pver) = 1._r8/( 1._r8 + ql_incld(:ncol,:pver)*dastdRH(:ncol,:pver)*zc3(:ncol,:pver) )
-
-        ! Calculate term C, then use the same denominator to re-scale all three terms (A, B, and C). 
-
-        term_C(:ncol,:pver) = ql_incld(:ncol,:pver)*dastdRH(:ncol,:pver)*zforcing(:ncol,:pver)
-
-        term_C(:ncol,:pver) = term_C(:ncol,:pver)*rdenom(:ncol,:pver) 
-        term_A(:ncol,:pver) = term_A(:ncol,:pver)*rdenom(:ncol,:pver) 
-        term_B(:ncol,:pver) = term_B(:ncol,:pver)*rdenom(:ncol,:pver) 
-
-     case(3) ! df/dt = df/dRH * dRH/dt = df/dRH * (C_alpha * A_V - C_beta * A_T + C_gamma*Qbar_old(in tn-1 step)) 
-        zforcing(:ncol,:pver) = ( qtend(:ncol,:pver)  &
-                                -ttend(:ncol,:pver)*rhgbm(:ncol,:pver)*dqsatdT(:ncol,:pver) ) &
-                                /qsat(:ncol,:pver) !C_alpha * A_V - C_beta * A_T
-        zc3(:ncol,:pver) = ( 1._r8 + rhgbm(:ncol,:pver)*gam(:ncol,:pver))/qsat(:ncol,:pver) !C_gamma
-        term_C(:ncol,:pver) = ql_incld(:ncol,:pver)*dastdRH(:ncol,:pver)* &
-                              (zforcing(:ncol,:pver) - zc3(:ncol,:pver)*qmeold(:ncol,:pver))
-
-     case(4) ! test only for a different formula for df/dRH 
-     !!!here we use dlnf/dRH instead of df/dRH to make termC smoother 
-        zforcing(:ncol,:pver) = ( qtend(:ncol,:pver)  &
-                                 -ttend(:ncol,:pver)*rhgbm(:ncol,:pver)*dqsatdT(:ncol,:pver)) &
-                               /qsat(:ncol,:pver)
-        zc3(:ncol,:pver)    = ( 1._r8 + rhgbm(:ncol,:pver)*gam(:ncol,:pver))/qsat(:ncol,:pver)
-        rdenom(:ncol,:pver) = 1._r8/( 1._r8 + state%q(:ncol,:pver,ixcldliq)*dlnastdRH(:ncol,:pver)*zc3(:ncol,:pver) )
-        term_C(:ncol,:pver) = state%q(:ncol,:pver,ixcldliq)*dlnastdRH(:ncol,:pver)*zforcing(:ncol,:pver)
-        term_C(:ncol,:pver) = term_C(:ncol,:pver)*rdenom(:ncol,:pver)
-        term_A(:ncol,:pver) = term_A(:ncol,:pver)*rdenom(:ncol,:pver)
-        term_B(:ncol,:pver) = term_B(:ncol,:pver)*rdenom(:ncol,:pver)
-
-     case(5) ! The same as case (2) except that df/dRH is estimated after the condensation model
-        zforcing(:ncol,:pver) = ( qtend(:ncol,:pver)  &
-                                 -ttend(:ncol,:pver)*rhgbm(:ncol,:pver)*dqsatdT(:ncol,:pver) ) &
-                               /qsat(:ncol,:pver)
-
-        zc3(:ncol,:pver) = ( 1._r8 + rhgbm(:ncol,:pver)*gam(:ncol,:pver) )/qsat(:ncol,:pver)
-
-        rdenom(:ncol,:pver) = 1._r8/( 1._r8 + ql_incld(:ncol,:pver)*dfacdRH(:ncol,:pver)*zc3(:ncol,:pver) )
-
-        term_C(:ncol,:pver) = ql_incld(:ncol,:pver)*dfacdRH(:ncol,:pver)*zforcing(:ncol,:pver)
-
-        term_C(:ncol,:pver) = term_C(:ncol,:pver)*rdenom(:ncol,:pver)
-        term_A(:ncol,:pver) = term_A(:ncol,:pver)*rdenom(:ncol,:pver)
-        term_B(:ncol,:pver) = term_B(:ncol,:pver)*rdenom(:ncol,:pver)
-
-     case(21) !!term C for RK98 scheme with the finite difference method the same as case (1)
-        ! use the finite difference to estimate df/dt, which is (fnew-fold)/(tn+1-tn)
-        ! term_C = ql_incld*(df/dt)/(1+f*alpha*beta)
-         term_C(:ncol,:pver) = ql_incld(:ncol,:pver)*rdtime*( ast(:ncol,:pver) - ast_old(:ncol,:pver) ) &
-                              /( 1._r8 + ast(:ncol,:pver)*gam(:ncol,:pver) )
-
-     case(22) !!term C for RK98 scheme with analytical method the same as case (2) 
-        ! df/dt = df/dRH * dRH/dt = df/dRH * (dRH/dqv + dRH/dT) 
-        ! The zforcing and zc3 are exactly the same as those in case (2) Copy and use them here
-        ! Refer to case(2) part for detailed information for these two variables 
-        zforcing(:ncol,:pver) = ( qtend(:ncol,:pver)  &
-                                 -ttend(:ncol,:pver)*rhgbm(:ncol,:pver)*dqsatdT(:ncol,:pver)) &
-                               /qsat(:ncol,:pver)
-
-        zc3(:ncol,:pver) = ( 1._r8 + rhgbm(:ncol,:pver)*gam(:ncol,:pver) )/qsat(:ncol,:pver)
-
-        ! Now calculate the denominator of the grid-box mean condensation rate.
-        ! rdenom = 1/denominator. Note that this term is different to that in case(2)
-        rdenom(:ncol,:pver) = 1._r8/( 1._r8 + ql_incld(:ncol,:pver)*dastdRH(:ncol,:pver)*zc3(:ncol,:pver) &
-                                              /(1._r8 + ast(:ncol,:pver)*gam(:ncol,:pver)) )
-        ! Calculate term C, then use the same denominator to re-scale all
-        ! three terms (A, B, and C). 
-
-        term_C(:ncol,:pver) = ql_incld(:ncol,:pver)*dastdRH(:ncol,:pver)*zforcing(:ncol,:pver) &
-                             /(1._r8 + ast(:ncol,:pver)*gam(:ncol,:pver))
-
-        term_C(:ncol,:pver) = term_C(:ncol,:pver)*rdenom(:ncol,:pver)
-        term_A(:ncol,:pver) = term_A(:ncol,:pver)*rdenom(:ncol,:pver)
-        term_B(:ncol,:pver) = term_B(:ncol,:pver)*rdenom(:ncol,:pver)
-
-     case default
-         write(iulog,*) "Unrecognized value of rkz_term_C_opt:",rkz_term_C_opt,". Abort."
-         call endrun
-     end select
-
-     !------------------------------------------------------------------
-     ! Sum up all three contributors to the grid-box mean condensation.
-     !------------------------------------------------------------------
-     qme(:ncol,:pver) = term_A(:ncol,:pver) + term_B(:ncol,:pver) + term_C(:ncol,:pver)
+     end if ! rkz_paritition > 0
 
      if (l_rkz_qme_check) then
        ! 3. when rh < rhu00, evaporate existing cloud water

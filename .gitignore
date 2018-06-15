@@ -6,3 +6,6 @@
 
 # Ignore emacs backup files
 *~
+
+# Ignore generated job run scripts
+job_*.csh
