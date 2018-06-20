@@ -24,15 +24,16 @@ if (len(sys.argv) < 2):
 
 # Set dictionary of default HOMME parameter names and values
 paramDict = {
-  'dcmip4_X':           '1.0',
-  'tsteptype':          '7',
-  'ndays':             '15',
-  'tstep':            '120',
-  'hydrostatic':    'false',
-  'nu':            '3.7e15',
-  'rtol':          '1.0e-4',
   'atol':              '-1',
-  'calcstats':        'true'
+  'calcstats':       'true',
+  'dcmip4_X':         '1.0',
+  'hydrostatic':    'false',
+  'ndays':             '15',
+  'nu':            '1.0e15',
+  'rsplit':             '1',
+  'rtol':          '1.0e-4',
+  'tstep':            '120',
+  'tsteptype':          '7'
 }
 
 # Parse command line arguments and parameter dictionary
@@ -96,14 +97,14 @@ topology               = "cube"
 test_case              = "dcmip2012_test4"
 u_perturb              = 1
 rotate_grid            = 0
-ne                     = 20
+ne                     = 30
 qsize                  = 0
 nmax                   = %s
 statefreq              = 100
 runtype                = 0
 mesh_file              = "/dev/null"
 tstep                  = %s
-rsplit                 = 1
+rsplit                 = %s
 qsplit                 = 1
 tstep_type             = %s
 integration            = "explicit"
@@ -144,7 +145,7 @@ rel_tol                = %s
 abs_tol                = %s
 calc_nonlinear_stats   = .%s.
 /""" % (paramDict['hydrostatic'], paramDict['dcmip4_X'], paramDict['nmax'],
-        paramDict['tstep'], paramDict['tsteptype'],
+        paramDict['tstep'], paramDict['rsplit'], paramDict['tsteptype'],
         paramDict['nu'], paramDict['nu'], paramDict['nu'], paramDict['nu'], paramDict['nu'],
         outputfreq, suffix, paramDict['rtol'], paramDict['atol'], paramDict['calcstats'])
 os.system("echo '%s' > input_%s.nl" % (namelist, suffix))

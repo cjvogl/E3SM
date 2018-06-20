@@ -70,6 +70,9 @@ istageDict = {'KGU35-native': 0,
               'KGS252': 2,
               'KGS254': 4}
 
+X = 100
+
+
 # Iterate through methods and plot energy efficiency test
 f, ax = pyplot.subplots(figsize=(10,10))
 f.set_tight_layout(True)
@@ -77,7 +80,7 @@ for m,method in enumerate(methodDict.keys()):
   relErrorDict = {}
   walltimeDict = {}
   print method
-  globstr = 'tsteptype%d_tstep*_X100.out' % methodDict[method]
+  globstr = 'tsteptype%d_tstep*_X%d.out' % (methodDict[method], X)
   for fileName in glob.glob(globstr):
     words = fileName.split('_')
     dt = words[1].replace('tstep','')
@@ -93,8 +96,7 @@ for m,method in enumerate(methodDict.keys()):
       if (flag and '(E-E0)/E0' in line):
         words = line.split()
         relError = float(words[1])
-        if (relError < 1e-5):
-          relErrorDict[dt] = relError
+        relErrorDict[dt] = relError
         break
     if (not flag):
       print '... skipping due to incomplete results ...'

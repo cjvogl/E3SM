@@ -28,8 +28,7 @@ paramDict = {
   'nmax':            '3600',
   'ne':                '27',
   'nu':             '5.0e8',
-  'splitting':          '1',
-  'rtol':          '1.0e-8',
+  'rtol':          '1.0e-4',
   'atol':            '-1.0',
   'calcstats':        'true'
 }
@@ -67,7 +66,7 @@ test_case              = "dcmip2012_test3"
 ne                     = %s
 qsize                  = 0
 nmax                   = %s
-statefreq              = 60
+statefreq              = 100
 restartfreq            = -1
 runtype                = 0
 tstep                  = %s
@@ -99,7 +98,6 @@ interp_nlat            = 128
 interp_nlon            = 256
 /
 &arkode_nl
-imex_splitting         = %s
 rel_tol                = %s
 abs_tol                = %s
 calc_nonlinear_stats   = .%s.
@@ -108,9 +106,9 @@ calc_nonlinear_stats   = .%s.
 profile_outpe_num      = 100
 profile_single_file	   = .true.
 /""" % (paramDict['ne'], paramDict['nmax'], paramDict['tstep'],
-        paramDict['tsteptype'],paramDict['nu'],paramDict['nu'],
-        suffix,output_frequency,paramDict['splitting'],
-        paramDict['rtol'], paramDict['atol'],paramDict['calcstats'])
+        paramDict['tsteptype'], paramDict['nu'], paramDict['nu'],
+        suffix, output_frequency,
+        paramDict['rtol'], paramDict['atol'], paramDict['calcstats'])
 os.system("echo '%s' > input_%s.nl" % (namelist, suffix))
 
 # Create job script

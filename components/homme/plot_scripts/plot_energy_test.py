@@ -2,6 +2,7 @@ import glob
 import matplotlib.pyplot as pyplot
 import matplotlib
 from netCDF4 import Dataset
+import math
 import numpy as np
 import os
 
@@ -70,18 +71,25 @@ istageDict = {'KGU35-native': 0,
               'KGS252': 2,
               'KGS254': 4}
 
+dtTickList = [10, 20, 50, 100, 160, 300]
+X = 1
 
 # Iterate through methods and plot energy test
-f, ax = pyplot.subplots(figsize=(10,10))
-f.set_tight_layout(True)
+dtTickList = np.array(dtTickList)/float(X)
+f1, ax1 = pyplot.subplots(2,1,figsize=(10,10))
+f2, ax2 = pyplot.subplots(figsize=(10,10))
+f1.set_tight_layout(True)
+f2.set_tight_layout(True)
 for m,method in enumerate(methodDict.keys()):
   relErrorDict = {}
   print method
-  globstr = 'tsteptype%d_tstep*_X100.out' % methodDict[method]
+  globstr = 'tsteptype%d_tstep*_X%d.out' % (methodDict[method], X)
   for fileName in glob.glob(globstr):
     words = fileName.split('_')
     dt = words[1].replace('tstep','')
     dt = dt.replace('.out','')
+    if (float(dt) < 15):
+      continue
     print 'Reading diagnostics in ' + fileName
     fileObj = open(fileName)
     lines = list(fileObj)
@@ -93,11 +101,31 @@ for m,method in enumerate(methodDict.keys()):
       if (flag and '(E-E0)/E0' in line):
         words = line.split()
         relError = float(words[1])
-        if (relError < 1e-5):
-          relErrorDict[dt] = relError
+        relErrorDict[dt] = relError
         break
     if (not flag):
       print '... skipping due to incomplete results ...'
+
+  # globstr = 'tsteptype%d_tstep*_X%d_rsplit*.out' % (methodDict[method], X)
+  # for fileName in glob.glob(globstr):
+  #   words = fileName.split('_')
+  #   dt = words[1].replace('tstep','')
+  #   dt = dt.replace('.out','')
+  #   print 'Reading diagnostics in ' + fileName
+  #   fileObj = open(fileName)
+  #   lines = list(fileObj)
+  #   fileObj.close()
+  #   flag = False
+  #   for line in reversed(lines):
+  #     if ('Finished main timestepping loop' in line):
+  #       flag = True
+  #     if (flag and '(E-E0)/E0' in line):
+  #       words = line.split()
+  #       relError = float(words[1])
+  #       relErrorDict[dt] = relError
+  #       break
+  #   if (not flag):
+  #     print '... skipping due to incomplete results ...'
 
   # if no solutions were found, goto next method
   dtList = relErrorDict.keys()
@@ -113,7 +141,7 @@ for m,method in enumerate(methodDict.keys()):
   dtPlot = np.sort(dtDict.keys())
   relErrorPlot = np.empty(len(dtPlot))
   for j,dt in enumerate(dtPlot):
-    relErrorPlot[j] = abs(relErrorDict[dtDict[dt]])
+    relErrorPlot[j] = relErrorDict[dtDict[dt]]
   if (orderDict[method] == 2):
     lineStyle = '-'
   elif (orderDict[method] == 3):
@@ -151,15 +179,30 @@ for m,method in enumerate(methodDict.keys()):
   #   orderLI = (0.0,)
   # ax1.loglog(dtPlot,L2Plot,lineStyle,label='%s (final=%3.2f, best=%3.2f)' % (method,orderL2[0],np.amax(orderL2)), linewidth=3, markersize=12)
   # ax2.loglog(dtPlot,LIPlot,lineStyle,label='%s (final=%3.2f, best=%3.2f)' % (method,orderLI[0],np.amax(orderLI)), linewidth=3, markersize=12)
-  ax.loglog(dtPlot,relErrorPlot,lineStyle,label=method, linewidth=3, markersize=12)
+#  for j in range(len(relErrorPlot)):
+#    dtPlot[j] = math.log(dtPlot[j],10)
+#    relErrorPlot[j] = math.copysign(9+math.log(abs(relErrorPlot[j]),10), relErrorPlot[j])
+  if (relErrorPlot[-1] > 0):
+    ind = 0
+  else:
+    ind = 1
+  ax1[ind].plot(dtPlot,relErrorPlot,lineStyle,label=method, linewidth=3, markersize=12)
+  ax2.loglog(dtPlot,abs(relErrorPlot),lineStyle,label=method, linewidth=3, markersize=12)
 
+for ind in range(2):
+  ax1[ind].set_ylabel('Relative Energy Error', fontsize='xx-large')
+  ax1[ind].set_xlabel('dt (s)', fontsize='xx-large')
+  ax1[ind].legend(loc='best')
 
-ax.set_ylabel('Relative Energy Error', fontsize='xx-large')
-ax.set_xlabel('dt (s)', fontsize='xx-large')
-#ax.axis('equal')
+ax2.set_ylabel('Relative Energy Error', fontsize='xx-large')
+ax2.set_xlabel('dt (s)', fontsize='xx-large')
+ax2.axis('equal')
 
-f.savefig('errorEnergy.png')
+#ax.set_xticks(dtTickList)
+#ax.set_xticklabels(dtTickList)
 
-ax.legend(loc='best')
-f.savefig('errorEnergy_legend.png')
+#f.savefig('errorEnergy.png')
+
+ax2.legend(loc='best')
+#f.savefig('errorEnergy_legend.png')
 pyplot.show()
