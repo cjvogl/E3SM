@@ -16,6 +16,7 @@ machine = 'edison'
 
 f1, ax1 = pyplot.subplots(figsize=(10,10))
 f2, ax2 = pyplot.subplots(figsize=(10,10))
+f3, ax3 = pyplot.subplots(figsize=(10,10))
 for dt in dtList:
   globstr = 'RKZ_P*_lmt4_ne30_ne30*/DT%04d_01_dycore_mac/*.cam.h0.0001-01-01-03600.nc' % dt
   for fileName in glob.glob(globstr):
@@ -47,6 +48,7 @@ for dt in dtList:
 dtRef = min(dtList)
 for config in configDict.keys(): 
   dtDict = {}
+  RMSerror = {}
   WRMSerror = {}
   LIerror = {}
   solutionDict = configDict[config]
@@ -65,37 +67,47 @@ for config in configDict.keys():
     psw = 0.5*(psRef + ps)
     dz = dpw
     dxdy = np.outer(np.ones(np.shape(dpw)[0]), area)
-    weight = dxdy*dz
-    WRMSerror[dt] = np.sqrt( np.sum((q-qRef)**2*weight) / np.sum(psw*weight) )
+    weight = dxdy*dz / np.sum(psw*area)
+    RMSerror[dt] = np.sqrt( np.sum((q-qRef)**2) / (np.shape(T)[0]*np.shape(T)[1]) )
+    WRMSerror[dt] = np.sqrt( np.sum((q-qRef)**2*weight) )
     LIerror[dt] = np.amax(abs(q-qRef))
   
   dtPlot = np.sort(dtDict.keys())
+  RMSPlot = np.empty(len(dtPlot))
   WRMSPlot = np.empty(len(dtPlot))
   LIPlot = np.empty(len(dtPlot))
   for j,dt in enumerate(dtPlot):
+    RMSPlot[j] = RMSerror[dtDict[dt]]
     WRMSPlot[j] = WRMSerror[dtDict[dt]]
     LIPlot[j] = LIerror[dtDict[dt]]
   
   if (len(dtList) > 1):
-    orderL2 = np.log(WRMSPlot[1:]/WRMSPlot[0:-1])/np.log(dtPlot[1:]/dtPlot[0:-1])
+    orderRMS = np.log(RMSPlot[1:]/RMSPlot[0:-1])/np.log(dtPlot[1:]/dtPlot[0:-1])
+    orderWRMS = np.log(WRMSPlot[1:]/WRMSPlot[0:-1])/np.log(dtPlot[1:]/dtPlot[0:-1])
     orderLI = np.log(LIPlot[1:]/LIPlot[0:-1])/np.log(dtPlot[1:]/dtPlot[0:-1])
   else:
     orderWRMS = (0.0,)
     orderLI = (0.0,)
   
-  ax1.loglog(dtPlot, WRMSPlot, '-o', label='%s final=%3.2f, best=%3.2f' % (config, orderL2[0], np.amax(orderL2)), linewidth=3, markersize=12)
-  ax2.loglog(dtPlot, LIPlot, '-o', label='%s final=%3.2f, best=%3.2f' % (config, orderLI[0], np.amax(orderLI)), linewidth=3, markersize=12)
+  ax1.loglog(dtPlot, RMSPlot, '-o', label='%s final=%3.2f, best=%3.2f' % (config, orderRMS[0], np.amax(orderRMS)), linewidth=3, markersize=12)
+  ax2.loglog(dtPlot, WRMSPlot, '-o', label='%s final=%3.2f, best=%3.2f' % (config, orderWRMS[0], np.amax(orderWRMS)), linewidth=3, markersize=12)
+  ax3.loglog(dtPlot, LIPlot, '-o', label='%s final=%3.2f, best=%3.2f' % (config, orderLI[0], np.amax(orderLI)), linewidth=3, markersize=12)
 
-ax1.set_ylabel('WRMS Error', fontsize='xx-large')
+ax1.set_ylabel('RMS Error', fontsize='xx-large')
 ax1.set_xlabel('dt', fontsize='xx-large')
 ax1.axis('equal')
 
-ax2.set_ylabel('LI Error', fontsize='xx-large')
+ax2.set_ylabel('WRMS Error', fontsize='xx-large')
 ax2.set_xlabel('dt', fontsize='xx-large')
 ax2.axis('equal')
 
+ax3.set_ylabel('LI Error', fontsize='xx-large')
+ax3.set_xlabel('dt', fontsize='xx-large')
+ax3.axis('equal')
+
 ax1.legend(loc='best', fontsize='xx-large')
 ax2.legend(loc='best', fontsize='xx-large')
+ax3.legend(loc='best', fontsize='xx-large')
 
 pyplot.show()
 
