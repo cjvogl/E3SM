@@ -333,8 +333,8 @@ contains
         !          + f * max{  -Al - ql/f, (Av - dqsat/dT*AT)/(1 + Lv/cp*dqsat/dT) }
            term_A(:ncol,:pver) = (1._r8 - ast(:ncol,:pver)) * ltend(:ncol,:pver)
            term_B(:ncol,:pver) = ( (1._r8 - ast(:ncol,:pver)) * &
-                                     (qtend(:ncol,:pver) &
-                                       - dqsatdT(:ncol,:pver)*ttend(:ncol,:pver) ) &
+                                     ( qtend(:ncol,:pver) &
+                                         - dqsatdT(:ncol,:pver)*ttend(:ncol,:pver) ) &
                                      - (qsat(:ncol,:pver) - qcwat(:ncol,:pver)) ) &
                                  / ( 1._r8 + gam(:ncol,:pver) )
            where ( -term_A(:ncol,:pver) > term_B(:ncol,:pver) )
@@ -345,14 +345,46 @@ contains
  
            term_A(:ncol,:pver) = ast(:ncol,:pver) * ltend(:ncol,:pver) + lcwat(:ncol,:pver)
            term_B(:ncol,:pver) = ast(:ncol,:pver) * &
-                                     (qtend(:ncol,:pver) &
-                                        - dqsatdT(:ncol,:pver)*ttend(:ncol,:pver) ) &
+                                     ( qtend(:ncol,:pver) &
+                                          - dqsatdT(:ncol,:pver)*ttend(:ncol,:pver) ) &
                                      / ( 1._r8 + gam(:ncol,:pver) )
            where ( -term_A(:ncol,:pver) > term_B(:ncol,:pver) )
               qme = qme - term_A
            elsewhere
               qme = qme + term_B
-           endwhere          
+           endwhere       
+
+        case(3)
+        !-----------------------------------------------------------------------------------
+        ! Three-Partition Reconstruction
+        ! qme(k) = f * (Av - dqsat/dT*AT)/(1 + Lv/cp*dqsat/dT) - (1-f) * Al + dt* df/dt*Al
+        ! df/dt = df/dRH * dRH/dt 
+        ! dRH/dt = (Av - dqsat/dT*RH*AT)/qsat - (1 + Lv/cp*dqsat/dT*RH)/qsat*qme(k) 
+        !        = zforcing - zc3*qme(k)
+        !
+        ! (1 + dt*df/dRH*zc3*Al)*qme(k) = 
+        !    f * (Av - dqsat/dT*AT)/(1 + Lv/cp*dqsat/dT) - (1-f) * Al 
+        !       + dt * df/dRH * zforcing * Al
+ 
+           term_A(:ncol,:pver) = ast(:ncol,:pver) * &
+                                    ( qtend(:ncol,:pver) &
+                                        - dqsatdT(:ncol,:pver)*ttend(:ncol,:pver) ) &
+                                    / ( 1._r8 + gam(:ncol,:pver) )
+           term_B(:ncol,:pver) = ( 1._r8 - ast(:ncol,:pver) ) * ltend(:ncol,:pver)
+
+           zforcing(:ncol,:pver) = ( qtend(:ncol,:pver)  &
+                  - dqsatdT(:ncol,:pver)*rhgbm(:ncol,:pver)*ttend(:ncol,:pver) ) &
+                                  / qsat(:ncol,:pver)
+           term_C(:ncol,:pver) = dtime * &
+                                dastdRH(:ncol,:pver)*zforcing(:ncol,:pver)*ltend(:ncol,:pver)
+   
+           zc3(:ncol,:pver) = ( 1._r8 + gam(:ncol,:pver)*rhgbm(:ncol,:pver) )  &
+                                  / qsat(:ncol,:pver)
+           rdenom(:ncol,:pver) = 1._r8 / &
+                  ( 1._r8 + dtime*dastdRH(:ncol,:pver)*zc3(:ncol,:pver)*ltend(:ncol,:pver) )
+
+           qme(:ncol,:pver) = rdenom(:ncol,:pver) * ( &
+                           term_A(:ncol,:pver) - term_B(:ncol,:pver) + term_C(:ncol,:pver) )
   
         case default
            write(iulog,*) "Unimplemented partition number:",rkz_partition_num,". Abort."
