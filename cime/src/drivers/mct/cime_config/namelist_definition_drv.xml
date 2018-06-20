@@ -1428,7 +1428,7 @@
   <!-- =========================== -->
 
   <entry id="atm_cpl_dt" modify_via_xml="ATM_NCPL" skip_default_entry="true">
-    <type>real</type>
+    <type>integer</type>
     <category>time</category>
     <group>seq_timemgr_inparm</group>
     <desc>
@@ -1441,7 +1441,7 @@
   </entry>
 
   <entry id="lnd_cpl_dt" modify_via_xml="LND_NCPL" skip_default_entry="true">
-    <type>real</type>
+    <type>integer</type>
     <category>time</category>
     <group>seq_timemgr_inparm</group>
     <desc>
@@ -1454,7 +1454,7 @@
   </entry>
 
   <entry id="rof_cpl_dt" modify_via_xml="ROF_NCPL" skip_default_entry="true">
-    <type>real</type>
+    <type>integer</type>
     <category>time</category>
     <group>seq_timemgr_inparm</group>
     <desc>
@@ -1465,7 +1465,7 @@
   </entry>
 
   <entry id="ice_cpl_dt" modify_via_xml="ICE_NCPL" skip_default_entry="true">
-    <type>real</type>
+    <type>integer</type>
     <category>time</category>
     <group>seq_timemgr_inparm</group>
     <desc>
@@ -1478,7 +1478,7 @@
   </entry>
 
   <entry id="ocn_cpl_dt" modify_via_xml="OCN_NCPL" skip_default_entry="true">
-    <type>real</type>
+    <type>integer</type>
     <category>time</category>
     <group>seq_timemgr_inparm</group>
     <desc>
@@ -1491,7 +1491,7 @@
   </entry>
 
   <entry id="glc_cpl_dt" modify_via_xml="GLC_NCPL" skip_default_entry="true">
-    <type>real</type>
+    <type>integer</type>
     <category>time</category>
     <group>seq_timemgr_inparm</group>
     <desc>
@@ -1525,7 +1525,7 @@
   </entry>
 
   <entry id="wav_cpl_dt" modify_via_xml="WAV_NCPL" skip_default_entry="true">
-    <type>real</type>
+    <type>integer</type>
     <category>time</category>
     <group>seq_timemgr_inparm</group>
     <desc>
@@ -1538,7 +1538,7 @@
   </entry>
 
   <entry id="esp_cpl_dt" skip_default_entry="true">
-    <type>real</type>
+    <type>integer</type>
     <category>time</category>
     <group>seq_timemgr_inparm</group>
     <desc>
