@@ -1,8 +1,10 @@
 import glob
 import matplotlib.pyplot as pyplot
+import matplotlib
 from netCDF4 import Dataset
 import numpy as np
 
+matplotlib.rcParams.update({'font.size': 22})
 
 #dtList = [1800,450,120,30,8,2,1]
 dtList = [1800,450,120,75,30,15,8,1]
@@ -15,8 +17,11 @@ machine = 'edison'
 
 
 f1, ax1 = pyplot.subplots(figsize=(10,10))
-f2, ax2 = pyplot.subplots(figsize=(10,10))
+f2, ax2 = pyplot.subplots(figsize=(10,5))
 f3, ax3 = pyplot.subplots(figsize=(10,10))
+f1.set_tight_layout(True)
+f2.set_tight_layout(True)
+f3.set_tight_layout(True)
 for dt in dtList:
   globstr = 'RKZ_P*_lmt4_ne30_ne30*/DT%04d_01_dycore_mac/*.cam.h0.0001-01-01-03600.nc' % dt
   for fileName in glob.glob(globstr):
@@ -88,9 +93,13 @@ for config in configDict.keys():
   else:
     orderWRMS = (0.0,)
     orderLI = (0.0,)
-  
+ 
+  if ("P1" in config):
+    label = "One-Partition (%3.2f)" % orderWRMS[0]
+  else:
+    label = "Two-Partition (%3.2f)" % orderWRMS[0] 
   ax1.loglog(dtPlot, RMSPlot, '-o', label='%s final=%3.2f, best=%3.2f' % (config, orderRMS[0], np.amax(orderRMS)), linewidth=3, markersize=12)
-  ax2.loglog(dtPlot, WRMSPlot, '-o', label='%s final=%3.2f, best=%3.2f' % (config, orderWRMS[0], np.amax(orderWRMS)), linewidth=3, markersize=12)
+  ax2.loglog(dtPlot, WRMSPlot, '-o', label=label, linewidth=3, markersize=12)
   ax3.loglog(dtPlot, LIPlot, '-o', label='%s final=%3.2f, best=%3.2f' % (config, orderLI[0], np.amax(orderLI)), linewidth=3, markersize=12)
 
 ax1.set_ylabel('RMS Error', fontsize='xx-large')
@@ -105,9 +114,11 @@ ax3.set_ylabel('LI Error', fontsize='xx-large')
 ax3.set_xlabel('dt', fontsize='xx-large')
 ax3.axis('equal')
 
-ax1.legend(loc='best', fontsize='xx-large')
-ax2.legend(loc='best', fontsize='xx-large')
-ax3.legend(loc='best', fontsize='xx-large')
+ax1.legend(loc='best')
+ax2.legend(loc='best')
+ax3.legend(loc='best')
+
+pyplot.tight_layout()
 
 pyplot.show()
 

@@ -21,7 +21,7 @@ date
 set clone_code    = 0
 set update_code   = 0
 
-set compile_model = 0
+set compile_model = 1
 set run_model     = 1
 
 #-----------------------------------------------------------------------------------------
@@ -71,7 +71,7 @@ set testconfig   = 'dycore_mac'    # dycore + mac
 #
 setenv COMPSET    FC5AQUAP
 
-setenv MACH       edison
+setenv MACH       cori-haswell
 setenv CESM_EMAIL vogl2@llnl.gov
 setenv RESOLUTION ne30_ne30
 
@@ -164,10 +164,7 @@ endif
 #set groupList = ("RKZ_A1_B1_C2_ql17_lmt4")
 #set groupList = ("RKZ_A1_B1_C2_ql19_lmt4")
 
-set groupList = ("RKZ_P1_lmt4")
-#set groupList = ("RKZ_P2_lmt4")
-#set groupList = ("RKZ_P1_lmt4_adjIC")
-#set groupList = ("RKZ_P2_lmt4_adjIC")
+set groupList = ("RKZ_P3_lmt4")
 
 # If multiple groups are specified above, you can use igS (group index start)
 # and igE (group index end) to run a subset in one particulation execution of 
@@ -273,7 +270,7 @@ else if ($MACH == "quartz") then
    setenv EXELOC   $PTMP/exe
    set initDir = /p/lscratchh/$USER/acme_input/ne30_FC5_init/
 
-else if ($MACH == "edison") then
+else if ($MACH == "edison" || $MACH == "cori-haswell" || $MACH == "cori-knl") then
    
    setenv CESM_PROJ m3089
    setenv PROJECT $CESM_PROJ
