@@ -11,7 +11,7 @@ if (hostname.startswith('cab')):
 elif (hostname.startswith('quartz')):
   num_nodes = 5
   num_procs_per_node = 36
-  seconds_per_step = 1.0
+  seconds_per_step = 1.25
 else:
   print('\n*** SCRIPT NOT IMPLEMENTED FOR THIS MACHINE **\n\n')
   sys.exit()

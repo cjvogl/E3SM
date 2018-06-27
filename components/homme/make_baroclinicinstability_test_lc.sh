@@ -18,7 +18,7 @@ if [[ $? == 0 ]]; then
   mkdir -p $WORKDIR
   rm -f $WORKDIR/theta-l-nlev$NLEV $WORKDIR/submit_baroclinicinstability.py
   rm -f $WORKDIR/run_convergence_test.sh $WORKDIR/plot_convergence_test.py
-  rm -f $WORKDIR/plot_efficiency.py #$WORKDIR/find_largest_timestep_nonfailure.py $WORKDIR/find_largest_timestep_accuracy.py
+  rm -f $WORKDIR/plot_efficiency.py $WORKDIR/plot_energy_test.py $WORKDIR/plot_energy_efficiency.py
   cp build_$SYSTEM/src/theta-l/theta-l $WORKDIR/theta-l-nlev$NLEV
   cp build_$SYSTEM/dcmip_tests/dcmip2012_test4.1_baroclinic_instability/vcoord/camm-30.ascii $WORKDIR/
   cp build_$SYSTEM/dcmip_tests/dcmip2012_test4.1_baroclinic_instability/vcoord/cami-30.ascii $WORKDIR/
@@ -26,6 +26,6 @@ if [[ $? == 0 ]]; then
   ln -s $PWD/dcmip_tests/dcmip2012_test4.1_baroclinic_instability/theta-l/run_convergence_test_lc.sh $WORKDIR/run_convergence_test.sh
   ln -s $PWD/plot_scripts/plot_convergence_test.py $WORKDIR/plot_convergence_test.py
   ln -s $PWD/plot_scripts/plot_efficiency.py $WORKDIR/plot_efficiency.py
-#  ln -s $PWD/dcmip_tests/dcmip2012_test4.1_baroclinic_instability/theta-l/find_largest_timestep_nonfailure_lc.py $WORKDIR/find_largest_timestep_nonfailure.py
-#  ln -s $PWD/dcmip_tests/dcmip2012_test4.1_baroclinic_instability/theta-l/find_largest_timestep_accuracy_lc.py $WORKDIR/find_largest_timestep_accuracy.py
+  ln -s $PWD/plot_scripts/plot_energy_test.py $WORKDIR/plot_energy_test.py
+  ln -s $PWD/plot_scripts/plot_energy_efficiency.py $WORKDIR/plot_energy_efficiency.py
 fi
