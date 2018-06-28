@@ -6,8 +6,8 @@ import numpy as np
 
 matplotlib.rcParams.update({'font.size': 22})
 
-#dtList = [1800,450,120,30,8,2,1]
-dtList = [1800,450,120,75,30,15,8,1]
+#dtList = [1800,450,120,30,15,8,4,2,1]
+dtList = [1800,450,120,75,30,15,8,4,1]
 configDict = {}
 resolution = 'ne30_ne30'
 compset = 'FC5AQUAP'
@@ -96,8 +96,10 @@ for config in configDict.keys():
  
   if ("P1" in config):
     label = "One-Partition (%3.2f)" % orderWRMS[0]
-  else:
+  elif ("P2" in config):
     label = "Two-Partition (%3.2f)" % orderWRMS[0] 
+  elif ("P3" in config):
+    label = "Three-Partition (%3.2f)" % orderWRMS[0]
   ax1.loglog(dtPlot, RMSPlot, '-o', label='%s final=%3.2f, best=%3.2f' % (config, orderRMS[0], np.amax(orderRMS)), linewidth=3, markersize=12)
   ax2.loglog(dtPlot, WRMSPlot, '-o', label=label, linewidth=3, markersize=12)
   ax3.loglog(dtPlot, LIPlot, '-o', label='%s final=%3.2f, best=%3.2f' % (config, orderLI[0], np.amax(orderLI)), linewidth=3, markersize=12)
