@@ -1302,6 +1302,9 @@ contains
                    (exner(:,:,k)*Cp)
            endif
 
+           ! DEBUG
+           heating(:,:,k) = 0.d0
+
            elem(ie)%state%theta_dp_cp(:,:,k,nt)=elem(ie)%state%theta_dp_cp(:,:,k,nt) &
                 +stens(:,:,k,2,ie)*hvcoord%dp0(k)*exner0(k)/(exner(:,:,k)*elem(ie)%state%dp3d(:,:,k,nt))&
                 -heating(:,:,k)

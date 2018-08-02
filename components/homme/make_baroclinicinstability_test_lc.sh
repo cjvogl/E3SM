@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WORKDIR=$S/homme/baroclinicinstability_test
+WORKDIR=$S/homme/baroclinicinstability_test_noheating
 NLEV=30
 
 if [[ $HOSTNAME == "cab"* ]]; then
