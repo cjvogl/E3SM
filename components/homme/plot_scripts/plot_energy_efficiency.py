@@ -70,7 +70,7 @@ istageDict = {'KGU35-native': 0,
               'KGS252': 2,
               'KGS254': 4}
 
-X = 100
+X = 1
 
 
 # Iterate through methods and plot energy efficiency test

@@ -196,10 +196,10 @@ for ind in range(2):
 
 ax2.set_ylabel('Relative Energy Error', fontsize='xx-large')
 ax2.set_xlabel('dt (s)', fontsize='xx-large')
-ax2.axis('equal')
+#ax2.axis('equal')
 
-#ax.set_xticks(dtTickList)
-#ax.set_xticklabels(dtTickList)
+ax2.set_xticks(dtTickList)
+ax2.set_xticklabels(dtTickList)
 
 #f.savefig('errorEnergy.png')
 

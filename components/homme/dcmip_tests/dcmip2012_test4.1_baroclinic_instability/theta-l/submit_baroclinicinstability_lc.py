@@ -67,9 +67,9 @@ if (abs(num_steps - int(num_steps)) > 1e-10):
 paramDict['nmax'] = int(num_steps)
 
 # Compute output frequencies
-outputfreq = paramDict['nmax']/15
-if (abs(outputfreq - paramDict['nmax']/15.0) > 1e-10):
-  print('\n*** NMAX %s DOES NOT EVENLY DIVIDE BY 15***\n\n' % paramDict['nmax'])
+outputfreq = paramDict['nmax']/int(paramDict['ndays'])
+if (abs(outputfreq - paramDict['nmax']/float(paramDict['ndays'])) > 1e-10):
+  print('\n*** NMAX %s DOES NOT EVENLY DIVIDE BY %s***\n\n' % (paramDict['nmax'], paramDict['ndays']))
 
 # Use tstep_type if no user defined parameters given
 if (not userList):
