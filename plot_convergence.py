@@ -23,7 +23,7 @@ f1.set_tight_layout(True)
 f2.set_tight_layout(True)
 f3.set_tight_layout(True)
 for dt in dtList:
-  globstr = 'RKZ_P*_lmt4_ne30_ne30*/DT%04d_01_dycore_mac/*.cam.h0.0001-01-01-03600.nc' % dt
+  globstr = 'RKZ_*_lmt4_ne30_ne30*/DT%04d_01_dycore_mac/*.cam.h0.0001-01-01-03600.nc' % dt
   for fileName in glob.glob(globstr):
     words = fileName.split('_')
     config = words[0]

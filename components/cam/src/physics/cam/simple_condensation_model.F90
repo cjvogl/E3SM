@@ -181,6 +181,7 @@ contains
                                      ! which tracers are affected by this parameterization
 
   real(r8) :: ast_old(pcols,pver)    ! cloud fraction of previous time step before condensation
+  real(r8) :: dastdT(pcols,pver)     ! finite difference approximation to df/dt
 
   real(r8) :: qsat(pcols,pver)       ! saturation specific humidity
   real(r8) :: esl(pcols,pver)        ! saturation vapor pressure (output from subroutine qsat_water, not used)
@@ -357,35 +358,29 @@ contains
         case(3)
         !-----------------------------------------------------------------------------------
         ! Three-Partition Reconstruction
-        ! qme(k) = f * (Av - dqsat/dT*AT)/(1 + Lv/cp*dqsat/dT) - (1-f) * Al + dt* df/dt*Al
-        ! df/dt = df/dRH * dRH/dt 
-        ! dRH/dt = (Av - dqsat/dT*RH*AT)/qsat - (1 + Lv/cp*dqsat/dT*RH)/qsat*qme(k) 
-        !        = zforcing - zc3*qme(k)
-        !
-        ! (1 + dt*df/dRH*zc3*Al)*qme(k) = 
-        !    f * (Av - dqsat/dT*AT)/(1 + Lv/cp*dqsat/dT) - (1-f) * Al 
-        !       + dt * df/dRH * zforcing * Al
- 
-           term_A(:ncol,:pver) = ast(:ncol,:pver) * &
+        ! qme(k) = f * (Av - dqsat/dT*AT)/(1 + Lv/cp*dqsat/dT) - (1-f)*Al
+        !          + dt*df/dt * [ (Av - dqsat/dT*AT)/(1 + Lv/cp*dqsat/dT) + Al ]
+        !        = (f + dt*df/dt) * (Av - dqsat/dT*AT)/(1 + Lv/cp*dqsat/dT) 
+        !          - (1 - f - dt*df/dt) * Al
+        ! 
+!        !  df/dt = df/dRH * dRH/dt 
+!        ! dRH/dt = (Av - dqsat/dT*RH*AT)/qsat - (1 + Lv/cp*dqsat/dT*RH)/qsat*qme(k) 
+!        !        = zforcing - zc3*qme(k)
+!        !
+!        ! (1 + dt*df/dRH*zc3*Al)*qme(k) = 
+!        !      f * (Av - dqsat/dT*AT)/(1 + Lv/cp*dqsat/dT) - (1-f) * Al 
+!        !         + dt * df/dRH * zforcing * Al
+!        !
+
+           term_A(:ncol,:pver) = (2._r8*ast(:ncol,:pver) - ast_old(:ncol,:pver) ) * &
                                     ( qtend(:ncol,:pver) &
                                         - dqsatdT(:ncol,:pver)*ttend(:ncol,:pver) ) &
                                     / ( 1._r8 + gam(:ncol,:pver) )
-           term_B(:ncol,:pver) = ( 1._r8 - ast(:ncol,:pver) ) * ltend(:ncol,:pver)
+           term_B(:ncol,:pver) = (1._r8 - 2._r8*ast(:ncol,:pver) + ast_old(:ncol,:pver) ) * &
+                                    ltend(:ncol,:pver)
+           qme(:ncol,:pver) = term_A(:ncol,:pver) - term_B(:ncol,:pver)
 
-           zforcing(:ncol,:pver) = ( qtend(:ncol,:pver)  &
-                  - dqsatdT(:ncol,:pver)*rhgbm(:ncol,:pver)*ttend(:ncol,:pver) ) &
-                                  / qsat(:ncol,:pver)
-           term_C(:ncol,:pver) = dtime * &
-                                dastdRH(:ncol,:pver)*zforcing(:ncol,:pver)*ltend(:ncol,:pver)
-   
-           zc3(:ncol,:pver) = ( 1._r8 + gam(:ncol,:pver)*rhgbm(:ncol,:pver) )  &
-                                  / qsat(:ncol,:pver)
-           rdenom(:ncol,:pver) = 1._r8 / &
-                  ( 1._r8 + dtime*dastdRH(:ncol,:pver)*zc3(:ncol,:pver)*ltend(:ncol,:pver) )
 
-           qme(:ncol,:pver) = rdenom(:ncol,:pver) * ( &
-                           term_A(:ncol,:pver) - term_B(:ncol,:pver) + term_C(:ncol,:pver) )
-  
         case default
            write(iulog,*) "Unimplemented partition number:",rkz_partition_num,". Abort."
            call endrun
