@@ -99,7 +99,7 @@ subroutine set_test_prescribed_wind(elem, deriv, hybrid, hvcoord, dt, tl, nets, 
     call copy_state(elem(ie),n0,np1)
   enddo
 
-  ! set prescribed quantities at timelevel np1
+  ! set prescribed quantities at timelevel np1 
   select case(test_case)
     case('dcmip2012_test1_1'); call dcmip2012_test1_1(elem,hybrid,hvcoord,nets,nete,time,np1,np1)
     case('dcmip2012_test1_2'); call dcmip2012_test1_2(elem,hybrid,hvcoord,nets,nete,time,np1,np1)
