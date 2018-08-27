@@ -69,6 +69,16 @@ if [[ $BUILD != "update" ]]; then
     -D PREQX_PLEV=$NLEVELS           \
     -D QSIZE_D=$NTRACERS             \
     \
+    -D BUILD_HOMME_SWEQX=OFF \
+    -D BUILD_HOMME_PREQX=OFF \
+    -D BUILD_HOMME_THETA=ON \
+    -D BUILD_HOMME_PREQX_ACC=OFF \
+    -D BUILD_HOMME_PESE=OFF \
+    -D BUILD_HOMME_SWIM=OFF \
+    -D BUILD_HOMME_PRIM=OFF\
+    \
+    -D HOMME_USE_ARKODE=ON \
+    \
     $HOMME_ROOT
 fi
 
