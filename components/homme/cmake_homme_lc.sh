@@ -37,7 +37,7 @@ elif [[ $HOSTNAME == "quartz"* ]]; then
     module load hdf5-parallel/1.8.17
     export NETCDF=$HOME/local/netcdf-c4.3.3.1_f4.4.2_quartz_intel_opt
     export HDF5=/usr/tce/packages/hdf5/hdf5-parallel-1.8.17-intel16.0.3-mvapich22.2
-    export SUNDIALS=$HOME/local/sundials-temp_quartz_intel_opt
+    export SUNDIALS=$HOME/local/sundials-3.1.2_quartz_intel_opt
   fi
 fi
 
@@ -68,6 +68,16 @@ if [[ $BUILD != "update" ]]; then
     -D PREQX_NP=$NP                  \
     -D PREQX_PLEV=$NLEVELS           \
     -D QSIZE_D=$NTRACERS             \
+    \
+    -D BUILD_HOMME_SWEQX=OFF \
+    -D BUILD_HOMME_PREQX=OFF \
+    -D BUILD_HOMME_THETA=ON \
+    -D BUILD_HOMME_PREQX_ACC=OFF \
+    -D BUILD_HOMME_PESE=OFF \
+    -D BUILD_HOMME_SWIM=OFF \
+    -D BUILD_HOMME_PRIM=OFF\
+    \
+    -D HOMME_USE_ARKODE=ON \
     \
     $HOMME_ROOT
 fi
