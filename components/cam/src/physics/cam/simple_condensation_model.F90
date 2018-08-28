@@ -363,14 +363,6 @@ contains
         !        = (f + dt*df/dt) * (Av - dqsat/dT*AT)/(1 + Lv/cp*dqsat/dT) 
         !          - (1 - f - dt*df/dt) * Al
         ! 
-!        !  df/dt = df/dRH * dRH/dt 
-!        ! dRH/dt = (Av - dqsat/dT*RH*AT)/qsat - (1 + Lv/cp*dqsat/dT*RH)/qsat*qme(k) 
-!        !        = zforcing - zc3*qme(k)
-!        !
-!        ! (1 + dt*df/dRH*zc3*Al)*qme(k) = 
-!        !      f * (Av - dqsat/dT*AT)/(1 + Lv/cp*dqsat/dT) - (1-f) * Al 
-!        !         + dt * df/dRH * zforcing * Al
-!        !
 
            term_A(:ncol,:pver) = (2._r8*ast(:ncol,:pver) - ast_old(:ncol,:pver) ) * &
                                     ( qtend(:ncol,:pver) &

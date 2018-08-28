@@ -4,36 +4,32 @@ import matplotlib
 from netCDF4 import Dataset
 import numpy as np
 
-matplotlib.rcParams.update({'font.size': 22})
+matplotlib.rcParams.update({'font.size': 18})
 
 #dtList = [1800,450,120,30,15,8,4,2,1]
 dtList = [1800,450,120,75,30,15,8,4,1]
 configDict = {}
-resolution = 'ne30_ne30'
-compset = 'FC5AQUAP'
-compiler = 'intel'
-machine = 'edison'
-
 
 
 f1, ax1 = pyplot.subplots(figsize=(10,10))
-f2, ax2 = pyplot.subplots(figsize=(10,5))
+f2, ax2 = pyplot.subplots(figsize=(10,10))
 f3, ax3 = pyplot.subplots(figsize=(10,10))
 f1.set_tight_layout(True)
 f2.set_tight_layout(True)
 f3.set_tight_layout(True)
 for dt in dtList:
-  globstr = 'RKZ_*_lmt4_ne30_ne30*/DT%04d_01_dycore_mac/*.cam.h0.0001-01-01-03600.nc' % dt
+  globstr = 'RKZ_*_ne30_ne30_*/DT%04d_01_dycore_mac/*.cam.h0.0001-01-01-03600.nc' % dt
   for fileName in glob.glob(globstr):
     words = fileName.split('_')
     config = words[0]
     for j in range(1,len(words)):
-      if (words[j] == compset):
+      if (words[j] == 'ne30'):
         break
       config = config + '_' + words[j]
     if (config not in configDict.keys()):
       solutionDict = {}
       configDict[config] = solutionDict
+      print('\nadding ' + config + ' to configuration list\n')
     solutionDict = configDict[config]
     print('Reading solution in ' + fileName)
     data = Dataset(fileName)
@@ -93,27 +89,34 @@ for config in configDict.keys():
   else:
     orderWRMS = (0.0,)
     orderLI = (0.0,)
- 
-  if ("P1" in config):
+
+  label = config + (" (%3.2f)" % orderWRMS[0]) 
+  if ("P1" in config and "adjIC" in config):
+    label = "One-Partition, adjIC (%3.2f)" % orderWRMS[0]
+  elif ("P1" in config):
     label = "One-Partition (%3.2f)" % orderWRMS[0]
+  elif ("P2" in config and "adjIC" in config):
+    label = "Two-Partition, adjIC (%3.2f)" % orderWRMS[0] 
   elif ("P2" in config):
     label = "Two-Partition (%3.2f)" % orderWRMS[0] 
+  elif ("P3" in config and "adjIC" in config):
+    label = "Three-Partition, adjIC (%3.2f)" % orderWRMS[0]
   elif ("P3" in config):
     label = "Three-Partition (%3.2f)" % orderWRMS[0]
   ax1.loglog(dtPlot, RMSPlot, '-o', label='%s final=%3.2f, best=%3.2f' % (config, orderRMS[0], np.amax(orderRMS)), linewidth=3, markersize=12)
   ax2.loglog(dtPlot, WRMSPlot, '-o', label=label, linewidth=3, markersize=12)
   ax3.loglog(dtPlot, LIPlot, '-o', label='%s final=%3.2f, best=%3.2f' % (config, orderLI[0], np.amax(orderLI)), linewidth=3, markersize=12)
 
-ax1.set_ylabel('RMS Error', fontsize='xx-large')
-ax1.set_xlabel('dt', fontsize='xx-large')
+ax1.set_ylabel('RMS Error', fontsize='large')
+ax1.set_xlabel('dt', fontsize='large')
 ax1.axis('equal')
 
-ax2.set_ylabel('WRMS Error', fontsize='xx-large')
-ax2.set_xlabel('dt', fontsize='xx-large')
+ax2.set_ylabel('WRMS Error', fontsize='large')
+ax2.set_xlabel('dt', fontsize='large')
 ax2.axis('equal')
 
-ax3.set_ylabel('LI Error', fontsize='xx-large')
-ax3.set_xlabel('dt', fontsize='xx-large')
+ax3.set_ylabel('LI Error', fontsize='large')
+ax3.set_xlabel('dt', fontsize='large')
 ax3.axis('equal')
 
 ax1.legend(loc='best')
