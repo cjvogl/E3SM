@@ -23,14 +23,14 @@ if (len(sys.argv) < 2):
 
 # Set dictionary of default HOMME parameter names and values
 paramDict = {
-  'tsteptype':          '5',
-  'tstep':            '1.0',
-  'nmax':            '3600',
-  'ne':                '27',
-  'nu':             '5.0e8',
-  'rtol':          '1.0e-4',
   'atol':            '-1.0',
   'calcstats':        'true'
+  'ne':                '27',
+  'nmax':            '3600',
+  'nu':             '5.0e8',
+  'rtol':          '1.0e-4',
+  'tstep':            '1.0',
+  'tsteptype':          '5',
 }
 
 # Parse command line arguments and parameter dictionary
