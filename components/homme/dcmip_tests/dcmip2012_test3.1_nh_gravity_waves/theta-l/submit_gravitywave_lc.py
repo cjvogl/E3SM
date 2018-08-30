@@ -9,7 +9,7 @@ if (hostname.startswith('cab')):
   num_procs_per_node = 16
   seconds_per_step = 3.0 # probably need to adjust this number
 elif (hostname.startswith('quartz')):
-  num_nodes = 5
+  num_nodes = 6
   num_procs_per_node = 36
   seconds_per_step = 3.0
 else:

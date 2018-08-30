@@ -3,7 +3,6 @@ import matplotlib.pyplot as pyplot
 import matplotlib
 from netCDF4 import Dataset
 import numpy as np
-import os
 from dictionaries import methodDict, lineStyleDict, colorDict
 
 matplotlib.rcParams.update({'font.size':22})
@@ -27,7 +26,7 @@ def plot_convergence_test(testName, fileRef, dtRef, indRef, varRef, \
   # Create figures for RMS and Linf plots
   f1, ax1 = pyplot.subplots(figsize=(10,10))
   f2, ax2 = pyplot.subplots(figsize=(10,10))
-  
+
   # Iterate through methods
   for m,method in enumerate(methodDict.keys()):
     solutionDict = {}
@@ -86,7 +85,7 @@ def plot_convergence_test(testName, fileRef, dtRef, indRef, varRef, \
                label='%s (final=%3.2f, best=%3.2f)' % (method,orderLI[0],np.amax(orderLI)), \
                color=colorDict[method], linewidth=3, markersize=12)
   # end of method loop
-  
+
   # Finalize figures
   ax1.set_ylabel('RMS error', fontsize='xx-large')
   ax1.set_xlabel('dt (s)', fontsize='xx-large')
@@ -108,3 +107,17 @@ def plot_convergence_test(testName, fileRef, dtRef, indRef, varRef, \
   f2.savefig('errorLI%s_legend.png' % varRef)
   pyplot.show()
 
+if (__name__ == '__main__'):
+  import os
+
+  cwd = os.getcwd()
+  if ('gravitywave_test' in os.getcwd()):
+    testName = 'dcmip2012_test31'
+    fileRef = cwd + '/output_tsteptype5_tstep0.00390625_nmax76800_nu0.0/' \
+                  + testName + '.nc'
+    dtRef = 0.00390625
+    indRef = 10
+    varRef = 'T'
+    suffix = '_nu0.0'
+    plot_convergence_test(testName, fileRef, dtRef, indRef, varRef, \
+                          suffix=suffix, minDt=0.0, maxDt=np.inf)
