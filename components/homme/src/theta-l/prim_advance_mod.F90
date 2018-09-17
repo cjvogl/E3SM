@@ -107,7 +107,7 @@ contains
     use arkode_mod,     only: parameter_list, update_arkode, get_solution_ptr, &
                               table_list, set_Butcher_tables, &
                               calc_nonlinear_stats, update_nonlinear_stats, &
-                              rel_tol, abs_tol
+                              rel_tol, abs_tol, use_column_solver
 #endif
     use iso_c_binding
 
@@ -471,12 +471,11 @@ contains
       ! If implicit solves are involved, set corresponding parameters
       if (arkode_parameters%imex /= 1) then
         ! linear solver parameters
-        arkode_parameters%useColumnSolver = .true. ! use GMRES (optimally, this could be changed at runtime)
-        ! TODO: put a conditional statement in here that only sets these if
-        !       not using the column solver
-        arkode_parameters%precLR = 0 ! no preconditioning
-        arkode_parameters%gstype = 1 ! classical Gram-Schmidt orthogonalization
-        arkode_parameters%lintol = 0.05d0 ! multiplies NLCOV_COEF in linear conv. criteria
+        if (.not.use_column_solver) then
+          arkode_parameters%precLR = 0 ! no preconditioning
+          arkode_parameters%gstype = 1 ! classical Gram-Schmidt orthogonalization
+          arkode_parameters%lintol = 0.05d0 ! multiplies NLCOV_COEF in linear conv. criteria
+        end if
         ! Iteration tolerances (appear in WRMS array as rtol*|u_i| + atol_i)
         arkode_parameters%rtol = rel_tol
         if (abs_tol < 0.d0) then

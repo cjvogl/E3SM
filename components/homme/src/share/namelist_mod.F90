@@ -9,7 +9,7 @@ module namelist_mod
   use cube_mod,   only: rotate_grid
   use physical_constants, only: rearth, rrearth, omega
 #if (defined MODEL_THETA_L && defined ARKODE)
-  use arkode_mod, only: rel_tol, abs_tol, calc_nonlinear_stats
+  use arkode_mod, only: rel_tol, abs_tol, calc_nonlinear_stats, use_column_solver
 #endif
 
   use control_mod, only : &
@@ -317,7 +317,8 @@ module namelist_mod
     namelist /arkode_nl/ &
       rel_tol, &
       abs_tol, &
-      calc_nonlinear_stats
+      calc_nonlinear_stats, &
+      use_column_solver
 #endif
 
 
@@ -732,6 +733,7 @@ module namelist_mod
     call MPI_bcast(rel_tol, 1, MPIreal_t, par%root, par%comm, ierr)
     call MPI_bcast(abs_tol, 1, MPIreal_t, par%root, par%comm, ierr)
     call MPI_bcast(calc_nonlinear_stats, 1, MPIlogical_t, par%root, par%comm, ierr)
+    call MPI_bcast(use_column_solver, 1, MPIlogical_t, par%root, par%comm, ierr)
 #endif
 
     ! use maximum available:
@@ -1012,6 +1014,7 @@ module namelist_mod
        write(iulog,*)"arkode: rel_tol = ",rel_tol
        write(iulog,*)"arkode: abs_tol = ",abs_tol
        write(iulog,*)"arkode: calc_nonlinear_stats = ",calc_nonlinear_stats
+       write(iulog,*)"arkode: use_column_solver = ",use_column_solver
 #endif
 
        ! display physical constants for HOMME stand alone simulations
