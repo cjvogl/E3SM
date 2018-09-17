@@ -11,8 +11,19 @@ matplotlib.rcParams.update({'font.size':22})
 
 # methodDict = {'KGU35-native': 5}
 
-def plot_convergence_test(testName, fileRef, dtRef, indRef, varRef, \
-                          suffix='', minDt=0.0, maxDt=np.inf):
+def plot_convergence_test(fileRef, indRef, varRef, \
+                          suffix='', suffix_omit=None, minDt=0.0, maxDt=np.inf):
+  # Parse info from reference solution format: ./tsteptype*_tstep(dtRef)*/(testName)
+  words = fileRef.split('/')
+  testName = words[-1]
+  words = fileRef.split('_')
+  i = 0
+  for word in words:
+    i = i+1
+    if ('output' in word):
+      break
+  dtRef = float(words[i+1].replace('tstep',''))
+
   # Read in reference solution
   print 'Reading reference solution from ' + fileRef
   data = Dataset(fileRef)
@@ -34,6 +45,8 @@ def plot_convergence_test(testName, fileRef, dtRef, indRef, varRef, \
     # Parse all stdout files for current method and given suffix
     globstr = 'tsteptype%d_tstep*%s.out' % (methodDict[method], suffix)
     for fileName in glob.glob(globstr):
+      if (suffix_omit is not None and suffix_omit in fileName):
+        continue
       words = fileName.split('_')
       dt = words[1].replace('tstep','')
       dt = dt.replace('.out','')
@@ -41,7 +54,7 @@ def plot_convergence_test(testName, fileRef, dtRef, indRef, varRef, \
       if (float(dt) > dtRef+1e-12 and float(dt) < maxDt and float(dt) > minDt):
         directory = './output_'+fileName.replace('.out','')
         print 'Reading solution in ' + directory
-        data = Dataset(directory+'/'+testName+'.nc')
+        data = Dataset(directory+'/'+testName)
         q = data[varRef][:]
         t = data['time'][:]
         if (len(t) > indRef and abs(t[indRef] - tRef) < 1e-10):
@@ -97,14 +110,14 @@ def plot_convergence_test(testName, fileRef, dtRef, indRef, varRef, \
   f2.tight_layout()
 
   # Save figures without legends
-  f1.savefig('errorRMS%s.png' % varRef)
-  f2.savefig('errorLI%s.png' % varRef)
+  f1.savefig('errorRMS%s_%s.png' % (varRef, suffix))
+  f2.savefig('errorLI%s_%s.png' % (varRef, suffix))
 
   # Save figures with legends
   ax1.legend(loc='best')
   ax2.legend(loc='best')
-  f1.savefig('errorRMS%s_legend.png' % varRef)
-  f2.savefig('errorLI%s_legend.png' % varRef)
+  f1.savefig('errorRMS%s_%s_legend.png' % (varRef, suffix))
+  f2.savefig('errorLI%s_%s_legend.png' % (varRef, suffix))
   pyplot.show()
 
 if (__name__ == '__main__'):
@@ -113,11 +126,13 @@ if (__name__ == '__main__'):
   cwd = os.getcwd()
   if ('gravitywave_test' in os.getcwd()):
     testName = 'dcmip2012_test31'
-    fileRef = cwd + '/output_tsteptype5_tstep0.00390625_nmax76800_nu0.0/' \
-                  + testName + '.nc'
-    dtRef = 0.00390625
+    fileRef = cwd + '/output_tsteptype5_tstep0.000390625_nmax768000_nu0.0/' \
+                  + 'dcmip2012_test31.nc'
     indRef = 10
     varRef = 'T'
-    suffix = '_nu0.0'
-    plot_convergence_test(testName, fileRef, dtRef, indRef, varRef, \
-                          suffix=suffix, minDt=0.0, maxDt=np.inf)
+    suffix = 'nu0.0'
+    plot_convergence_test(fileRef, indRef, varRef, suffix=suffix)
+    fileRef = cwd + '/output_tsteptype5_tstep0.000390625_nmax768000/' \
+                  + 'dcmip2012_test31.nc'
+    plot_convergence_test(fileRef, indRef, varRef, suffix_omit=suffix)
+    pyplot.show()

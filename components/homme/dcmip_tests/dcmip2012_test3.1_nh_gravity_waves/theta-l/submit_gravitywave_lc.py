@@ -24,11 +24,10 @@ if (len(sys.argv) < 2):
 # Set dictionary of default HOMME parameter names and values
 paramDict = {
   'atol':            '-1.0',
-  'calcstats':        'true',
   'ne':                '27',
   'nmax':            '3600',
   'nu':             '5.0e8',
-  'rtol':          '1.0e-4',
+  'rtol':          '1.0e-6',
   'tstep':            '1.0',
   'tsteptype':          '5'
 }
@@ -100,7 +99,8 @@ interp_nlon            = 256
 &arkode_nl
 rel_tol                = %s
 abs_tol                = %s
-calc_nonlinear_stats   = .%s.
+calc_nonlinear_stats   = .true.
+use_column_solver      = .true.
 /
 &prof_inparm
 profile_outpe_num      = 100
@@ -108,7 +108,7 @@ profile_single_file	   = .true.
 /""" % (paramDict['ne'], paramDict['nmax'], paramDict['tstep'],
         paramDict['tsteptype'], paramDict['nu'], paramDict['nu'],
         suffix, output_frequency,
-        paramDict['rtol'], paramDict['atol'], paramDict['calcstats'])
+        paramDict['rtol'], paramDict['atol'])
 os.system("echo '%s' > input_%s.nl" % (namelist, suffix))
 
 # Create job script
@@ -137,6 +137,8 @@ date
 echo
 pwd
 echo
+
+module purge
 
 time srun -n %d %s < input_%s.nl
 """ % (num_nodes,walltime,suffix,suffix,suffix,

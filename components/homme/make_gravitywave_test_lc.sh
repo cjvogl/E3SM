@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WORKDIR=$S/homme/gravitywave_test
+WORKDIR=$S/homme/gravitywave_test_noheating
 NLEV=20
 
 if [[ $HOSTNAME == "cab"* ]]; then

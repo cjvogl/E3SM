@@ -33,11 +33,13 @@ elif [[ $HOSTNAME == "quartz"* ]]; then
     export SUNDIALS=$HOME/local/sundials-2.7.0_quartz_gnu_opt
   else
     module load intel/16.0.3
-    module load mvapich2/2.2
-    module load hdf5-parallel/1.8.17
-    export NETCDF=$HOME/local/netcdf-c4.3.3.1_f4.4.2_quartz_intel_opt
-    export HDF5=/usr/tce/packages/hdf5/hdf5-parallel-1.8.17-intel16.0.3-mvapich22.2
+    export NETCDF=$HOME/local/netcdf-c-serial-4.5.0_f-4.4.4_quartz_intel_opt
+    export HDF5=$HOME/local/hdf5-serial-1.10.3_quartz_intel_opt
     export SUNDIALS=$HOME/local/sundials-3.1.2_quartz_intel_opt
+    MPI=$HOME/local/mpich-3.2_quartz_intel_opt/bin
+    export MPIF90=$MPI/mpif90
+    export MPICC=$MPI/mpicc
+    export MPICXX=$MPI/mpicxx
   fi
 fi
 
