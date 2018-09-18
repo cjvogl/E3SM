@@ -14,7 +14,7 @@ for n in ${!TSTEP[*]}; do
     VAR=$(bc <<< "scale=2;${TSTEP[$n]}/$2")
     ARGS="$ARGS tstep $VAR dcmip4_X $2"
   else
-    ARGS="$ARGS tstep ${TSTEP[$n]} dcmip4_X 1"
+    ARGS="$ARGS tstep ${TSTEP[$n]}"
   fi
   EXE="theta-l-nlev"
   if [[ $# -gt 2 ]]; then
