@@ -5,7 +5,7 @@ SET (CMAKE_CXX_COMPILER $ENV{MPICXX} CACHE FILEPATH "")
 
 SET (OPT_FLAGS "-O0" CACHE STRING "")
 SET (DEBUG_FLAGS "-g" CACHE STRING "")
-#SET (DEBUG_FFLAGS "-g -traceback -ftrapuv -fpe0 -check bounds -check uninit" CACHE STRING "")
+#SET (DEBUG_FFLAGS "-g -traceback -ftrapuv -fpe0 -check bounds,uninit" CACHE STRING "")
 
 SET (NETCDF_DIR $ENV{NETCDF} CACHE FILEPATH "")
 SET (WITH_PNETCDF FALSE CACHE BOOL "")
