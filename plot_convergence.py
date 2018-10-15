@@ -6,10 +6,11 @@ import numpy as np
 
 matplotlib.rcParams.update({'font.size': 18})
 
-#dtList = [1800,450,120,30,15,8,4,2,1]
 dtList = [1800,450,120,75,30,15,8,4,1]
-configDict = {}
+var = 'T'
+#var = 'CLDLIQ'
 
+configDict = {}
 
 f1, ax1 = pyplot.subplots(figsize=(10,10))
 f2, ax2 = pyplot.subplots(figsize=(10,10))
@@ -17,6 +18,7 @@ f3, ax3 = pyplot.subplots(figsize=(10,10))
 f1.set_tight_layout(True)
 f2.set_tight_layout(True)
 f3.set_tight_layout(True)
+
 for dt in dtList:
   globstr = 'RKZ_*_ne30_ne30_*/DT%04d_01_dycore_mac/*.cam.h0.0001-01-01-03600.nc' % dt
   for fileName in glob.glob(globstr):
@@ -33,8 +35,8 @@ for dt in dtList:
     solutionDict = configDict[config]
     print('Reading solution in ' + fileName)
     data = Dataset(fileName)
-    T = data['T'][:]
-    T = T[0,:,:]
+    q = data[var][:]
+    q = q[0,:,:]
     p0 = data['P0'][:]
     ps = data['PS'][:]
     ps = ps[0,:]
@@ -44,7 +46,7 @@ for dt in dtList:
     da = a[1:] - a[0:-1]
     db = b[1:] - b[0:-1]
     dp = np.outer(da,p0*np.ones(np.shape(ps))) + np.outer(db,ps)
-    solutionDict[dt] = {'T': T, 'p0': p0, 'ps': ps, 'area': area, 'dp': dp}
+    solutionDict[dt] = {'q': q, 'p0': p0, 'ps': ps, 'area': area, 'dp': dp}
  
 dtRef = min(dtList)
 for config in configDict.keys(): 
@@ -53,14 +55,14 @@ for config in configDict.keys():
   WRMSerror = {}
   LIerror = {}
   solutionDict = configDict[config]
-  qRef = solutionDict[dtRef]['T']
+  qRef = solutionDict[dtRef]['q']
   psRef = solutionDict[dtRef]['ps']
   dpRef = solutionDict[dtRef]['dp']
   for dt in dtList:
     if (dt is dtRef):
       continue
     dtDict[float(dt)] = dt
-    q = solutionDict[dt]['T']
+    q = solutionDict[dt]['q']
     area = solutionDict[dt]['area']
     dp = solutionDict[dt]['dp']
     ps = solutionDict[dt]['ps']
@@ -69,7 +71,7 @@ for config in configDict.keys():
     dz = dpw
     dxdy = np.outer(np.ones(np.shape(dpw)[0]), area)
     weight = dxdy*dz / np.sum(psw*area)
-    RMSerror[dt] = np.sqrt( np.sum((q-qRef)**2) / (np.shape(T)[0]*np.shape(T)[1]) )
+    RMSerror[dt] = np.sqrt( np.sum((q-qRef)**2) / (np.shape(q)[0]*np.shape(q)[1]) )
     WRMSerror[dt] = np.sqrt( np.sum((q-qRef)**2*weight) )
     LIerror[dt] = np.amax(abs(q-qRef))
   
