@@ -30,9 +30,10 @@ paramDict = {
   'ndays':             '15',
   'nu':            '1.0e15',
   'rsplit':             '1',
-  'rtol':          '1.0e-4',
+  'rtol':          '1.0e-6',
   'tstep':            '120',
-  'tsteptype':          '7'
+  'tsteptype':          '7',
+  'restart':         'none'
 }
 
 # Parse command line arguments and parameter dictionary
@@ -100,8 +101,18 @@ ne                     = 30
 qsize                  = 0
 nmax                   = %s
 statefreq              = 100
-runtype                = 0
-mesh_file              = "/dev/null"
+""" % (paramDict['hydrostatic'], paramDict['dcmip4_X'], paramDict['nmax'])
+if (paramDict['restart'] == 'none'):
+  namelist += \
+"""runtype                = 0
+"""
+else:
+  namelist += \
+"""runtype                = 2
+restartfile            = "./output_tsteptype22_tstep10/R%09d"
+""" % int(paramDict['restart'])
+namelist += \
+"""mesh_file              = "/dev/null"
 tstep                  = %s
 rsplit                 = %s
 qsplit                 = 1
@@ -144,10 +155,10 @@ rel_tol                = %s
 abs_tol                = %s
 calc_nonlinear_stats   = .true.
 use_column_solver      = .true.
-/""" % (paramDict['hydrostatic'], paramDict['dcmip4_X'], paramDict['nmax'],
-        paramDict['tstep'], paramDict['rsplit'], paramDict['tsteptype'],
+/""" % (paramDict['tstep'], paramDict['rsplit'], paramDict['tsteptype'],
         paramDict['nu'], paramDict['nu'], paramDict['nu'], paramDict['nu'], paramDict['nu'],
         outputfreq, suffix, paramDict['rtol'], paramDict['atol'])
+
 os.system("echo '%s' > input_%s.nl" % (namelist, suffix))
 
 # Create job script

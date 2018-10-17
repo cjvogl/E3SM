@@ -19,6 +19,7 @@ if [[ $? == 0 ]]; then
   rm -f $WORKDIR/theta-l-nlev$NLEV $WORKDIR/submit_baroclinicinstability.py
   rm -f $WORKDIR/run_convergence_test.sh $WORKDIR/plot_convergence_test.py
   rm -f $WORKDIR/plot_efficiency.py $WORKDIR/plot_energy_test.py $WORKDIR/plot_energy_efficiency.py
+  rm -f $WORKDIR/dictionaries.py
   cp build_$SYSTEM/src/theta-l/theta-l $WORKDIR/theta-l-nlev$NLEV
   cp build_$SYSTEM/dcmip_tests/dcmip2012_test4.1_baroclinic_instability/vcoord/camm-30.ascii $WORKDIR/
   cp build_$SYSTEM/dcmip_tests/dcmip2012_test4.1_baroclinic_instability/vcoord/cami-30.ascii $WORKDIR/
@@ -28,4 +29,5 @@ if [[ $? == 0 ]]; then
   ln -s $PWD/plot_scripts/plot_efficiency.py $WORKDIR/plot_efficiency.py
   ln -s $PWD/plot_scripts/plot_energy_test.py $WORKDIR/plot_energy_test.py
   ln -s $PWD/plot_scripts/plot_energy_efficiency.py $WORKDIR/plot_energy_efficiency.py
+  ln -s $PWD/plot_scripts/dictionaries.py $WORKDIR/dictionaries.py
 fi
