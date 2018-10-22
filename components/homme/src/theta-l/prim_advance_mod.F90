@@ -445,20 +445,11 @@ contains
     else if (tstep_type==31) then ! ARKode Conde et al ssp3(3,3,3)b (renamed here)
       call set_Butcher_tables(arkode_parameters, arkode_tables%SSP3333C)
 
-    else if (tstep_type==32) then ! ARKode KGS 2nd-order, 4 stage
-      call set_Butcher_tables(arkode_parameters, arkode_tables%KGS232)
+    else if (tstep_type==32) then ! ARKode KGS 2nd-order, 4 stage, variant a
+      call set_Butcher_tables(arkode_parameters, arkode_tables%IMEXKG232a)
 
-    else if (tstep_type==33) then ! ARKode KGS 2nd-order, 5 stage
-      call set_Butcher_tables(arkode_parameters, arkode_tables%KGS242)
-
-    else if (tstep_type==34) then ! ARKode KGS 2nd-order, 5 stage
-      call set_Butcher_tables(arkode_parameters, arkode_tables%KGS243)
-
-    else if (tstep_type==35) then ! ARKode KGS 2nd-order, 6 stage
-      call set_Butcher_tables(arkode_parameters, arkode_tables%KGS252)
-
-    else if (tstep_type==36) then ! ARKode KGS 2nd-order, 6 stage
-      call set_Butcher_tables(arkode_parameters, arkode_tables%KGS254)
+    else if (tstep_type==33) then ! ARKode KGS 2nd-order, 4 stage, variant b
+      call set_Butcher_tables(arkode_parameters, arkode_tables%IMEXKG232b)
 #endif
     else
        call abortmp('ERROR: bad choice of tstep_type')

@@ -14,12 +14,24 @@
 #define SSP3333C_ARK 10
 #define RK2_ARK 11
 #define KGU35_ARK 12
-#define KGS232_ARK 13
-#define KGS242_ARK 14
-#define KGS243_ARK 15
-#define KGS252_ARK 16
-#define KGS253_ARK 17
-#define KGS254_ARK 18
+#define IMEXKG232a_ARK 13
+#define IMEXKG232b_ARK 14
+#define IMEXKG242a_ARK 15
+#define IMEXKG242b_ARK 16
+#define IMEXKG243a_ARK 17
+#define IMEXKG243b_ARK 18
+#define IMEXKG252a_ARK 19
+#define IMEXKG252b_ARK 20
+#define IMEXKG253a_ARK 21
+#define IMEXKG253b_ARK 22
+#define IMEXKG254a_ARK 23
+#define IMEXKG254b_ARK 24
+#define IMEXKG254c_ARK 25
+#define IMEXKG343a_ARK 26
+#define IMEXKG343b_ARK 27
+
+
+
 
 module arkode_mod
 
@@ -50,24 +62,33 @@ module arkode_mod
 
   ! data type for passing ARKode Butcher table names
   type :: table_list
-    integer :: ARK324   = ARK324_ARK
-    integer :: ARK436   = ARK436_ARK
-    integer :: ARK453   = ARK453_ARK
-    integer :: ARS222   = ARS222_ARK
-    integer :: ARS232   = ARS232_ARK
-    integer :: ARS233   = ARS233_ARK
-    integer :: ARS343   = ARS343_ARK
-    integer :: ARS443   = ARS443_ARK
-    integer :: SSP3333B = SSP3333B_ARK
-    integer :: SSP3333C = SSP3333C_ARK
-    integer :: RK2      = RK2_ARK
-    integer :: KGU35    = KGU35_ARK
-    integer :: KGS232   = KGS232_ARK
-    integer :: KGS242   = KGS242_ARK
-    integer :: KGS243   = KGS243_ARK
-    integer :: KGS252   = KGS252_ARK
-    integer :: KGS253   = KGS253_ARK
-    integer :: KGS254   = KGS254_ARK
+    integer :: ARK324     = ARK324_ARK
+    integer :: ARK436     = ARK436_ARK
+    integer :: ARK453     = ARK453_ARK
+    integer :: ARS222     = ARS222_ARK
+    integer :: ARS232     = ARS232_ARK
+    integer :: ARS233     = ARS233_ARK
+    integer :: ARS343     = ARS343_ARK
+    integer :: ARS443     = ARS443_ARK
+    integer :: SSP3333B   = SSP3333B_ARK
+    integer :: SSP3333C   = SSP3333C_ARK
+    integer :: RK2        = RK2_ARK
+    integer :: KGU35      = KGU35_ARK
+    integer :: IMEXKG232a = IMEXKG232a_ARK
+    integer :: IMEXKG232b = IMEXKG232b_ARK
+    integer :: IMEXKG242a = IMEXKG242a_ARK
+    integer :: IMEXKG242b = IMEXKG242b_ARK
+    integer :: IMEXKG243a = IMEXKG243a_ARK
+    integer :: IMEXKG243b = IMEXKG243b_ARK
+    integer :: IMEXKG252a = IMEXKG252a_ARK
+    integer :: IMEXKG252b = IMEXKG252b_ARK
+    integer :: IMEXKG253a = IMEXKG253a_ARK
+    integer :: IMEXKG253b = IMEXKG253b_ARK
+    integer :: IMEXKG254a = IMEXKG254a_ARK
+    integer :: IMEXKG254b = IMEXKG254b_ARK
+    integer :: IMEXKG254c = IMEXKG254c_ARK
+    integer :: IMEXKG343a = IMEXKG343a_ARK
+    integer :: IMEXKG343b = IMEXKG343b_ARK
   end type table_list
 
   ! data type for passing ARKode parameters
@@ -680,6 +701,8 @@ contains
     ! local variables
     type(parameter_list), pointer :: ap
     real(real_kind) :: beta, gamma, delta, b1, b2
+    real(real_kind) :: a(max_stage_num), ahat(max_stage_num)
+    real(real_kind) :: b(max_stage_num), dhat(max_stage_num)
 
     !======= Internals ============
     ap => arkode_parameters
@@ -1003,166 +1026,131 @@ contains
         ap%ce(1:3) = ap%ci(1:3)
         ap%be(1:3) = ap%bi(1:3)
 
-      case (KGS232_ARK)
+      case (IMEXKG232a_ARK)
         ap%imex = 2 ! imex
         ap%s = 4 ! 4 stage
         ap%q = 2 ! 2nd order
         ap%p = 0 ! no embedded order
         ap%be2 = 0.d0 ! no embedded explicit method
-        ! Implicit Butcher Table (matrix)
-        ap%Ai(1:4,1:4) = 0.d0
-        ap%Ai(2,1:2) = (/ 0.d0,  7.d0/5.d0 /)
-        ap%Ai(3,1:3) = (/ 0.d0, -7.d0/4.d0, 9.d0/4.d0 /)
-        ap%Ai(4,1:4) = (/ 0.d0,       0.d0,      1.d0,  0.d0 /)
-        ! Implicit Butcher Table (vectors)
-        ap%ci(1:4) = (/ 0.d0, 7.d0/5.d0, 0.5d0, 1.d0 /)
-        ap%bi(1:4) = (/ 0.d0, 0.d0, 1.d0, 0.d0 /)
-        ! Explicit Butcher Table (matrix)
-        ap%Ae(1:4,1:4) = 0.d0
-        ap%Ae(2,1) = 0.5d0
-        ap%Ae(3,1:2) = (/ 0.d0, 0.5d0 /)
-        ap%Ae(4,1:3) = (/ 0.d0,  0.d0, 1.d0 /)
-        ! Explicit Butcher Table (vectors)
-        ap%ce(1:4) = (/ 0.d0, 0.5d0, 0.5d0, 1.d0 /)
-        ap%be(1:4) = ap%bi(1:4)
+        ! IMEX-KG vectors
+        a(1:3) = (/ 0.5d0, 0.5d0, 1.d0 /)
+        ahat(1:3) = (/ 0.d0, 0.5d0*(sqrt(2.d0)-1.d0), 1.d0 /)
+        dhat(1:2) = (/ 0.5d0*(2.d0-sqrt(2.d0)), 0.5d0*(2.d0-sqrt(2.d0)) /)
+        b(1:2) = 0.d0
+        ! set IMEX-KG Butcher table
+        call set_IMEXKG_Butcher_tables(arkode_parameters, ap%s, a, ahat, dhat, b)
 
-      case (KGS242_ARK)
+      case (IMEXKG232b_ARK)
         ap%imex = 2 ! imex
-        ap%s = 5 ! 5 stage
+        ap%s = 4 ! 4 stage
         ap%q = 2 ! 2nd order
         ap%p = 0 ! no embedded order
         ap%be2 = 0.d0 ! no embedded explicit method
-        ! Implicit Butcher Table (matrix)
-        ap%Ai(1:5,1:5) = 0.d0
-        ap%Ai(3,1:3) = (/ 0.d0, 0.d0,  7.d0/5.d0 /)
-        ap%Ai(4,1:4) = (/ 0.d0, 0.d0, -7.d0/4.d0, 9.d0/4.d0 /)
-        ap%Ai(5,1:5) = (/ 0.d0, 0.d0,       0.d0,      1.d0, 0.d0 /)
-        ! Implicit Butcher Table (vectors)
-        ap%ci(1:5) = (/ 0.d0, 0.d0, 7.d0/5.d0, 0.5d0, 1.d0 /)
-        ap%bi(1:5) = (/ 0.d0, 0.d0, 0.d0, 1.d0, 0.d0 /)
-        ! Explicit Butcher Table (matrix)
-        ap%Ae(1:5,1:5) = 0.d0
-        ap%Ae(2,1) = 1.d0/4.d0
-        ap%Ae(3,1:2) = (/ 0.d0, 1.d0/3.d0 /)
-        ap%Ae(4,1:3) = (/ 0.d0,      0.d0, 0.5d0 /)
-        ap%Ae(5,1:4) = (/ 0.d0,      0.d0,  0.d0, 1.d0 /)
-        ! Explicit Butcher Table (vectors)
-        ap%ce(1:5) = (/ 0.d0, 1.d0/4.d0, 1.d0/3.d0, 0.5d0, 1.d0 /)
-        ap%be(1:5) = ap%bi(1:5)
-
-      case (KGS243_ARK)
-        ap%imex = 2 ! imex
-        ap%s = 5 ! 5 stage
-        ap%q = 2 ! 2nd order
-        ap%p = 0 ! no embedded order
-        ap%be2 = 0.d0 ! no embedded explicit method
-        ! Implicit Butcher Table (matrix)
-        ap%Ai(1:5,1:5) = 0.d0
-        ap%Ai(2,1:2) = (/ 0.d0, 1.d0 /)
-        ap%Ai(3,1:3) = (/ 0.d0, 2.d0,  1.d0 /)
-        ap%Ai(4,1:4) = (/ 0.d0, 0.d0, -0.5d0, 1.d0 /)
-        ap%Ai(5,1:5) = (/ 0.d0, 0.d0,   0.d0, 1.d0, 0.d0 /)
-        ! Implicit Butcher Table (vectors)
-        ap%ci(1:5) = (/ 0.d0, 1.d0, 3.d0, 0.5d0, 1.d0 /)
-        ap%bi(1:5) = (/ 0.d0, 0.d0, 0.d0, 1.d0, 0.d0 /)
-        ! Explicit Butcher Table (matrix)
-        ap%Ae(1:5,1:5) = 0.d0
-        ap%Ae(2,1) = 1.d0/4.d0
-        ap%Ae(3,1:2) = (/ 0.d0, 1.d0/3.d0 /)
-        ap%Ae(4,1:3) = (/ 0.d0,      0.d0, 0.5d0 /)
-        ap%Ae(5,1:4) = (/ 0.d0,      0.d0,  0.d0, 1.d0 /)
-        ! Explicit Butcher Table (vectors)
-        ap%ce(1:5) = (/ 0.d0, 1.d0/4.d0, 1.d0/3.d0, 0.5d0, 1.d0 /)
-        ap%be(1:5) = ap%bi(1:5)
-
-      case (KGS252_ARK)
-        ap%imex = 2 ! imex
-        ap%s = 6 ! 6 stage
-        ap%q = 2 ! 2nd order
-        ap%p = 0 ! no embedded order
-        ap%be2 = 0.d0 ! no embedded explicit method
-        ! Implicit Butcher Table (matrix)
-        ap%Ai(1:6,1:6) = 0.d0
-        ap%Ai(4,1:4) = (/ 0.d0, 0.d0, 0.d0,  7.d0/5.d0 /)
-        ap%Ai(5,1:5) = (/ 0.d0, 0.d0, 0.d0, -7.d0/4.d0, 9.d0/4.d0 /)
-        ap%Ai(6,1:6) = (/ 0.d0, 0.d0, 0.d0,       0.d0,      1.d0, 0.d0 /)
-        ! Implicit Butcher Table (vectors)
-        ap%ci(1:6) = (/ 0.d0, 0.d0, 0.d0, 7.d0/5.d0, 0.5d0, 1.d0 /)
-        ap%bi(1:6) = (/ 0.d0, 0.d0, 0.d0, 0.d0, 1.d0, 0.d0 /)
-        ! Explicit Butcher Table (matrix)
-        ap%Ae(1:6,1:6) = 0.d0
-        ap%Ae(2,1) = 1.d0/4.d0
-        ap%Ae(3,1:2) = (/ 0.d0, 1.d0/6.d0 /)
-        ap%Ae(4,1:3) = (/ 0.d0,      0.d0, 3.d0/8.d0 /)
-        ap%Ae(5,1:4) = (/ 0.d0,      0.d0,  0.d0, 0.5d0 /)
-        ap%Ae(6,1:5) = (/ 0.d0,      0.d0,  0.d0, 0.0d0, 1.d0 /)
-        ! Explicit Butcher Table (vectors)
-        ap%ce(1:6) = (/ 0.d0, 1.d0/4.d0, 1.d0/6.d0, 3.d0/8.d0, 0.5d0, 1.d0 /)
-        ap%be(1:6) = ap%bi(1:6)
-
-      case (KGS253_ARK)
-        ap%imex = 2 ! imex
-        ap%s = 6 ! 6 stage
-        ap%q = 2 ! 2nd order
-        ap%p = 0 ! no embedded order
-        ap%be2 = 0.d0 ! no embedded explicit method
-        ! Implicit Butcher Table (matrix)
-        ap%Ai(1:6,1:6) = 0.d0
-        ap%Ai(3,1:3) = (/ 0.d0, 0.d0, 1.d0 /)
-        ap%Ai(4,1:4) = (/ 0.d0, 0.d0, 2.d0,  1.d0 /)
-        ap%Ai(5,1:5) = (/ 0.d0, 0.d0, 0.d0, -0.5d0, 1.d0 /)
-        ap%Ai(6,1:6) = (/ 0.d0, 0.d0, 0.d0,   0.d0, 1.d0, 0.d0 /)
-        ! Implicit Butcher Table (vectors)
-        ap%ci(1:6) = (/ 0.d0, 0.d0, 1.d0, 3.d0, 0.5d0, 1.d0 /)
-        ap%bi(1:6) = (/ 0.d0, 0.d0, 0.d0, 0.d0, 1.d0, 0.d0 /)
-        ! Explicit Butcher Table (matrix)
-        ap%Ae(1:6,1:6) = 0.d0
-        ap%Ae(2,1) = 1.d0/4.d0
-        ap%Ae(3,1:2) = (/ 0.d0, 1.d0/6.d0 /)
-        ap%Ae(4,1:3) = (/ 0.d0,      0.d0, 3.d0/8.d0 /)
-        ap%Ae(5,1:4) = (/ 0.d0,      0.d0,  0.d0, 0.5d0 /)
-        ap%Ae(6,1:5) = (/ 0.d0,      0.d0,  0.d0, 0.0d0, 1.d0 /)
-        ! Explicit Butcher Table (vectors)
-        ap%ce(1:6) = (/ 0.d0, 1.d0/4.d0, 1.d0/6.d0, 3.d0/8.d0, 0.5d0, 1.d0 /)
-        ap%be(1:6) = ap%bi(1:6)
-
-      case (KGS254_ARK)
-        ap%imex = 2 ! imex
-        ap%s = 6 ! 6 stage
-        ap%q = 2 ! 2nd order
-        ap%p = 0 ! no embedded order
-        ap%be2 = 0.d0 ! no embedded explicit method
-        ! Implicit Butcher Table (matrix)
-        ap%Ai(1:6,1:6) = 0.d0
-        ap%Ai(2,1:2) = (/ 0.d0, 2.d0/3.d0 /)
-        ap%Ai(3,1:3) = (/ 0.d0, -1.d0/3.d0,   2.d0/3.d0 /)
-        ap%Ai(4,1:4) = (/ 0.d0,      0.d0, 10.d0/63.d0,  2.d0/3.d0  /)
-        ap%Ai(5,1:5) = (/ 0.d0,      0.d0,        0.d0, -7.d0/3.d0, 17.d0/6.d0 /)
-        ap%Ai(6,1:6) = (/ 0.d0,      0.d0,       0.d0,       0.d0,        1.d0, 0.d0 /)
-        ! Implicit Butcher Table (vectors)
-        ap%ci(1:6) = (/ 0.d0, 2.d0/3.d0, 1.d0/3.d0, 52.d0/63.d0, 0.5d0, 1.d0 /)
-        ap%bi(1:6) = (/ 0.d0, 0.d0, 0.d0, 0.d0, 1.d0, 0.d0 /)
-        ! Explicit Butcher Table (matrix)
-        ap%Ae(1:6,1:6) = 0.d0
-        ap%Ae(2,1) = 1.d0/4.d0
-        ap%Ae(3,1:2) = (/ 0.d0, 1.d0/6.d0 /)
-        ap%Ae(4,1:3) = (/ 0.d0,      0.d0, 3.d0/8.d0 /)
-        ap%Ae(5,1:4) = (/ 0.d0,      0.d0,  0.d0, 0.5d0 /)
-        ap%Ae(6,1:5) = (/ 0.d0,      0.d0,  0.d0, 0.0d0, 1.d0 /)
-        ! Explicit Butcher Table (vectors)
-        ap%ce(1:6) = (/ 0.d0, 1.d0/4.d0, 1.d0/6.d0, 3.d0/8.d0, 0.5d0, 1.d0 /)
-        ap%be(1:6) = ap%bi(1:6)
-
+        ! IMEX-KG vectors
+        a(1:3) = (/ 0.5d0, 0.5d0, 1.d0 /)
+        ahat(1:3) = (/ 0.d0, -0.5d0*(sqrt(2.d0)+1.d0), 1.d0 /)
+        dhat(1:2) = (/ 0.5d0*(2.d0+sqrt(2.d0)), 0.5d0*(2.d0+sqrt(2.d0)) /)
+        b(1:2) = 0.d0
+        ! set IMEX-KG Butcher table
+        call set_IMEXKG_Butcher_tables(arkode_parameters, ap%s, a, ahat, dhat, b)
 
       case default
         call abortmp('Unknown ARKode Butcher table name')
     end select
 
-
-
-
   end subroutine set_Butcher_tables
   !=================================================================
 
+  subroutine set_IMEXKG_Butcher_tables(arkode_parameters, s, a, ahat, dhat, b)
+    !-----------------------------------------------------------------
+    ! Description: sets Butcher tables in IMEX-KG format:
+    !   Ae:   0 |    0             Ai:     0 |       0
+    !        c1 |   a1    0            chat1 |   ahat1 dhat1
+    !        c2 |   b2   a2  0         chat2 |   bhat1 ahat2 dhat2
+    !        c3 |   b3    0 a3 0       chat3 |   bhat2     0 ahat3 dhat3
+    !           |                            |
+    !        cq | bq-1 0 ... 0 aq 0    chatq | bhatq-1     0    ...    0 ahatq 0
+    !        ----------------------    -----------------------------------------
+    !           | bq-1 0 ... 0 aq 0          | bhatq-1     0    ...    0 ahatq 0
+    !
+    !        ci = sum_j Ae(i,j)        chati = sum_j Ai(i,j)
+    !
+    !   Arguments:
+    !    arkode_parameters - (parameter, in/output) object for arkode parameters
+    !                    s - (integer, input) number of stages
+    !                    a - (real(max_stage_num), input) alpha vector
+    !                 ahat - (real(max_stage_num), input) alpha_hat vector
+    !                 dhat - (real(max_stage_num), in/output) delta_hat vector
+    !                    b - (real(max_stage_num), input) beta vector
+    !-----------------------------------------------------------------
+
+    !======= Inclusions ===========
+    use kinds,            only: real_kind
+    use parallel_mod,     only: abortmp
+
+    !======= Declarations =========
+    implicit none
+
+    ! calling variables
+    type(parameter_list), target, intent(inout) :: arkode_parameters
+    integer,                      intent(in)    :: s
+    real(real_kind),              intent(in)    :: a(max_stage_num)
+    real(real_kind),              intent(in)    :: ahat(max_stage_num)
+    real(real_kind),              intent(inout) :: dhat(max_stage_num)
+    real(real_kind),              intent(in)    :: b(max_stage_num)
+
+    ! local variables
+    type(parameter_list), pointer :: ap
+
+    !======= Internals ============
+    ap => arkode_parameters
+
+    ! for easier implementation, extend dhat vector by setting s-1 index to zero
+    dhat(s-1) = 0.d0
+
+    ! set matrices and c vectors according to IMEX-KG format
+    ap%Ai(1:s,1:s) = 0.d0
+    ap%Ae(1:s,1:s) = 0.d0
+    ap%ci(1) = 0.d0
+    ap%ce(1) = 0.d0
+    if (s > 1) then
+      ap%Ai(2,1:2) = (/ ahat(1), dhat(1) /)
+      ap%Ae(2,1) = a(1)
+      ap%ci(2) = ahat(1)+dhat(1)
+      ap%ce(2) = a(1)
+    end if
+    if (s > 2) then
+      ap%Ai(3,1:3) = (/ b(1), ahat(2), dhat(2) /)
+      ap%Ae(3,1:2) = (/ b(1), a(2) /)
+      ap%ci(3) = b(1)+ahat(2)+dhat(2)
+      ap%ce(3) = b(1)+a(2)
+    end if
+    if (s > 3) then
+      ap%Ai(4,1:4) = (/ b(2), 0.d0, ahat(3), dhat(3) /)
+      ap%Ae(4,1:3) = (/ b(2), 0.d0, a(3) /)
+      ap%ci(4) = b(2)+ahat(3)+dhat(3)
+      ap%ce(4) = b(2)+a(3)
+    end if
+    if (s > 4) then
+      ap%Ai(5,1:5) = (/ b(3), 0.d0, 0.d0, ahat(4), dhat(4) /)
+      ap%Ae(5,1:4) = (/ b(3), 0.d0, 0.d0, a(4) /)
+      ap%ci(5) = b(3)+ahat(4)+dhat(4)
+      ap%ce(5) = b(3)+a(4)
+    end if
+    if (s > 5) then
+      ap%Ai(6,1:6) = (/ b(4), 0.d0, 0.d0, 0.d0, ahat(5), dhat(5) /)
+      ap%Ae(6,1:5) = (/ b(4), 0.d0, 0.d0, 0.d0, a(5) /)
+      ap%ci(6) = b(4)+ahat(5)+dhat(5)
+      ap%ce(6) = b(4)+a(5)
+    end if
+    if (s > 6) then
+      call abortmp('ARKode IMEX-KG only implemented for 6 stages or less')
+    end if
+
+    ! set b vectors
+    ap%bi(1:s) = ap%Ai(s,1:s)
+    ap%be(1:s) = ap%Ae(s,1:s)
+
+  end subroutine set_IMEXKG_Butcher_tables
 
 end module arkode_mod
