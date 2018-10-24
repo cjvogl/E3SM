@@ -183,14 +183,14 @@ contains
     ! Take timestep
     ! ==================================
     dt_vis = dt
-    if (tstep_type==1) then 
-       ! RK2                                                                                                              
-       ! forward euler to u(dt/2) = u(0) + (dt/2) RHS(0)  (store in u(np1))                                               
-       call compute_andor_apply_rhs(np1,n0,n0,qn0,dt/2,elem,hvcoord,hybrid,&                                              
-            deriv,nets,nete,compute_diagnostics,0d0,1.d0,1.d0,1.d0)                                                      
-       ! leapfrog:  u(dt) = u(0) + dt RHS(dt/2)     (store in u(np1))                                                     
-       call compute_andor_apply_rhs(np1,n0,np1,qn0,dt,elem,hvcoord,hybrid,&                                               
-            deriv,nets,nete,.false.,eta_ave_w,1.d0,1.d0,1.d0)                                                             
+    if (tstep_type==1) then
+       ! RK2
+       ! forward euler to u(dt/2) = u(0) + (dt/2) RHS(0)  (store in u(np1))
+       call compute_andor_apply_rhs(np1,n0,n0,qn0,dt/2,elem,hvcoord,hybrid,&
+            deriv,nets,nete,compute_diagnostics,0d0,1.d0,1.d0,1.d0)
+       ! leapfrog:  u(dt) = u(0) + dt RHS(dt/2)     (store in u(np1))
+       call compute_andor_apply_rhs(np1,n0,np1,qn0,dt,elem,hvcoord,hybrid,&
+            deriv,nets,nete,.false.,eta_ave_w,1.d0,1.d0,1.d0)
     else if (tstep_type==5) then
        ! Ullrich 3nd order 5 stage:   CFL=sqrt( 4^2 -1) = 3.87
        ! u1 = u0 + dt/5 RHS(u0)  (save u1 in timelevel nm1)
@@ -300,7 +300,7 @@ contains
 #endif
 
 !==============================================================================================
-    elseif (tstep_type == 7) then 
+    elseif (tstep_type == 7) then
 
       max_itercnt_perstep = 0
       max_itererr_perstep = 0.0
@@ -445,11 +445,51 @@ contains
     else if (tstep_type==31) then ! ARKode Conde et al ssp3(3,3,3)b (renamed here)
       call set_Butcher_tables(arkode_parameters, arkode_tables%SSP3333C)
 
-    else if (tstep_type==32) then ! ARKode KGS 2nd-order, 4 stage, variant a
+    else if (tstep_type==32) then ! ARKode IMEX-KG 2nd-order, 4 stage, variant a
       call set_Butcher_tables(arkode_parameters, arkode_tables%IMEXKG232a)
 
-    else if (tstep_type==33) then ! ARKode KGS 2nd-order, 4 stage, variant b
+    else if (tstep_type==33) then ! ARKode IMEX-KG 2nd-order, 4 stage, variant b
       call set_Butcher_tables(arkode_parameters, arkode_tables%IMEXKG232b)
+
+    else if (tstep_type==34) then ! ARKode IMEX-KG 2nd-order, 5 stage, variant a
+      call set_Butcher_tables(arkode_parameters, arkode_tables%IMEXKG242a)
+
+    else if (tstep_type==35) then ! ARKode IMEX-KG 2nd-order, 5 stage, variant b
+      call set_Butcher_tables(arkode_parameters, arkode_tables%IMEXKG242b)
+
+    else if (tstep_type==36) then ! ARKode IMEX-KG 2nd-order, 5 stage, variant a
+      call set_Butcher_tables(arkode_parameters, arkode_tables%IMEXKG243a)
+
+    else if (tstep_type==37) then ! ARKode IMEX-KG 2nd-order, 5 stage, variant b
+      call set_Butcher_tables(arkode_parameters, arkode_tables%IMEXKG243b)
+
+    else if (tstep_type==38) then ! ARKode IMEX-KG 2nd-order, 6 stage, variant a
+      call set_Butcher_tables(arkode_parameters, arkode_tables%IMEXKG252a)
+
+    else if (tstep_type==39) then ! ARKode IMEX-KG 2nd-order, 6 stage, variant b
+      call set_Butcher_tables(arkode_parameters, arkode_tables%IMEXKG252b)
+
+    else if (tstep_type==40) then ! ARKode IMEX-KG 2nd-order, 6 stage, variant a
+      call set_Butcher_tables(arkode_parameters, arkode_tables%IMEXKG253a)
+
+    else if (tstep_type==41) then ! ARKode IMEX-KG 2nd-order, 6 stage, variant b
+      call set_Butcher_tables(arkode_parameters, arkode_tables%IMEXKG253b)
+
+    else if (tstep_type==42) then ! ARKode IMEX-KG 2nd-order, 6 stage, variant a
+      call set_Butcher_tables(arkode_parameters, arkode_tables%IMEXKG254a)
+
+    else if (tstep_type==43) then ! ARKode IMEX-KG 2nd-order, 6 stage, variant b
+      call set_Butcher_tables(arkode_parameters, arkode_tables%IMEXKG254b)
+
+    else if (tstep_type==44) then ! ARKode IMEX-KG 2nd-order, 6 stage, variant c
+      call set_Butcher_tables(arkode_parameters, arkode_tables%IMEXKG254c)
+
+    else if (tstep_type==45) then ! ARKode IMEX-KG 3rd-order, 5 stage, variant a
+      call set_Butcher_tables(arkode_parameters, arkode_tables%IMEXKG343a)
+
+    else if (tstep_type==46) then ! ARKode IMEX-KG 3rd-order, 5 stage, variant b
+      call set_Butcher_tables(arkode_parameters, arkode_tables%IMEXKG343b)
+
 #endif
     else
        call abortmp('ERROR: bad choice of tstep_type')
@@ -714,7 +754,7 @@ contains
      nlyr_tot=6*nlev  ! total amount of data for DSS
      ssize=4*nlev
   endif
-  
+
   do k=1,nlev
      exner0(k) = (hvcoord%etam(k)*hvcoord%ps0/p0 )**kappa
   enddo
@@ -724,7 +764,7 @@ contains
 ! NOTE1:  Diffusion works best when applied to theta.
 ! It creates some TOM noise when applied to vtheta_dp in DCMIP 2.0 test
 ! so we convert from vtheta_dp->theta, and then convert back at the end of diffusion
-! 
+!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -774,9 +814,9 @@ contains
                 dp_ref(:,:,k,ie)
         enddo
      enddo
-     
+
      call biharmonic_wk_theta(elem,stens,vtens,deriv,edge_g,hybrid,nt,nets,nete)
-     
+
      do ie=nets,nete
 
         ! comptue mean flux
@@ -938,11 +978,11 @@ contains
   enddo
 
 ! convert vtheta_dp -> theta
-  do ie=nets,nete            
+  do ie=nets,nete
      elem(ie)%state%vtheta_dp(:,:,:,nt)=&
           elem(ie)%state%vtheta_dp(:,:,:,nt)*elem(ie)%state%dp3d(:,:,:,nt)
-     
-     ! finally update w at the surface: 
+
+     ! finally update w at the surface:
      elem(ie)%state%w_i(:,:,nlevp,nt) = (elem(ie)%state%v(:,:,1,nlev,nt)*elem(ie)%derived%gradphis(:,:,1) + &
           elem(ie)%state%v(:,:,2,nlev,nt)*elem(ie)%derived%gradphis(:,:,2))/g
   enddo
@@ -1052,18 +1092,18 @@ contains
      call edgeVpack_nlyr(edge_g,elem(ie)%desc,vtens(:,:,:,:,ie),2*nlev,kptr,6*nlev)
      kptr=2*nlev
      call edgeVpack_nlyr(edge_g,elem(ie)%desc,stens(:,:,:,:,ie),4*nlev,kptr,6*nlev)
-     
+
   enddo
 
   call bndry_exchangeV(hybrid,edge_g)
-  
+
   do ie=nets,nete
 
      kptr=0
      call edgeVunpack_nlyr(edge_g,elem(ie)%desc,vtens(:,:,:,:,ie),2*nlev,kptr,6*nlev)
      kptr=2*nlev
      call edgeVunpack_nlyr(edge_g,elem(ie)%desc,stens(:,:,:,:,ie),4*nlev,kptr,6*nlev)
-     
+
      ! apply inverse mass matrix, accumulate tendencies
      do k=1,nlev
         elem(ie)%state%v(:,:,1,k,nt)=elem(ie)%state%v(:,:,1,k,nt) + &
@@ -1074,7 +1114,7 @@ contains
 
         elem(ie)%state%dp3d(:,:,k,nt)=elem(ie)%state%dp3d(:,:,k,nt) &
              +mu_s*dt*stens(:,:,k,1,ie)*elem(ie)%rspheremp(:,:)
-        
+
         elem(ie)%state%vtheta_dp(:,:,k,nt)=elem(ie)%state%vtheta_dp(:,:,k,nt) &
              +mu_s*dt*stens(:,:,k,2,ie)*elem(ie)%rspheremp(:,:)
 
@@ -1089,7 +1129,7 @@ contains
 
 
   ! convert vtheta_dp -> theta
-  do ie=nets,nete            
+  do ie=nets,nete
      do k=1,nlev
         elem(ie)%state%vtheta_dp(:,:,k,nt)=&
              elem(ie)%state%vtheta_dp(:,:,k,nt)*elem(ie)%state%dp3d(:,:,k,nt)
@@ -1141,7 +1181,7 @@ contains
   real (kind=real_kind), pointer, dimension(:,:,:) :: phi_i
   real (kind=real_kind), pointer, dimension(:,:,:) :: dp3d
   real (kind=real_kind), pointer, dimension(:,:,:) :: vtheta_dp
-   
+
   real (kind=real_kind) :: vtheta(np,np,nlev)
   real (kind=real_kind) :: vtheta_i(np,np,nlevp)
   real (kind=real_kind) :: omega_p(np,np,nlev)
@@ -1202,7 +1242,7 @@ contains
   else
      nlyr_tot=5*nlev+nlevp  ! total amount of data for DSS
   endif
-     
+
 
   do ie=nets,nete
     ! check boundary condition if using nonhydrostatic mode
@@ -1248,7 +1288,7 @@ contains
         enddo
         ! in H mode, ignore w contibutions to KE term
         ! set to zero so H and NH can share code and reduce if statements
-        elem(ie)%state%w_i(:,:,:,n0)=0   
+        elem(ie)%state%w_i(:,:,:,n0)=0
      endif
 
      do k=1,nlev
@@ -1677,7 +1717,7 @@ contains
         kptr=kptr+nlevp
         call edgeVunpack_nlyr(edge_g,elem(ie)%desc,elem(ie)%state%phinh_i(:,:,:,np1),nlev,kptr,nlyr_tot)
      endif
-      
+
      ! ====================================================
      ! Scale tendencies by inverse mass matrix
      ! ====================================================

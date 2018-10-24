@@ -1033,9 +1033,10 @@ contains
         ap%p = 0 ! no embedded order
         ap%be2 = 0.d0 ! no embedded explicit method
         ! IMEX-KG vectors
+        delta = 0.5d0*(2.d0-sqrt(2.d0))
         a(1:3) = (/ 0.5d0, 0.5d0, 1.d0 /)
         ahat(1:3) = (/ 0.d0, 0.5d0*(sqrt(2.d0)-1.d0), 1.d0 /)
-        dhat(1:2) = (/ 0.5d0*(2.d0-sqrt(2.d0)), 0.5d0*(2.d0-sqrt(2.d0)) /)
+        dhat(1:2) = (/ delta, delta /)
         b(1:2) = 0.d0
         ! set IMEX-KG Butcher table
         call set_IMEXKG_Butcher_tables(arkode_parameters, ap%s, a, ahat, dhat, b)
@@ -1047,10 +1048,207 @@ contains
         ap%p = 0 ! no embedded order
         ap%be2 = 0.d0 ! no embedded explicit method
         ! IMEX-KG vectors
+        delta = 0.5d0*(2.d0+sqrt(2.d0))
         a(1:3) = (/ 0.5d0, 0.5d0, 1.d0 /)
         ahat(1:3) = (/ 0.d0, -0.5d0*(sqrt(2.d0)+1.d0), 1.d0 /)
-        dhat(1:2) = (/ 0.5d0*(2.d0+sqrt(2.d0)), 0.5d0*(2.d0+sqrt(2.d0)) /)
+        dhat(1:2) = (/ delta, delta /)
         b(1:2) = 0.d0
+        ! set IMEX-KG Butcher table
+        call set_IMEXKG_Butcher_tables(arkode_parameters, ap%s, a, ahat, dhat, b)
+
+      case (IMEXKG242a_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 5 ! 5 stage
+        ap%q = 2 ! 2nd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedded explicit method
+        ! IMEX-KG vectors
+        delta = 0.5d0*(2.d0-sqrt(2.d0))
+        a(1:4) = (/ 0.25d0, 1.d0/3.d0, 0.5d0, 1.d0 /)
+        ahat(1:4) = (/ 0.d0, 0.d0, 0.5d0*(sqrt(2.d0)-1.d0), 1.d0 /)
+        dhat(1:3) = (/ 0.d0, delta, delta /)
+        b(1:3) = 0.d0
+        ! set IMEX-KG Butcher table
+        call set_IMEXKG_Butcher_tables(arkode_parameters, ap%s, a, ahat, dhat, b)
+
+      case (IMEXKG242b_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 5 ! 5 stage
+        ap%q = 2 ! 2nd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedded explicit method
+        ! IMEX-KG vectors
+        delta = 0.5d0*(2.d0+sqrt(2.d0))
+        a(1:4) = (/ 0.25d0, 1.d0/3.d0, 0.5d0, 1.d0 /)
+        ahat(1:4) = (/ 0.d0, 0.d0, -0.5d0*(sqrt(2.d0)+1.d0), 1.d0 /)
+        dhat(1:3) = (/ 0.d0, delta, delta /)
+        b(1:3) = 0.d0
+        ! set IMEX-KG Butcher table
+        call set_IMEXKG_Butcher_tables(arkode_parameters, ap%s, a, ahat, dhat, b)
+
+      case (IMEXKG243a_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 5 ! 5 stage
+        ap%q = 2 ! 2nd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedded explicit method
+        ! IMEX-KG vectors
+        delta = 0.5d0-sqrt(3.d0)/6.d0
+        a(1:4) = (/ 0.25d0, 1.d0/3.d0, 0.5d0, 1.d0 /)
+        ahat(1:4) = (/ 0.d0, 1.d0/6.d0, sqrt(3.d0)/6.d0, 1.d0 /)
+        dhat(1:3) = (/ delta, delta, delta /)
+        b(1:3) = 0.d0
+        ! set IMEX-KG Butcher table
+        call set_IMEXKG_Butcher_tables(arkode_parameters, ap%s, a, ahat, dhat, b)
+
+      case (IMEXKG243b_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 5 ! 5 stage
+        ap%q = 2 ! 2nd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedded explicit method
+        ! IMEX-KG vectors
+        delta = 0.5d0+sqrt(3.d0)/6.d0
+        a(1:4) = (/ 0.25d0, 1.d0/3.d0, 0.5d0, 1.d0 /)
+        ahat(1:4) = (/ 0.d0, 1.d0/6.d0, -sqrt(3.d0)/6.d0, 1.d0 /)
+        dhat(1:3) = (/ delta, delta, delta /)
+        b(1:3) = 0.d0
+        ! set IMEX-KG Butcher table
+        call set_IMEXKG_Butcher_tables(arkode_parameters, ap%s, a, ahat, dhat, b)
+
+      case (IMEXKG252a_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 6 ! 6 stage
+        ap%q = 2 ! 2nd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedded explicit method
+        ! IMEX-KG vectors
+        delta = 0.5d0*(2.d0-sqrt(2.0))
+        a(1:5) = (/ 0.25d0, 1.d0/6.d0, 3.d0/8.d0, 0.5d0, 1.d0 /)
+        ahat(1:5) = (/ 0.d0, 0.d0, 0.d0, 0.5d0*(sqrt(2.d0)-1.d0), 1.d0 /)
+        dhat(1:4) = (/ 0.d0, 0.d0, delta, delta /)
+        b(1:4) = 0.d0
+        ! set IMEX-KG Butcher table
+        call set_IMEXKG_Butcher_tables(arkode_parameters, ap%s, a, ahat, dhat, b)
+
+      case (IMEXKG252b_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 6 ! 6 stage
+        ap%q = 2 ! 2nd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedded explicit method
+        ! IMEX-KG vectors
+        delta = 0.5d0*(2.d0+sqrt(2.0))
+        a(1:5) = (/ 0.25d0, 1.d0/6.d0, 3.d0/8.d0, 0.5d0, 1.d0 /)
+        ahat(1:5) = (/ 0.d0, 0.d0, 0.d0, -0.5d0*(sqrt(2.d0)+1.d0), 1.d0 /)
+        dhat(1:4) = (/ 0.d0, 0.d0, delta, delta /)
+        b(1:4) = 0.d0
+        ! set IMEX-KG Butcher table
+        call set_IMEXKG_Butcher_tables(arkode_parameters, ap%s, a, ahat, dhat, b)
+
+      case (IMEXKG253a_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 6 ! 6 stage
+        ap%q = 2 ! 2nd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedded explicit method
+        ! IMEX-KG vectors
+        delta = 0.5d0-sqrt(3.d0)/6.d0
+        gamma = 0.25d0*sqrt(3.d0)*(1.d0-sqrt(3.d0)/3.d0)*((sqrt(3.d0)/3.d0+1.d0)**2-2.d0)
+        a(1:5) = (/ 0.25d0, 1.d0/6.d0, 3.d0/8.d0, 0.5d0, 1.d0 /)
+        ahat(1:5) = (/ 0.d0, 0.d0, gamma, sqrt(3.d0)/6.d0, 1.d0 /)
+        dhat(1:4) = (/ 0.d0, delta, delta, delta /)
+        b(1:4) = 0.d0
+        ! set IMEX-KG Butcher table
+        call set_IMEXKG_Butcher_tables(arkode_parameters, ap%s, a, ahat, dhat, b)
+
+      case (IMEXKG253b_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 6 ! 6 stage
+        ap%q = 2 ! 2nd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedded explicit method
+        ! IMEX-KG vectors
+        delta = 0.5d0+sqrt(3.d0)/6.d0
+        gamma = 0.25d0*sqrt(3.d0)*(1.d0+sqrt(3.d0)/3.d0)*((sqrt(3.d0)/3.d0-1.d0)**2-2.d0)
+        a(1:5) = (/ 0.25d0, 1.d0/6.d0, 3.d0/8.d0, 0.5d0, 1.d0 /)
+        ahat(1:5) = (/ 0.d0, 0.d0, gamma, -sqrt(3.d0)/6.d0, 1.d0 /)
+        dhat(1:4) = (/ 0.d0, delta, delta, delta /)
+        b(1:4) = 0.d0
+        ! set IMEX-KG Butcher table
+        call set_IMEXKG_Butcher_tables(arkode_parameters, ap%s, a, ahat, dhat, b)
+
+      case (IMEXKG254a_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 6 ! 6 stage
+        ap%q = 2 ! 2nd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedded explicit method
+        ! IMEX-KG vectors
+        a(1:5) = (/ 0.25d0, 1.d0/6.d0, 3.d0/8.d0, 0.5d0, 1.d0 /)
+        ahat(1:5) = (/ 0.d0, 1.d0/60.d0, 5.d0/12.d0, -1.d0, 1.d0 /)
+        dhat(1:4) = (/ 1.d0/6.d0, 0.5d0, 0.5d0, 1.5d0 /)
+        b(1:4) = 0.d0
+        ! set IMEX-KG Butcher table
+        call set_IMEXKG_Butcher_tables(arkode_parameters, ap%s, a, ahat, dhat, b)
+
+      case (IMEXKG254b_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 6 ! 6 stage
+        ap%q = 2 ! 2nd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedded explicit method
+        ! IMEX-KG vectors
+        a(1:5) = (/ 0.25d0, 1.d0/6.d0, 3.d0/8.d0, 0.5d0, 1.d0 /)
+        ahat(1:5) = (/ 0.d0, -1.d0/20.d0, 1.25d0, -0.5d0, 1.d0 /)
+        dhat(1:4) = (/ -0.5d0, 1.d0, 1.d0, 1.d0 /)
+        b(1:4) = 0.d0
+        ! set IMEX-KG Butcher table
+        call set_IMEXKG_Butcher_tables(arkode_parameters, ap%s, a, ahat, dhat, b)
+
+      case (IMEXKG254c_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 6 ! 6 stage
+        ap%q = 2 ! 2nd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedded explicit method
+        ! IMEX-KG vectors
+        delta = 1.d0/6.d0
+        a(1:5) = (/ 0.25d0, 1.d0/6.d0, 3.d0/8.d0, 0.5d0, 1.d0 /)
+        ahat(1:5) = (/ 0.d0, 1.d0/20.d0, 5.d0/36.d0, -1.d0/3.d0, 1.d0 /)
+        dhat(1:4) = (/ delta, delta, delta, delta /)
+        b(1:4) = 0.d0
+        ! set IMEX-KG Butcher table
+        call set_IMEXKG_Butcher_tables(arkode_parameters, ap%s, a, ahat, dhat, b)
+
+      case (IMEXKG343a_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 5 ! 5 stage
+        ap%q = 3 ! 3rd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedded explicit method
+        ! IMEX-KG vectors
+        a(1:4) = (/ 0.25d0, 2.d0/3.d0, 1.d0/3.d0, 0.75d0 /)
+        ahat(1:4) = (/ 0.d0, -1.d0/3.d0, -2.d0/3.d0, 0.75d0 /)
+        dhat(1:3) = (/ -1.d0/3.d0, 1.d0, 1.d0 /)
+        b(1:3) = (/ 0.d0, 1.d0/3.d0, 0.25d0 /)
+        ! set IMEX-KG Butcher table
+        call set_IMEXKG_Butcher_tables(arkode_parameters, ap%s, a, ahat, dhat, b)
+
+      case (IMEXKG343b_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 5 ! 5 stage
+        ap%q = 3 ! 3rd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedded explicit method
+        ! IMEX-KG vectors
+        a(1:4) = (/ 0.25d0, 2.d0/3.d0, 1.d0/3.d0, 0.75d0 /)
+        ahat(1:4) = (/ 0.4358665215084589d0, &
+                     0.23080014515820763d0, &
+                    -0.10253318817512572d0, &
+                    0.75d0 /)
+        dhat(1:3) = 0.4358665215084589d0
+        b(1:3) = (/ 0.d0, 1.d0/3.d0, 0.25d0 /)
         ! set IMEX-KG Butcher table
         call set_IMEXKG_Butcher_tables(arkode_parameters, ap%s, a, ahat, dhat, b)
 
