@@ -157,6 +157,7 @@ logical :: l_rad           = .true.
 integer :: simple_macrop_opt = -1   ! -1 = NOT using simple macrophysics schemes
 integer :: rkz_cldfrc_opt    = 1
 integer :: rkz_partition_num = 0
+integer :: rkz_P3_opt        = 0
 integer :: rkz_term_A_opt    = 1
 integer :: rkz_term_B_opt    = 0
 integer :: rkz_term_C_opt    = 2
@@ -210,7 +211,7 @@ subroutine phys_ctl_readnl(nlfile)
       mam_amicphys_optaa, n_so4_monolayers_pcage,micro_mg_accre_enhan_fac, &
       l_tracer_aero, l_vdiff, l_rayleigh, l_gw_drag, l_ac_energy_chk, &
       l_bc_energy_fix, l_dry_adj, l_st_mac, l_st_mic, l_rad, &
-      simple_macrop_opt, rkz_cldfrc_opt, rkz_partition_num, rkz_term_A_opt, rkz_term_B_opt, &
+      simple_macrop_opt, rkz_cldfrc_opt, rkz_partition_num, rkz_P3_opt, rkz_term_A_opt, rkz_term_B_opt, &
       rkz_term_C_opt, &
       rkz_term_C_ql_opt, rkz_term_C_fmin, rkz_zsmall_opt, rkz_lmt5_opt, l_rkz_qme_check, &
       l_rkz_lmt_2, l_rkz_lmt_3, l_rkz_lmt_4, l_rkz_lmt_5, &
@@ -299,6 +300,7 @@ subroutine phys_ctl_readnl(nlfile)
    call mpibcast(simple_macrop_opt,               1 , mpiint,  0, mpicom)
    call mpibcast(rkz_cldfrc_opt,                  1 , mpiint,  0, mpicom)
    call mpibcast(rkz_partition_num,               1 , mpiint,  0, mpicom)
+   call mpibcast(rkz_P3_opt,                      1 , mpiint,  0, mpicom)
    call mpibcast(rkz_term_A_opt,                  1 , mpiint,  0, mpicom)
    call mpibcast(rkz_term_B_opt,                  1 , mpiint,  0, mpicom)
    call mpibcast(rkz_term_C_opt,                  1 , mpiint,  0, mpicom)
@@ -466,7 +468,7 @@ subroutine phys_getopts(deep_scheme_out, shallow_scheme_out, eddy_scheme_out, mi
                         micro_mg_accre_enhan_fac_out, liqcf_fix_out, regen_fix_out,demott_ice_nuc_out      &
                        ,l_tracer_aero_out, l_vdiff_out, l_rayleigh_out, l_gw_drag_out, l_ac_energy_chk_out  &
                        ,l_bc_energy_fix_out, l_dry_adj_out, l_st_mac_out, l_st_mic_out, l_rad_out  &
-                       ,simple_macrop_opt_out, rkz_cldfrc_opt_out, rkz_partition_num_out &
+                       ,simple_macrop_opt_out, rkz_cldfrc_opt_out, rkz_partition_num_out, rkz_P3_opt_out &
                        , rkz_term_A_opt_out, rkz_term_B_opt_out &
                        ,rkz_term_C_opt_out, rkz_term_C_ql_opt_out, rkz_term_C_fmin_out, rkz_zsmall_opt_out &
                        ,rkz_lmt5_opt_out, l_rkz_qme_check_out, l_rkz_lmt_2_out, l_rkz_lmt_3_out, l_rkz_lmt_4_out &
@@ -541,6 +543,7 @@ subroutine phys_getopts(deep_scheme_out, shallow_scheme_out, eddy_scheme_out, mi
    integer,           intent(out), optional :: simple_macrop_opt_out
    integer,           intent(out), optional :: rkz_cldfrc_opt_out
    integer,           intent(out), optional :: rkz_partition_num_out
+   integer,           intent(out), optional :: rkz_P3_opt_out
    integer,           intent(out), optional :: rkz_term_A_opt_out
    integer,           intent(out), optional :: rkz_term_B_opt_out
    integer,           intent(out), optional :: rkz_term_C_opt_out
@@ -623,6 +626,7 @@ subroutine phys_getopts(deep_scheme_out, shallow_scheme_out, eddy_scheme_out, mi
    if ( present(simple_macrop_opt_out   ) ) simple_macrop_opt_out = simple_macrop_opt
    if ( present(rkz_cldfrc_opt_out      ) ) rkz_cldfrc_opt_out    = rkz_cldfrc_opt
    if ( present(rkz_partition_num_out   ) ) rkz_partition_num_out = rkz_partition_num
+   if ( present(rkz_P3_opt_out          ) ) rkz_P3_opt_out        = rkz_P3_opt
    if ( present(rkz_term_A_opt_out      ) ) rkz_term_A_opt_out    = rkz_term_A_opt
    if ( present(rkz_term_B_opt_out      ) ) rkz_term_B_opt_out    = rkz_term_B_opt
    if ( present(rkz_term_C_opt_out      ) ) rkz_term_C_opt_out    = rkz_term_C_opt

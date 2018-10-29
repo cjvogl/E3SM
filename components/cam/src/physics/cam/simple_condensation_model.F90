@@ -105,10 +105,12 @@ contains
   ! Calculate condensation rate and the resulting tendencies of the model 
   ! state variables
   !------------------------------------------------------------------------
-  subroutine simple_RKZ_tend(state, ptend, tcwat, qcwat, lcwat, ast, qmeold, astwat, dfacdRH,&
+  subroutine simple_RKZ_tend(state, ptend, tcwat, qcwat, lcwat, ast, qmeold, astwat, astwatold, &
+                             dfacdRH,&
                              dtime, ixcldliq, &
                              rkz_cldfrc_opt, &
                              rkz_partition_num, &
+                             rkz_P3_opt, &
                              rkz_term_A_opt, &
                              rkz_term_B_opt, &
                              rkz_term_C_opt, &
@@ -143,6 +145,7 @@ contains
   real(r8), intent(inout) :: qcwat(:,:)       ! qv          after macro- and microphysics calculation in the previous time step
   real(r8), intent(inout) :: lcwat(:,:)       ! ql          after macro- and microphysics calculation in the previous time step
   real(r8), intent(inout) :: astwat(:,:)      ! f           after macro- and microphysics calculation in the previous time step 
+  real(r8), intent(inout) :: astwatold(:,:)   ! f           after macro- and microphysics calculation in the previous previous time step 
   real(r8), intent(inout) :: dfacdRH(:,:)     ! df/dRH      after macro- and microphysics calculation in the previous time step 
                                               !             where f is the cloud fraction and RH the relative humidity
 
@@ -154,6 +157,7 @@ contains
 
   integer,  intent(in) :: rkz_cldfrc_opt       ! cloud fraction scheme 
   integer,  intent(in) :: rkz_partition_num
+  integer,  intent(in) :: rkz_P3_opt
   integer,  intent(in) :: rkz_term_A_opt
   integer,  intent(in) :: rkz_term_B_opt
   integer,  intent(in) :: rkz_term_C_opt
@@ -181,7 +185,7 @@ contains
                                      ! which tracers are affected by this parameterization
 
   real(r8) :: ast_old(pcols,pver)    ! cloud fraction of previous time step before condensation
-  real(r8) :: dastdT(pcols,pver)     ! finite difference approximation to df/dt
+  real(r8) :: dastdt(pcols,pver)     ! finite difference approximation to df/dt
 
   real(r8) :: qsat(pcols,pver)       ! saturation specific humidity
   real(r8) :: esl(pcols,pver)        ! saturation vapor pressure (output from subroutine qsat_water, not used)
@@ -196,6 +200,8 @@ contains
   real(r8) :: qtend(pcols,pver)      ! Moisture tendency caused by other processes
   real(r8) :: ltend(pcols,pver)      ! liquid condensate tendency caused by other processes
   real(r8) :: ttend(pcols,pver)      ! Temperature tendency caused by other processes
+  real(r8) :: qtends(pcols,pver)     ! qtend for P3
+  real(r8) :: ltends(pcols,pver)     ! ltend for P3
 
   real(r8) :: qme   (pcols,pver)     ! total condensation rate
 
@@ -212,8 +218,9 @@ contains
 
   real(r8) :: ql_incld(pcols,pver)   ! in-cloud liquid concentration
   real(r8) :: dfdt    (pcols,pver)   ! df/dt where f is the cloud fraction
-  real(r8) :: zforcing (pcols,pver)
-  real(r8) :: zc3      (pcols,pver)
+  real(r8) :: df      (pcols,pver)   ! dt*df/dt
+  real(r8) :: zforcing(pcols,pver)
+  real(r8) :: zc3     (pcols,pver)
 
   real(r8) :: zqvnew(pcols,pver)     ! qv at new time step if total condenation rate is not limited. Might be negative.
   real(r8) :: zqlnew(pcols,pver)     ! ql at new time step if total condenation rate is not limited. Might be negative.
@@ -309,7 +316,20 @@ contains
 
 
      if (rkz_partition_num > 0) then
-        
+  
+        if (nstep == 1) then
+           dastdt(:ncol,:pver) = 0._r8
+        else
+           dastdt(:ncol,:pver) = (astwat(:ncol,:pver) - astwatold(:ncol,:pver))*rdtime
+        end if
+ 
+
+        do k=1,pver
+           do i=1,ncol
+              call qsat_water( tcwat(i,k), state%pmid(i,k), esl(i,k), qsat(i,k), gam(i,k), dqsatdT(i,k) )
+           end do
+        end do
+
         select case (rkz_partition_num)
         
         case(1)
@@ -332,8 +352,8 @@ contains
         ! qme(k) = (1-f) * max{ -Al, 
         !            ( Av - dqsat/dT*AT - (qsat-qv)/(1-f) ) / (1 + Lv/cp*dqsat/dT) }
         !          + f * max{  -Al - ql/f, (Av - dqsat/dT*AT)/(1 + Lv/cp*dqsat/dT) }
-           term_A(:ncol,:pver) = (1._r8 - ast(:ncol,:pver)) * ltend(:ncol,:pver)
-           term_B(:ncol,:pver) = ( (1._r8 - ast(:ncol,:pver)) * &
+           term_A(:ncol,:pver) = (1._r8 - astwat(:ncol,:pver)) * ltend(:ncol,:pver)
+           term_B(:ncol,:pver) = ( (1._r8 - astwat(:ncol,:pver)) * &
                                      ( qtend(:ncol,:pver) &
                                          - dqsatdT(:ncol,:pver)*ttend(:ncol,:pver) ) &
                                      - (qsat(:ncol,:pver) - qcwat(:ncol,:pver)) ) &
@@ -344,8 +364,8 @@ contains
               qme = term_B
            endwhere
  
-           term_A(:ncol,:pver) = ast(:ncol,:pver) * ltend(:ncol,:pver) + lcwat(:ncol,:pver)
-           term_B(:ncol,:pver) = ast(:ncol,:pver) * &
+           term_A(:ncol,:pver) = astwat(:ncol,:pver) * ltend(:ncol,:pver) + lcwat(:ncol,:pver)
+           term_B(:ncol,:pver) = astwat(:ncol,:pver) * &
                                      ( qtend(:ncol,:pver) &
                                           - dqsatdT(:ncol,:pver)*ttend(:ncol,:pver) ) &
                                      / ( 1._r8 + gam(:ncol,:pver) )
@@ -358,20 +378,64 @@ contains
         case(3)
         !-----------------------------------------------------------------------------------
         ! Three-Partition Reconstruction
-        ! qme(k) = f * (Av - dqsat/dT*AT)/(1 + Lv/cp*dqsat/dT) - (1-f)*Al
-        !          + dt*df/dt * [ (Av - dqsat/dT*AT)/(1 + Lv/cp*dqsat/dT) + Al ]
-        !        = (f + dt*df/dt) * (Av - dqsat/dT*AT)/(1 + Lv/cp*dqsat/dT) 
-        !          - (1 - f - dt*df/dt) * Al
+        ! qme(k) = f * (Avs - dqsat/dT*AT)/(1 + Lv/cp*dqsat/dT) - (1-f)*Als
+        !          + dt*df/dt * [ (Avs - dqsat/dT*AT)/(1 + Lv/cp*dqsat/dT) + Als ]
+        !        = (f + dt*df/dt) * (Avs - dqsat/dT*AT)/(1 + Lv/cp*dqsat/dT) 
+        !          - (1 - f - dt*df/dt) * Als
         ! 
+        !   if rkz_P3_opt=0 then Avs = Av 
+        !                    Als = Al
+        !   if rkz_P3_opt=1 then Avs = Av - dt*df/dt*(qsat - qv)/(1-f)
+        !                    Als = Al - dt*df/dt*(ql/f)
+        !   if rkz_P3_opt=2 then Avs = Av - dt*df/dt*(qsat - qv)/max(1-f,fmin)
+        !                    Als = Al - dt*df/dt*(ql/max(f,fmin))
 
-           term_A(:ncol,:pver) = (2._r8*ast(:ncol,:pver) - ast_old(:ncol,:pver) ) * &
+           df(:ncol,:pver) = dtime*dastdt(:ncol,:pver)
+           do k=1,pver
+             do i=1,ncol
+               if (astwat(i,k) + df(i,k) > 1._r8 ) then
+                 write(iulog,*) "Adjusting dt*df/dt..."
+                 write(iulog,*) "f + df = ", astwat(i,k) + df(i,k)
+                 write(iulog,*)  "    df = ", df(i,k)
+                 df(i,k) = 1._r8 - astwat(i,k)
+                 write(iulog,*) "    df = ", df(i,k)
+               else if ( astwat(i,k) + df(i,k) < 0._r8 ) then
+                 write(iulog,*) "Adjusting dt*df/dt..."
+                 write(iulog,*) "f + df = ", astwat(i,k) + df(i,k)
+                 write(iulog,*)  "    df = ", df(i,k)
+                 df(i,k) = -astwat(i,k)
+                 write(iulog,*) "    df = ", df(i,k)
+               end if
+             end do
+           end do
+           
+           select case (rkz_P3_opt)
+              case(0)
+                 qtends(:ncol,:pver) = qtend(:ncol,:pver)
+                 ltends(:ncol,:pver) = ltend(:ncol,:pver)
+              case(1)
+                 qtends(:ncol,:pver) = qtend(:ncol,:pver) - df(:ncol,:pver) * &
+                                          (qsat(:ncol,:pver) - qcwat(:ncol,:pver)) &
+                                         /(1._r8 - ast(:ncol,:pver))  
+                 ltends(:ncol,:pver) = ltend(:ncol,:pver) - df(:ncol,:pver) * &
+                                          lcwat(:ncol,:pver)/ast(:ncol,:pver)
+              case(2)
+                 qtends(:ncol,:pver) = qtend(:ncol,:pver) - df(:ncol,:pver) * &
+                                          (qsat(:ncol,:pver) - qcwat(:ncol,:pver)) &
+                                         /max(1._r8 - ast(:ncol,:pver),rkz_term_C_fmin)
+                 ltends(:ncol,:pver) = ltend(:ncol,:pver) - df(:ncol,:pver) * &
+                                          lcwat(:ncol,:pver)/max(ast(:ncol,:pver),rkz_term_C_fmin)
+              case default
+                 write(iulog,*) "Unimplemented P3 option:",rkz_P3_opt,". Abort."
+                 call endrun
+           end select
+
+           qme(:ncol,:pver) = (astwat(:ncol,:pver) + df(:ncol,:pver) ) * &
                                     ( qtend(:ncol,:pver) &
                                         - dqsatdT(:ncol,:pver)*ttend(:ncol,:pver) ) &
-                                    / ( 1._r8 + gam(:ncol,:pver) )
-           term_B(:ncol,:pver) = (1._r8 - 2._r8*ast(:ncol,:pver) + ast_old(:ncol,:pver) ) * &
+                                    / ( 1._r8 + gam(:ncol,:pver) ) &
+                              -(1._r8 - astwat(:ncol,:pver) - df(:ncol,:pver) ) * &
                                     ltend(:ncol,:pver)
-           qme(:ncol,:pver) = term_A(:ncol,:pver) - term_B(:ncol,:pver)
-
 
         case default
            write(iulog,*) "Unimplemented partition number:",rkz_partition_num,". Abort."

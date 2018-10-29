@@ -139,6 +139,21 @@ contains
 
     rhu00 = rhlim
 
+  case (4) ! like the slingo formula, but ensuring ql>0 => f>0
+
+    rhlim = 0.8_r8
+
+    gbmrh(:ncol,:pver) = q(:ncol,:pver) / qsat(:ncol,:pver)
+    ztmp(:ncol,:pver) = ql(:ncol,:pver) / qsat(:ncol,:pver)
+    rhdif(:ncol,:pver) = (gbmrh(:ncol,:pver) - rhlim + ztmp(:ncol,:pver))/(1._r8 - rhlim + ztmp(:ncol,:pver))
+
+    ast(:ncol,:pver) = rhdif(:ncol,:pver)**2
+    ast(:ncol,:pver) = min(ast(:ncol,:pver), fmax)
+
+    rhdif(:ncol,:pver) = ztmp(:ncol,:pver)/(1._r8 - rhlim + ztmp(:ncol,:pver))
+    ast(:ncol,:pver) = max(ast(:ncol,:pver), rhdif(:ncol,:pver)**2)
+    ast(:ncol,:pver) = max(ast(:ncol,:pver), 0._r8)
+
   case default
     write(iulog,*) "Unrecognized value of smpl_frc_schm:",smpl_frc_schm,". Abort."
     call endrun

@@ -2653,6 +2653,12 @@ Number of subgrid reconstruction partitions
 Default: 0
 </entry>
 
+<entry id="rkz_P3_opt" type="integer" category="physc_test"
+       group="phys_ctl_nl" valid_values="" >
+Variant of three-partition reconstruction
+Default: 0
+</entry>
+
 <entry id="rkz_term_A_opt" type="integer" category="physc_test"
        group="phys_ctl_nl" valid_values="" >
 Choice of numerical implementation for term A in the RKZ simple macrophysics scheme 

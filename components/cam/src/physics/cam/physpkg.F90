@@ -2039,6 +2039,7 @@ subroutine tphysbc (ztodt,               &
     integer :: simple_macrop_opt = -1   ! -1 = NOT using simple macrophysics schemes
     integer :: rkz_cldfrc_opt
     integer :: rkz_partition_num
+    integer :: rkz_P3_opt
     integer :: rkz_term_A_opt
     integer :: rkz_term_B_opt
     integer :: rkz_term_C_opt
@@ -2058,6 +2059,7 @@ subroutine tphysbc (ztodt,               &
     !Shixuan Zhang (2018/03): added for simple condensation model convergence test 
     real(r8), pointer, dimension(:,:) :: qmeold     ! total condensation rate in previous step 
     real(r8), pointer, dimension(:,:) :: astwat     ! cloud fraction after condensation      
+    real(r8), pointer, dimension(:,:) :: astwatold  ! cloud fraction after condensation in previous step
     real(r8), pointer, dimension(:,:) :: dfacdRH    ! df/dRH where f is the cloud fraction and RH the relative humidity
 
     real(r8) :: qsat(pcols,pver)       ! saturation specific humidity
@@ -2082,6 +2084,7 @@ subroutine tphysbc (ztodt,               &
                       ,simple_macrop_opt_out  = simple_macrop_opt  &
                       ,rkz_cldfrc_opt_out     = rkz_cldfrc_opt &
                       ,rkz_partition_num_out  = rkz_partition_num &
+                      ,rkz_P3_opt_out         = rkz_P3_opt &
                       ,rkz_term_A_opt_out     = rkz_term_A_opt &
                       ,rkz_term_B_opt_out     = rkz_term_B_opt &
                       ,rkz_term_C_opt_out     = rkz_term_C_opt &
@@ -2528,13 +2531,17 @@ end if
                ifld = pbuf_get_index('ASTWAT')
                call pbuf_get_field(pbuf, ifld, astwat, start=(/1,1,itim_old/), kount=(/pcols,pver,1/) )
 
+               ifld = pbuf_get_index('ASTWATOLD')
+               call pbuf_get_field(pbuf, ifld, astwatold, start=(/1,1,itim_old/), kount=(/pcols,pver,1/) )
                ifld = pbuf_get_index('DASTDRH')
                call pbuf_get_field(pbuf, ifld, dfacdRH, start=(/1,1,itim_old/), kount=(/pcols,pver,1/) )
 
-               call simple_RKZ_tend( state, ptend, tcwat, qcwat, lcwat, ast, qmeold, astwat, dfacdRH, &
+               call simple_RKZ_tend( state, ptend, tcwat, qcwat, lcwat, ast, qmeold, astwat, astwatold, &
+                                     dfacdRH, &
                                      cld_macmic_ztodt, ixcldliq, &
                                      rkz_cldfrc_opt, &
                                      rkz_partition_num, &
+                                     rkz_P3_opt, &
                                      rkz_term_A_opt, &
                                      rkz_term_B_opt, &
                                      rkz_term_C_opt, &
@@ -2763,6 +2770,9 @@ end if
              ifld = pbuf_get_index('ASTWAT')
              call pbuf_get_field(pbuf, ifld, astwat, start=(/1,1,itim_old/), kount=(/pcols,pver,1/) )
 
+             ifld = pbuf_get_index('ASTWATOLD')
+             call pbuf_get_field(pbuf, ifld, astwatold, start=(/1,1,itim_old/), kount=(/pcols,pver,1/) )
+
              ifld = pbuf_get_index('DASTDRH')
              call pbuf_get_field(pbuf, ifld, dfacdRH, start=(/1,1,itim_old/), kount=(/pcols,pver,1/) )
 
@@ -2778,7 +2788,8 @@ end if
                call qsat_water( state%t(i,k), state%pmid(i,k), esl(i,k), qsat(i,k), gam(i,k), dqsatdT(i,k) )
              end do
              end do
-             ! Calculate the cloud fraction (astwat) 
+             ! Calculate the cloud fraction (astwat) and store current cloud fraction in "old" variable
+             astwatold(:ncol,:pver) = astwat(:ncol,:pver)
              call  smpl_frc( state%q(:,:,1), state%q(:,:,ixcldliq), qsat,      &! all in
                              astwat, rhu00, rhgbm, dfacdRH, dlnastdRH,         &! inout, out, out
                              rkz_cldfrc_opt, 0.5_r8, 0.5_r8, pcols, pver, ncol )! all in
