@@ -191,6 +191,7 @@ contains
   real(r8) :: esl(pcols,pver)        ! saturation vapor pressure (output from subroutine qsat_water, not used)
   real(r8) :: dqsatdT(pcols,pver)    ! dqsat/dT
   real(r8) :: gam(pcols,pver)        ! L/cpair * dqsat/dT
+  real(r8) :: gamma(pcols,pver)      ! 1 + gam
 
   real(r8) :: rhu00                  ! threshold grid-box-mean RH used in the diagnostic cldfrc scheme
   real(r8) :: rhgbm(pcols,pver)      ! grid box mean relative humidity
@@ -218,7 +219,7 @@ contains
 
   real(r8) :: ql_incld(pcols,pver)   ! in-cloud liquid concentration
   real(r8) :: dfdt    (pcols,pver)   ! df/dt where f is the cloud fraction
-  real(r8) :: df      (pcols,pver)   ! dt*df/dt
+  real(r8) :: D(pcols,pver), Dstar(pcols,pver)
   real(r8) :: zforcing(pcols,pver)
   real(r8) :: zc3     (pcols,pver)
 
@@ -378,10 +379,11 @@ contains
         case(3)
         !-----------------------------------------------------------------------------------
         ! Three-Partition Reconstruction
-        ! qme(k) = f * (Avs - dqsat/dT*AT)/(1 + Lv/cp*dqsat/dT) - (1-f)*Als
-        !          + dt*df/dt * [ (Avs - dqsat/dT*AT)/(1 + Lv/cp*dqsat/dT) + Als ]
-        !        = (f + dt*df/dt) * (Avs - dqsat/dT*AT)/(1 + Lv/cp*dqsat/dT) 
-        !          - (1 - f - dt*df/dt) * Als
+        ! qme(k) = f * (Avs - dqsat/dT*AT)/gamma - (1-f)*Als
+        !          + dt*df/dt * [ (Avs - dqsat/dT*AT)/gamma + Als ]
+        !        = (f + dt*df/dt) * (Avs - dqsat/dT*AT)/gamma - (1 - f - dt*df/dt) * Als
+        !        = (f + dt*df/dt) * D/gamma - Als, D = Avs - dqsat/dT*AT - gamma*Als
+        !                                          gamma = 1 + Lv/cp * dqsat/dT
         ! 
         !   if rkz_P3_opt=0 then Avs = Av 
         !                    Als = Al
@@ -389,53 +391,105 @@ contains
         !                    Als = Al - dt*df/dt*(ql/f)
         !   if rkz_P3_opt=2 then Avs = Av - dt*df/dt*(qsat - qv)/max(1-f,fmin)
         !                    Als = Al - dt*df/dt*(ql/max(f,fmin))
+        !
+        !   if rkz_term_C_opt = 1 then df/dt = (f(t_n) - f(t_nm1)/dt
+        !   if rkz_term_C_opt = 2 then df/dt = df/dRH * dRH/dt
+        !                                    = df/dRH * ((Av - dqsat/dT*RH*AT)/qsat
+        !                                               -(1 + Lv/cp*dqsat/dT*RH)/qsat * qme)
 
-           df(:ncol,:pver) = dtime*dastdt(:ncol,:pver)
-           do k=1,pver
-             do i=1,ncol
-               if (astwat(i,k) + df(i,k) > 1._r8 ) then
-                 write(iulog,*) "Adjusting dt*df/dt..."
-                 write(iulog,*) "f + df = ", astwat(i,k) + df(i,k)
-                 write(iulog,*)  "    df = ", df(i,k)
-                 df(i,k) = 1._r8 - astwat(i,k)
-                 write(iulog,*) "    df = ", df(i,k)
-               else if ( astwat(i,k) + df(i,k) < 0._r8 ) then
-                 write(iulog,*) "Adjusting dt*df/dt..."
-                 write(iulog,*) "f + df = ", astwat(i,k) + df(i,k)
-                 write(iulog,*)  "    df = ", df(i,k)
-                 df(i,k) = -astwat(i,k)
-                 write(iulog,*) "    df = ", df(i,k)
-               end if
-             end do
-           end do
-           
+           gamma(:ncol,:pver) = 1._r8 + gam(:ncol,:pver)
+         
            select case (rkz_P3_opt)
               case(0)
                  qtends(:ncol,:pver) = qtend(:ncol,:pver)
                  ltends(:ncol,:pver) = ltend(:ncol,:pver)
               case(1)
-                 qtends(:ncol,:pver) = qtend(:ncol,:pver) - df(:ncol,:pver) * &
+                 qtends(:ncol,:pver) = qtend(:ncol,:pver) - dtime*dastdt(:ncol,:pver) * &
                                           (qsat(:ncol,:pver) - qcwat(:ncol,:pver)) &
                                          /(1._r8 - ast(:ncol,:pver))  
-                 ltends(:ncol,:pver) = ltend(:ncol,:pver) - df(:ncol,:pver) * &
+                 ltends(:ncol,:pver) = ltend(:ncol,:pver) - dtime*dastdt(:ncol,:pver) * &
                                           lcwat(:ncol,:pver)/ast(:ncol,:pver)
               case(2)
-                 qtends(:ncol,:pver) = qtend(:ncol,:pver) - df(:ncol,:pver) * &
+                 qtends(:ncol,:pver) = qtend(:ncol,:pver) - dtime*dastdt(:ncol,:pver) * &
                                           (qsat(:ncol,:pver) - qcwat(:ncol,:pver)) &
                                          /max(1._r8 - ast(:ncol,:pver),rkz_term_C_fmin)
-                 ltends(:ncol,:pver) = ltend(:ncol,:pver) - df(:ncol,:pver) * &
+                 ltends(:ncol,:pver) = ltend(:ncol,:pver) - dtime*dastdt(:ncol,:pver) * &
                                           lcwat(:ncol,:pver)/max(ast(:ncol,:pver),rkz_term_C_fmin)
               case default
                  write(iulog,*) "Unimplemented P3 option:",rkz_P3_opt,". Abort."
                  call endrun
            end select
 
-           qme(:ncol,:pver) = (astwat(:ncol,:pver) + df(:ncol,:pver) ) * &
-                                    ( qtend(:ncol,:pver) &
-                                        - dqsatdT(:ncol,:pver)*ttend(:ncol,:pver) ) &
-                                    / ( 1._r8 + gam(:ncol,:pver) ) &
-                              -(1._r8 - astwat(:ncol,:pver) - df(:ncol,:pver) ) * &
-                                    ltend(:ncol,:pver)
+           D(:ncol,:pver) = qtends(:ncol,:pver) - dqsatdT(:ncol,:pver)*ttend(:ncol,:pver) &
+                                          + gamma(:ncol,:pver)*ltends(:ncol,:pver)
+
+           term_A(:ncol,:pver) = astwat(:ncol,:pver)* &
+                        (D(:ncol,:pver)/gamma(:ncol,:pver) - ltends(:ncol,:pver))
+           !term_A(:ncol,:pver) = ast(:ncol,:pver)* &
+           !            (qtend(:ncol,:pver) - dqsatdT(:ncol,:pver)*ttend(:ncol,:pver) ) &
+           !                   /( 1._r8 + gam(:ncol,:pver) )
+           term_B(:ncol,:pver) = -(1._r8 - astwat(:ncol,:pver))*ltends(:ncol,:pver)
+           !term_B(:ncol,:pver) = - (1._r8 - ast(:ncol,:pver))*ltend(:ncol,:pver)
+
+           select case (rkz_term_C_opt)
+              case(1)
+                 if (nstep == 1) then
+                    dastdt(:ncol,:pver) = 0._r8
+                 else
+                    dastdt(:ncol,:pver) = (astwat(:ncol,:pver)-astwatold(:ncol,:pver))*rdtime
+                 end if
+                 term_C(:ncol,:pver) = dtime*dastdt(:ncol,:pver)* &
+                                       D(:ncol,:pver)/gamma(:ncol,:pver)
+!                 qme(:ncol,:pver) = (astwat(:ncol,:pver) + dtime*dastdt(:ncol,:pver) ) * &
+!                                    D(:ncol,:pver)/gamma(:ncol,:pver) - ltends(:ncol,:pver)
+              case(2)
+                 rhgbm(:ncol,:pver) = qcwat(:ncol,:pver) / qsat(:ncol,:pver)
+                                              
+                 zforcing(:ncol,:pver) = (qtend(:ncol,:pver) - dqsatdT(:ncol,:pver) &
+                                          * rhgbm(:ncol,:pver) * ttend(:ncol,:pver) &
+                                         ) / qsat(:ncol,:pver)
+   
+                 zc3(:ncol,:pver) = (1._r8+rhgbm(:ncol,:pver)*gam(:ncol,:pver))/ &
+                                     qsat(:ncol,:pver)
+   
+                 rdenom(:ncol,:pver) = 1._r8 / &
+                                    (1._r8 + dtime &
+                                             * dfacdRH(:ncol,:pver) &
+                                             * D(:ncol,:pver)/gamma(:ncol,:pver) &
+                                             * zc3(:ncol,:pver) &
+                                     )
+   
+                 term_C(:ncol,:pver) = dtime*dfacdRH(:ncol,:pver)* &
+                                     D(:ncol,:pver)/gamma(:ncol,:pver)*zforcing(:ncol,:pver)
+   
+                 term_C(:ncol,:pver) = term_C(:ncol,:pver)*rdenom(:ncol,:pver) 
+                 term_A(:ncol,:pver) = term_A(:ncol,:pver)*rdenom(:ncol,:pver) 
+                 term_B(:ncol,:pver) = term_B(:ncol,:pver)*rdenom(:ncol,:pver) 
+   
+!                 qme(:ncol,:pver) = astwat(:ncol,:pver) * &
+!                                    D(:ncol,:pver)/gamma(:ncol,:pver) - ltends(:ncol,:pver) &                                  + dtime &
+!                                    * dfacdRH(:ncol,:pver) &
+!                                    * D(:ncol,:pver)/gamma(:ncol,:pver) &
+!                                    * (qtend(:ncol,:pver) - dqsatdT(:ncol,:pver) &
+!                                       * rhgbm(:ncol,:pver) * ttend(:ncol,:pver) &
+!                                      ) / qsat(:ncol,:pver)
+!
+!                 qme(:ncol,:pver) = qme(:ncol,:pver) / &
+!                                    (1._r8 + dtime &
+!                                             * dfacdRH(:ncol,:pver) &
+!                                             * D(:ncol,:pver)/gamma(:ncol,:pver) &
+!                                             * (1._r8+gam(:ncol,:pver)*rhgbm(:ncol,:pver) &
+!                                               ) / qsat(:ncol,:pver) &
+!                                     )
+
+              case default
+                 write(iulog,*) "Unimplemented P3_C option:", rkz_term_C_opt,". Abort."
+                 call endrun
+           end select
+
+
+           qme(:ncol,:pver) = term_A(:ncol,:pver) + term_B(:ncol,:pver) + term_C(:ncol,:pver)
+
 
         case default
            write(iulog,*) "Unimplemented partition number:",rkz_partition_num,". Abort."
