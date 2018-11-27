@@ -15,21 +15,21 @@ methodDict = {'KGU35-native': 5,
               'ARK436': 29,
               'SSP3333b': 30,
               'SSP3333c': 31,
-              'IMEXKG232a': 32,
-              'IMEXKG232b': 33,
-              'IMEXKG242a': 34,
-              'IMEXKG242b': 35,
-              'IMEXKG243a': 36,
-              'IMEXKG243b': 37,
-              'IMEXKG252a': 38,
-              'IMEXKG252b': 39,
-              'IMEXKG253a': 40,
-              'IMEXKG253b': 41,
-              'IMEXKG254a': 42,
-              'IMEXKG254b': 43,
-              'IMEXKG254c': 44,
-              'IMEXKG343a': 45,
-              'IMEXKG343b': 46}
+              'IMKG232a': 32,
+              'IMKG232b': 33,
+              'IMKG242a': 34,
+              'IMKG242b': 35,
+              'IMKG243a': 36,
+              'IMKG243b': 37,
+              'IMKG252a': 38,
+              'IMKG252b': 39,
+              'IMKG253a': 40,
+              'IMKG253b': 41,
+              'IMKG254a': 42,
+              'IMKG254b': 43,
+              'IMKG254c': 44,
+              'IMKG343a': 45,
+              'IMKG343b': 46}
 
 # Line+marker styles chosen to provide certain information about the method
 #   line:
@@ -55,21 +55,21 @@ lineStyleDict = {'KGU35-native': '--o',
                  'ARS343': '--^',
                  'ARK324': '--^',
                  'ARK436': '-.p',
-                 'IMEXKG232a': '-x',
-                 'IMEXKG232b': '-x',
-                 'IMEXKG242a': '-x',
-                 'IMEXKG242b': '-x',
-                 'IMEXKG243a': '-^',
-                 'IMEXKG243b': '-^',
-                 'IMEXKG252a': '-x',
-                 'IMEXKG252b': '-x',
-                 'IMEXKG253a': '-^',
-                 'IMEXKG253b': '-^',
-                 'IMEXKG254a': '-s',
-                 'IMEXKG254b': '-s',
-                 'IMEXKG254c': '-s',
-                 'IMEXKG343a': '--^',
-                 'IMEXKG343b': '--^'}
+                 'IMKG232a': '-x',
+                 'IMKG232b': '-x',
+                 'IMKG242a': '-x',
+                 'IMKG242b': '-x',
+                 'IMKG243a': '-^',
+                 'IMKG243b': '-^',
+                 'IMKG252a': '-x',
+                 'IMKG252b': '-x',
+                 'IMKG253a': '-^',
+                 'IMKG253b': '-^',
+                 'IMKG254a': '-s',
+                 'IMKG254b': '-s',
+                 'IMKG254c': '-s',
+                 'IMKG343a': '--^',
+                 'IMKG343b': '--^'}
 
 colorDict = {'KGU35-native': 'k',
              'KGU35': 'tab:blue',
@@ -79,25 +79,25 @@ colorDict = {'KGU35-native': 'k',
              'SSP3333b': 'tab:green',
              'SSP3333c': 'k',
              'ARS233': 'tab:red',
-             'IMEXKG232a': 'tab:purple',
-             'IMEXKG232b': 'tab:brown',
-             'IMEXKG242a': 'tab:pink',
-             'IMEXKG242b': 'tab:gray',
-             'IMEXKG252a': 'tab:olive',
-             'IMEXKG252b': 'tab:cyan',
+             'IMKG232a': 'tab:purple',
+             'IMKG232b': 'tab:brown',
+             'IMKG242a': 'tab:pink',
+             'IMKG242b': 'tab:gray',
+             'IMKG252a': 'tab:olive',
+             'IMKG252b': 'tab:cyan',
              'ARS343': 'tab:blue',
              'ARK324': 'tab:orange',
-             'IMEXKG243a': 'tab:green',
-             'IMEXKG243b': 'tab:red',
-             'IMEXKG253a': 'tab:purple',
-             'IMEXKG253b': 'tab:brown',
-             'IMEXKG343a': 'tab:pink',
-             'IMEXKG343b': 'tab:gray',
+             'IMKG243a': 'tab:green',
+             'IMKG243b': 'tab:red',
+             'IMKG253a': 'tab:purple',
+             'IMKG253b': 'tab:brown',
+             'IMKG343a': 'tab:pink',
+             'IMKG343b': 'tab:gray',
              'ARS443': 'tab:blue',
              'DBM453': 'tab:orange',
-             'IMEXKG254a': 'tab:green',
-             'IMEXKG254b': 'tab:red',
-             'IMEXKG254c': 'tab:purple',
+             'IMKG254a': 'tab:green',
+             'IMKG254b': 'tab:red',
+             'IMKG254c': 'tab:purple',
              'ARK436': 'tab:blue'}
 
 # method to create solution dictionary
@@ -157,7 +157,7 @@ def create_energy_error_dict(globstr, minDt, maxDt, suffix, suffix_omit):
         print '... skipping due to incomplete results ...'
   return energyErrorDict
 
-def create_walltime_dict(globstr, minDt, maxDt, suffix, suffix_omit):
+def create_walltime_dict(globstr, minDt, maxDt, suffix_omit):
   walltimeDict = {}
   for fileName in glob.glob(globstr):
     if (suffix_omit is not None and suffix_omit in fileName):
@@ -192,7 +192,7 @@ def create_walltime_dict(globstr, minDt, maxDt, suffix, suffix_omit):
   return walltimeDict
 
 # method to create solution dictionary
-def create_solution_dict(globstr, testName, varRef, indRef, tRef, minDt, maxDt, suffix, suffix_omit):
+def create_solution_dict(globstr, testName, varRef, indRef, tRef, minDt, maxDt, suffix_omit):
   solutionDict = {}
   for fileName in glob.glob(globstr):
     if (suffix_omit is not None and suffix_omit in fileName):
@@ -204,8 +204,8 @@ def create_solution_dict(globstr, testName, varRef, indRef, tRef, minDt, maxDt, 
     dt = dt.replace('.out','')
     # If current timestep is appropriate, obtain solution if it exists
     if (float(dt) < maxDt and float(dt) > minDt):
-      directory = './output_'+fileName.replace('.out','')
-      print 'Reading solution in ' + directory
+      directory = fileName.replace('.out','').replace('tsteptype','output_tsteptype')
+      print 'Reading solution in ' + directory + '/' + testName
       data = Dataset(directory+'/'+testName)
       q = data[varRef][:]
       t = data['time'][:]
@@ -247,37 +247,3 @@ def create_energy_error_dict(globstr, minDt, maxDt, suffix, suffix_omit):
       else:
         print '... skipping due to incomplete results ...'
   return energyErrorDict
-
-def create_walltime_dict(globstr, minDt, maxDt, suffix, suffix_omit):
-  walltimeDict = {}
-  for fileName in glob.glob(globstr):
-    if (suffix_omit is not None and suffix_omit in fileName):
-      continue
-    words = fileName.split('/')
-    shortName = words[-1]
-    words = shortName.split('_')
-    dt = words[1].replace('tstep','')
-    dt = dt.replace('.out','')
-    if (float(dt) < maxDt and float(dt) > minDt):
-      fileNameTiming = fileName.replace('.out','.err')
-      print 'Reading timing info in ' + fileNameTiming
-      fileObj = open(fileName)
-      lines = list(fileObj)
-      fileObj.close()
-      flag = False
-      for line in reversed(lines):
-        if ('Finished main timestepping loop' in line):
-          flag = True
-          break
-      if (not flag):
-        print '... skipping due to incomplete results ...'
-        continue
-      fileObj = open(fileNameTiming)
-      lines = list(fileObj)
-      fileObj.close()
-      words = lines[1].split()
-      word = words[1] # ignore the word 'real'
-      words = word.split(('m'))
-      seconds = int(words[0])*60 + float(words[1].replace('s',''))
-      walltimeDict[dt] = seconds
-  return walltimeDict

@@ -62,14 +62,23 @@ if ('dcmip4_X' in userList):
 # Sanity check simulation length and timestep
 num_steps = float(paramDict['ndays'])*3600*24/float(paramDict['tstep'])
 if (abs(num_steps - int(num_steps)) > 1e-10):
-  print('\n*** TSTEP %s DOES NOT EVENLY DIVIDE %s DAYS***\n\n' % (paramDict['tstep'], paramDict['ndays']))
+  print('\n*** TSTEP %s DOES NOT EVENLY DIVIDE %s DAYS ***\n\n' % (paramDict['tstep'], paramDict['ndays']))
   sys.exit()
 paramDict['nmax'] = int(num_steps)
 
 # Compute output frequencies
-outputfreq = paramDict['nmax']/int(paramDict['ndays'])
+outputfreq = paramDict['nmax']/max(int(paramDict['ndays']),1) # to avoid divide by 0
 if (abs(outputfreq - paramDict['nmax']/float(paramDict['ndays'])) > 1e-10):
-  print('\n*** NMAX %s DOES NOT EVENLY DIVIDE BY %s***\n\n' % (paramDict['nmax'], paramDict['ndays']))
+  print('\n*** NMAX %s DOES NOT EVENLY DIVIDE BY %s DAYS ***\n' % (paramDict['nmax'], paramDict['ndays']))
+  numOutput = 10
+  success = False
+  while (not success):
+    outputfreq = paramDict['nmax']/numOutput
+    if (abs(outputfreq - paramDict['nmax']/float(numOutput)) > 1e-10):
+      numOutput -= 1
+    else:
+      success = True
+  print('\n*** USING OUTPUT EVERY %d STEPS INSTEAD ***\n\n' % (outputfreq))
 
 # Use tstep_type if no user defined parameters given
 if (not userList):
@@ -145,7 +154,7 @@ interp_gridtype        = 2
 output_timeunits       = 0
 output_frequency       = %s
 output_start_time      = 0
-output_varnames1       = 'u','v','w','T','geo'
+output_varnames1       = 'u','v','w','T','geo','ps'
 num_io_procs           = 16
 output_type            = 'netcdf'
 output_dir             = "./output_%s/"
