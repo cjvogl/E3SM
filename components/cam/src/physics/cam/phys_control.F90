@@ -157,10 +157,10 @@ logical :: l_rad           = .true.
 integer :: simple_macrop_opt = -1   ! -1 = NOT using simple macrophysics schemes
 integer :: rkz_cldfrc_opt    = 1
 integer :: rkz_partition_num = 0
-integer :: rkz_P3_opt        = 0
+integer :: rkz_P3_opt        = -1
 integer :: rkz_term_A_opt    = 1
 integer :: rkz_term_B_opt    = 0
-integer :: rkz_term_C_opt    = 2
+integer :: rkz_term_C_opt    = -1
 integer :: rkz_term_C_ql_opt = 17
 real(r8):: rkz_term_C_fmin   = 1e-3_r8
 integer :: rkz_zsmall_opt    = 1

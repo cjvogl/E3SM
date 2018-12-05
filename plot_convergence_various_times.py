@@ -6,19 +6,20 @@ import numpy as np
 
 matplotlib.rcParams.update({'font.size': 18})
 
-#dtList = [1800,450,120,30,15,8,4,2,1]
 dtList = [1800,450,120,75,30,15,8,4,1]
 configDict = {}
 
-timeList = [1800, 3600, 5400, 7200, 9000, 10800, 12600]
-#timeList = [1800, 3600]
+#timeList = [1800, 3600, 5400, 7200, 9000, 10800, 12600]
+timeList = [1800, 3600, 5400, 7200]
 
 f2, ax2 = pyplot.subplots(figsize=(10,10))
 f2.set_tight_layout(True)
 
 for time in timeList:
   for dt in dtList:
-    globstr = 'RKZ_P3_adjIC_lmt4_ne30_ne30_*/DT%04d_01_dycore_mac/*.cam.h0.0001-01-01-%05d.nc' % (dt, time)
+#    globstr = 'RKZ_P3.*_lmt4_*_ne30_ne30_*/DT%04d_01_dycore_mac/*.cam.h0.0001-01-01-%05d.nc' % (dt, time)
+    globstr = 'RKZ_P3.0_C2_lmt4_adjIC_ne30_ne30_*/DT%04d_01_dycore_mac/*.cam.h0.0001-01-01-%05d.nc' % (dt, time)
+#    globstr = 'RKZ_A1_B1_C2_ql19_lmt4_*_ne30_ne30_*/DT%04d_01_dycore_mac/*.cam.h0.0001-01-01-%05d.nc' % (dt, time)
     for fileName in glob.glob(globstr):
       words = fileName.split('_')
       config = words[0]
@@ -81,7 +82,8 @@ for time in timeList:
     else:
       orderWRMS = (0.0,)
 
-    label = "%d second run (%3.2f)" % (time, orderWRMS[0])
+    label = "%d second run (%3.2f) %s" % (time, orderWRMS[0], config)
+    label = "%d second run (%3.2f) C2_mod" % (time, orderWRMS[0])
     ax2.loglog(dtPlot, WRMSPlot, '-o', label=label, linewidth=3, markersize=12)
 
 ax2.set_ylabel('WRMS Error', fontsize='large')
@@ -93,9 +95,3 @@ ax2.legend(loc='best')
 pyplot.tight_layout()
 
 pyplot.show()
-
-
-
-
-
-

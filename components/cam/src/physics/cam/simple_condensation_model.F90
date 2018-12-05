@@ -327,7 +327,11 @@ contains
 
         do k=1,pver
            do i=1,ncol
-              call qsat_water( tcwat(i,k), state%pmid(i,k), esl(i,k), qsat(i,k), gam(i,k), dqsatdT(i,k) )
+              ! cnvg_condensation
+              !call qsat_water( tcwat(i,k), state%pmid(i,k), esl(i,k), qsat(i,k), gam(i,k), dqsatdT(i,k) )
+  
+              ! cnvg_condensation_mod*
+              call qsat_water( state%t(i,k), state%pmid(i,k), esl(i,k), qsat(i,k), gam(i,k), dqsatdT(i,k) )
            end do
         end do
 
@@ -382,7 +386,7 @@ contains
         ! qme(k) = f * (Avs - dqsat/dT*AT)/gamma - (1-f)*Als
         !          + dt*df/dt * [ (Avs - dqsat/dT*AT)/gamma + Als ]
         !        = (f + dt*df/dt) * (Avs - dqsat/dT*AT)/gamma - (1 - f - dt*df/dt) * Als
-        !        = (f + dt*df/dt) * D/gamma - Als, D = Avs - dqsat/dT*AT - gamma*Als
+        !        = (f + dt*df/dt) * D/gamma - Als, D = Avs - dqsat/dT*AT + gamma*Als
         !                                          gamma = 1 + Lv/cp * dqsat/dT
         ! 
         !   if rkz_P3_opt=0 then Avs = Av 
@@ -423,49 +427,78 @@ contains
            D(:ncol,:pver) = qtends(:ncol,:pver) - dqsatdT(:ncol,:pver)*ttend(:ncol,:pver) &
                                           + gamma(:ncol,:pver)*ltends(:ncol,:pver)
 
-           term_A(:ncol,:pver) = astwat(:ncol,:pver)* &
+           ! cnvg_condensation
+           !term_A(:ncol,:pver) = astwat(:ncol,:pver)* &
+           !             (D(:ncol,:pver)/gamma(:ncol,:pver) - ltends(:ncol,:pver))
+
+           ! cnvg_condensation_mod
+           term_A(:ncol,:pver) = ast(:ncol,:pver)* &
                         (D(:ncol,:pver)/gamma(:ncol,:pver) - ltends(:ncol,:pver))
+
+           ! cnvg_condensation_mod2
            !term_A(:ncol,:pver) = ast(:ncol,:pver)* &
-           !            (qtend(:ncol,:pver) - dqsatdT(:ncol,:pver)*ttend(:ncol,:pver) ) &
-           !                   /( 1._r8 + gam(:ncol,:pver) )
-           term_B(:ncol,:pver) = -(1._r8 - astwat(:ncol,:pver))*ltends(:ncol,:pver)
+           !              (qtend(:ncol,:pver) - dqsatdT(:ncol,:pver)*ttend(:ncol,:pver) ) &
+           !                    /( 1._r8 + gam(:ncol,:pver) )
+
+           ! cnvg_condensation
+           !term_B(:ncol,:pver) = -(1._r8 - astwat(:ncol,:pver))*ltends(:ncol,:pver)
+ 
+           ! cnvg_condsation_mod
+           term_B(:ncol,:pver) = -(1._r8 - ast(:ncol,:pver))*ltends(:ncol,:pver)
+
+           ! cnvg_sondensation_mod2
            !term_B(:ncol,:pver) = - (1._r8 - ast(:ncol,:pver))*ltend(:ncol,:pver)
 
            select case (rkz_term_C_opt)
               case(1)
-                 if (nstep == 1) then
-                    dastdt(:ncol,:pver) = 0._r8
-                 else
-                    dastdt(:ncol,:pver) = (astwat(:ncol,:pver)-astwatold(:ncol,:pver))*rdtime
-                 end if
                  term_C(:ncol,:pver) = dtime*dastdt(:ncol,:pver)* &
                                        D(:ncol,:pver)/gamma(:ncol,:pver)
+                 ! old formulation before switching to term A, B, C
 !                 qme(:ncol,:pver) = (astwat(:ncol,:pver) + dtime*dastdt(:ncol,:pver) ) * &
 !                                    D(:ncol,:pver)/gamma(:ncol,:pver) - ltends(:ncol,:pver)
               case(2)
-                 rhgbm(:ncol,:pver) = qcwat(:ncol,:pver) / qsat(:ncol,:pver)
-                                              
+           
+                 ! cnvg_condensation
+                 ! rhgbm(:ncol,:pver) = qcwat(:ncol,:pver) / qsat(:ncol,:pver)
+           
+                 ! cnvg_condensation_mod*
+                 ! use rhgbm from original call to simple_frac
+
+                 ! all                
                  zforcing(:ncol,:pver) = (qtend(:ncol,:pver) - dqsatdT(:ncol,:pver) &
                                           * rhgbm(:ncol,:pver) * ttend(:ncol,:pver) &
                                          ) / qsat(:ncol,:pver)
-   
                  zc3(:ncol,:pver) = (1._r8+rhgbm(:ncol,:pver)*gam(:ncol,:pver))/ &
                                      qsat(:ncol,:pver)
-   
+
+                 ! cnvg_condensation or cnvg_condensation_mod
+                 !rdenom(:ncol,:pver) = 1._r8 / &
+                 !                   (1._r8 + dtime &
+                 !                            * dfacdRH(:ncol,:pver) &
+                 !                            * D(:ncol,:pver)/gamma(:ncol,:pver) &
+                 !                            * zc3(:ncol,:pver) &
+                 !                    )
+                 !term_C(:ncol,:pver) = dtime*dfacdRH(:ncol,:pver)* &
+                 !                    D(:ncol,:pver)/gamma(:ncol,:pver)*zforcing(:ncol,:pver)
+               
+                 ! cnvg_condensation_mod2
+                 ql_incld(:ncol,:pver) = lcwat(:ncol,:pver) &
+                                         / max(astwat(:ncol,:pver),rkz_term_C_fmin)
                  rdenom(:ncol,:pver) = 1._r8 / &
-                                    (1._r8 + dtime &
-                                             * dfacdRH(:ncol,:pver) &
-                                             * D(:ncol,:pver)/gamma(:ncol,:pver) &
+                                    (1._r8 + 1._r8 &
+                                             * dastdRH(:ncol,:pver) &
+                                             * ql_incld(:ncol,:pver) &
                                              * zc3(:ncol,:pver) &
-                                     )
-   
-                 term_C(:ncol,:pver) = dtime*dfacdRH(:ncol,:pver)* &
-                                     D(:ncol,:pver)/gamma(:ncol,:pver)*zforcing(:ncol,:pver)
-   
+                                    )
+                 term_C(:ncol,:pver) = 1._r8*dastdRH(:ncol,:pver)* &
+                                      ql_incld(:ncol,:pver)*zforcing(:ncol,:pver)
+  
+                 ! all 
                  term_C(:ncol,:pver) = term_C(:ncol,:pver)*rdenom(:ncol,:pver) 
                  term_A(:ncol,:pver) = term_A(:ncol,:pver)*rdenom(:ncol,:pver) 
                  term_B(:ncol,:pver) = term_B(:ncol,:pver)*rdenom(:ncol,:pver) 
    
+                 ! old formulation before switching to term A, B, C
 !                 qme(:ncol,:pver) = astwat(:ncol,:pver) * &
 !                                    D(:ncol,:pver)/gamma(:ncol,:pver) - ltends(:ncol,:pver) &                                  + dtime &
 !                                    * dfacdRH(:ncol,:pver) &
@@ -1002,10 +1035,32 @@ contains
    lq(ixcldliq) = .TRUE.
    call physics_ptend_init(ptend,state%psetcols, "RKZ macro simplified", ls=.true., lq=lq)
 
-   ptend%q(:ncol,:pver,1)        = -qme(:ncol,:pver)
-   ptend%q(:ncol,:pver,ixcldliq) =  qme(:ncol,:pver)
-   ptend%s(:ncol,:pver)          =  qme(:ncol,:pver) *latvap
-   qmeold(:ncol,:pver)           =  qme(:ncol,:pver) ! save qme for next step 
+
+!  if (nstep == 0) then
+!      
+!    do k=1,pver
+!    do i=1,ncol
+!      ! convert all oversaturated water vapor to cloud liquid
+!      rhlim = max(state%q(i,k,1) - qsat(i,k), 0._r8)
+!      
+!      ptend%q(i,k,1) = -rhlim/dtime
+!      ptend%q(i,k,ixcldliq) = rhlim/dtime
+!      ! not clear if latent heat should be included
+!      !ptend%s(i,k) = rhlim*latvap
+!      ptend%s(i,k) = 0._r8
+!
+!    end do
+!    end do
+!
+!  else
+
+    ptend%q(:ncol,:pver,1)        = -qme(:ncol,:pver)
+    ptend%q(:ncol,:pver,ixcldliq) =  qme(:ncol,:pver)
+    ptend%s(:ncol,:pver)          =  qme(:ncol,:pver) *latvap
+
+!  end if
+
+  qmeold(:ncol,:pver)           =  qme(:ncol,:pver) ! save qme for next step 
 
   end subroutine simple_RKZ_tend
 
