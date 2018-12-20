@@ -1,1 +1,0 @@
-/global/homes/c/cvogl/workspace/scidac-convergence-scripts-and-docs/simple_condensation_model/cnvg_test_scripts/create_and_setup_bundled_case.csh
