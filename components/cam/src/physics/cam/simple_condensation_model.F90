@@ -185,7 +185,6 @@ contains
                                      ! which tracers are affected by this parameterization
 
   real(r8) :: ast_old(pcols,pver)    ! cloud fraction of previous time step before condensation
-  real(r8) :: dastdt(pcols,pver)     ! finite difference approximation to df/dt
 
   real(r8) :: qsat(pcols,pver)       ! saturation specific humidity
   real(r8) :: esl(pcols,pver)        ! saturation vapor pressure (output from subroutine qsat_water, not used)
@@ -255,11 +254,19 @@ contains
 
   ! Calculate saturation specific humidity (qsat) and its derivative wrt temperature (dqsatdT)
 
-  do k=1,pver
-  do i=1,ncol
-     call qsat_water( state%t(i,k), state%pmid(i,k), esl(i,k), qsat(i,k), gam(i,k), dqsatdT(i,k) )
-  end do
-  end do
+  if (rkz_partition_num == 0) then
+    do k=1,pver
+    do i=1,ncol
+      call qsat_water( state%t(i,k), state%pmid(i,k), esl(i,k), qsat(i,k), gam(i,k), dqsatdT(i,k) )
+    end do
+    end do
+  else
+    do k=1,pver
+    do i=1,ncol
+      call qsat_water(tcwat(i,k), state%pmid(i,k), esl(i,k), qsat(i,k), gam(i,k), dqsatdT(i,k) )
+    end do
+    end do
+  end if
   call outfld('RKZ_qsat',    qsat,    pcols, lchnk)
   call outfld('RKZ_dqsatdT', dqsatdT, pcols, lchnk)
   call outfld('RKZ_gam',     gam,     pcols, lchnk)
@@ -317,7 +324,7 @@ contains
 
 
     if (rkz_partition_num > 0) then
-
+      
       ! compute prediction for f(t+dt)
       if (nstep == 1) then
         ast_np1(:ncol,:pver) = astwat(:ncol,:pver)
@@ -333,17 +340,6 @@ contains
         ast_np1 = 0._r8
       end where
 
-      ! compute approximation to df/dt
-      dastdt(:ncol,:pver) = (ast_np1(:ncol,:pver) - astwat(:ncol,:pver))*rdtime
-
-      ! compute qsat, gam, and dqsatdT from pre-dynamics values
-      do k=1,pver
-         do i=1,ncol
-            ! cnvg_condensation
-            call qsat_water(tcwat(i,k), state%pmid(i,k), esl(i,k), qsat(i,k), gam(i,k), dqsatdT(i,k) )
-         end do
-      end do
-
       ! add condensation term that maintains water saturation in cloudy
       ! portion of cell at t+dt
       qme(:ncol,:pver) = ast_np1(:ncol, :pver) * &
@@ -356,7 +352,9 @@ contains
       where (ast_np1(:ncol,:pver) > astwat(:ncol,:pver))
         ! note that because ast_np1 is bounded by 1.0, entering this block means
         ! astwat < 1.0 so that (1.0-astwat) > 0.0
-        qme = qme - dastdt * (qsat - qcwat)/(1._r8 - astwat)
+        qme = qme - rdtime * (1._r8 - (1._r8-ast_np1)/(1._r8-astwat)) * (qsat-qcwat) 
+        ! note that this is a less-susceptible-to-round-off-error version of
+        ! qme = qme - dastdt * (qsat - qcwat)/(1._r8 - astwat)
       end where
       ! where cloud annihilation scenario, add condensation term that ensures
       ! the clear region at t+dt that was cloudy at t (transition region)
@@ -364,7 +362,9 @@ contains
       where (ast_np1(:ncol,:pver) < astwat(:ncol,:pver))
         ! note that because ast_np1 is bounded by 0.0, entering this block means
         ! astwat > 0.0
-        qme = qme - dastdt * (ltend + lcwat)/astwat
+        qme = qme - rdtime * (1._r8 - ast_np1/astwat) * (ltend + lcwat)
+        ! note that this is a less-suusceptible-to-round-off-error version of
+        ! qme = qme + dastdt * (ltend + lcwat)/astwat
       end where
 
     else
