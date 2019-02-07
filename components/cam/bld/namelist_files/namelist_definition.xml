@@ -19,7 +19,7 @@
           An abbreviation of the fortran declaration for the variable.
 	  Valid declarations are:
 
-          char*n  
+          char*n
 	  integer
 	  logical
 	  real
@@ -503,8 +503,8 @@ MPI-1 implementation. 3: use Co-Array Fortran implementation if supported,
 otherwise use MPI-1 implementation. 11-13: use mod_comm, choosing any of
 several methods internal to mod_comm.  The method within mod_comm (denoted
 mod_method) has possible values 0,1,2 and is set according to mod_method =
-phys_alltoall - modmin_alltoall, where modmin_alltoall is 11. -1: use 
-option 1 when each process communicates with less than half of the other 
+phys_alltoall - modmin_alltoall, where modmin_alltoall is 11. -1: use
+option 1 when each process communicates with less than half of the other
 processes, otherwise use option 0 (approx.).
 Default: -1
 </entry>
@@ -558,7 +558,7 @@ Default: .true. for WACCM, otherwise .false.
 
 <entry id="print_energy_errors" type="logical"  category="diagnostics"
        group="cam_inparm" valid_values="" >
-Turn on verbose output identifying columns that fail energy/water 
+Turn on verbose output identifying columns that fail energy/water
 conservation checks.
 Default: FALSE
 </entry>
@@ -626,15 +626,15 @@ Default: 0
 <entry id="geopktrans" type="integer"  category="dyn_fv"
        group="spmd_fv_inparm" valid_values="0,1,2" >
 Geopotential method (routines geopk, geopk16, or geopk_d).
-0 for transpose method, 1 for method using semi-global z communication 
+0 for transpose method, 1 for method using semi-global z communication
 with optional 16-byte arithmetic, 2 for method using local
-z communication; method 0, method 1 with 16-byte arithmetic and method 2 
-are all bit-for-bit across decompositions; method 0 scales better than 
+z communication; method 0, method 1 with 16-byte arithmetic and method 2
+are all bit-for-bit across decompositions; method 0 scales better than
 method 1 with npr_z, and method 1 is superior to method 0 for small npr_z.
-The optimum speed is attained using either method 1 with 8-byte 
-arithmetic (standard for geopk16) or method 2 when utilizing the 
-optimal value for the associated parameter geopkblocks; for the last 
-two subcycles of a timestep, method 0 is automatically used; see 
+The optimum speed is attained using either method 1 with 8-byte
+arithmetic (standard for geopk16) or method 2 when utilizing the
+optimal value for the associated parameter geopkblocks; for the last
+two subcycles of a timestep, method 0 is automatically used; see
 geopk.F90 and cd_core.F90.
 
 Default: 0
@@ -643,7 +643,7 @@ Default: 0
 <entry id="geopkblocks" type="integer"  category="dyn_fv"
        group="spmd_fv_inparm" valid_values="" >
 Geopotential method 2 pipeline parameter (routine geopk_d).
-geopk_d implements a pipeline algorithm by dividing the 
+geopk_d implements a pipeline algorithm by dividing the
 information that must be moved between processes into blocks. geopkblocks
 specifies the number of blocks to use. The larger the number of blocks,
 the greater the opportunity for overlapping communication with computation
@@ -678,8 +678,8 @@ Default: .true.
 <entry id="modc_mxreq_dynrun" type="integer"  category="dyn_fv"
        group="spmd_fv_inparm" valid_values="" >
 Maximum number of outstanding nonblocking MPI requests to allow when
-using mp_swapirr and point-to-point communications for dyn_run/misc. 
-Setting this less than the maximum can improve robustness for large process 
+using mp_swapirr and point-to-point communications for dyn_run/misc.
+Setting this less than the maximum can improve robustness for large process
 count runs. If set to less than zero, then do not limit the number of
 outstanding send/receive requests.
 Default: -1 (so no limit)
@@ -702,7 +702,7 @@ Default: .true.
 
 <entry id="modc_send_cdcore" type="logical"  category="dyn_fv"
        group="spmd_fv_inparm" valid_values="" >
-True for geopk_d and mod_comm irregular communication blocking send for 
+True for geopk_d and mod_comm irregular communication blocking send for
 cd_core/geopk; false for nonblocking send.
 Default: .true.
 </entry>
@@ -711,7 +711,7 @@ Default: .true.
        group="spmd_fv_inparm" valid_values="" >
 Maximum number of outstanding nonblocking MPI requests to allow when
 using mp_swapirr and point-to-point communications for cd_core/geopk.
-Setting this less than the maximum can improve robustness for large process 
+Setting this less than the maximum can improve robustness for large process
 count runs. If set to less than zero, then do not limit the number of
 outstanding send/receive requests.
 Default: -1 (so no limit)
@@ -743,7 +743,7 @@ Default: .true.
        group="spmd_fv_inparm" valid_values="" >
 Maximum number of outstanding nonblocking MPI requests to allow when
 using mp_swapirr and point-to-point communications for gather.
-Setting this less than the maximum can improve robustness for large process 
+Setting this less than the maximum can improve robustness for large process
 count runs. If set to less than zero, then do not limit the number of
 outstanding send/receive requests.
 Default: -1 (so no limit)
@@ -775,7 +775,7 @@ Default: .true.
        group="spmd_fv_inparm" valid_values="" >
 Maximum number of outstanding nonblocking MPI requests to allow when
 using mp_swapirr and point-to-point communications for scatter.
-Setting this less than the maximum can improve robustness for large process 
+Setting this less than the maximum can improve robustness for large process
 count runs. If set to less than zero, then do not limit the number of
 outstanding send/receive requests.
 Default: -1 (so no limit)
@@ -807,7 +807,7 @@ Default: .true.
        group="spmd_fv_inparm" valid_values="" >
 Maximum number of outstanding nonblocking MPI requests to allow when
 using mp_swaptrirr and point-to-point communications for multiple tracers.
-Setting this less than the maximum can improve robustness for large process 
+Setting this less than the maximum can improve robustness for large process
 count runs. If set to less than zero, then do not limit the number of
 outstanding send/receive requests.
 Default: -1 (so no limit)
@@ -961,7 +961,7 @@ Default: FALSE
 <entry id="met_rlx_top" type="real"  category="dyn_fv_off"
        group="metdata_nl" valid_values="" >
 (km) top of relaxation region of winds for offline waccm
-Default: 
+Default:
 </entry>
 
 <entry id="met_rlx_bot" type="real"  category="dyn_fv_off"
@@ -978,7 +978,7 @@ Default: 1.0
 
 <entry id="met_fix_mass" type="logical"  category="dyn_fv_off"
        group="metdata_nl" valid_values="" >
-switch to turn on/off mass fixer for offline driver 
+switch to turn on/off mass fixer for offline driver
 Default: true
 </entry>
 
@@ -1106,13 +1106,13 @@ Default: set by build-namelist.
 
 <entry id="use_qqflx_fixer" type="logical" category="fixers"
        group="phys_ctl_nl" valid_values="" >
-Whether or not to use the new qqflx fixer (instead of QNEG4). 
+Whether or not to use the new qqflx fixer (instead of QNEG4).
 Default: set by build-namelist.
 </entry>
 
 <entry id="print_fixer_message" type="logical" category="fixers"
        group="phys_ctl_nl" valid_values="" >
-Whether or not to printout fixer diagnostic message. 
+Whether or not to printout fixer diagnostic message.
 Default: set by build-namelist.
 </entry>
 
@@ -1239,7 +1239,7 @@ Default: set by build-namelist.
        group="chem_surfvals_nl" valid_values="" >
 User override for the prescribed CO2 volume mixing ratio used by the radiation
 calculation.  Note however that the prescribed value of CO2 which is sent
-to the surface models is still the one that is set using either the 
+to the surface models is still the one that is set using either the
 <varname>co2vmr</varname> or the <varname>scenario_ghg</varname> variables.
 Default: not used
 </entry>
@@ -1305,7 +1305,7 @@ Default: 0
 <entry id="rampyear_ghg" type="integer"  category="ghg_cam"
        group="chem_surfvals_nl" valid_values="" >
 If <varname>scenario_ghg</varname> is set to "RAMPED" then the greenhouse
-gas surface values are interpolated between the annual average values 
+gas surface values are interpolated between the annual average values
 read from the file specified by <varname>bndtvghg</varname>.
 In that case, the value of this variable (&gt; 0) fixes the year of the
 lower bounding value (i.e., the value for calendar day 1.0) used in the
@@ -1542,7 +1542,7 @@ Default: none.
 
 <entry id="clubb_iop_name" type="char*200"  category="history"
        group="scm_nl" valid_values="" >
-Name of the IOP case so case specific adjustments can be made in CLUBB.  
+Name of the IOP case so case specific adjustments can be made in CLUBB.
 Default: none.
 </entry>
 
@@ -1658,9 +1658,9 @@ Defaults: "%c.cam2.h0.%y-%m.nc", "%c.cam2.h1.%y-%m-%d-%s.nc", ...,
 
 <entry id="sathist_track_infile" type="char*256" input_pathname="abs" category="history"
        group="satellite_options_nl" valid_values="" >
-Full pathname of the satellite track data used by the satellite track history 
+Full pathname of the satellite track data used by the satellite track history
 output feature.
-Default: none 
+Default: none
 </entry>
 <entry id="sathist_hfilename_spec" type="char*256"  category="history"
        group="satellite_options_nl" valid_values="" >
@@ -1675,7 +1675,7 @@ Default: none
 <entry id="sathist_mfilt" type="integer"  category="history"
        group="satellite_options_nl" valid_values="" >
 Sets the number of observation columns written the satellite track history file
-series. 
+series.
 Default: 100000
 </entry>
 
@@ -1704,7 +1704,7 @@ Default: 'YEARLY'
 <entry id="inithist_all" type="logical"  category="history"
        group="cam_history_nl" valid_values="" >
 If false then include only REQUIRED fields on IC file.  If true then
-include required AND optional fields on IC file.  
+include required AND optional fields on IC file.
 Default: FALSE
 </entry>
 
@@ -1718,26 +1718,26 @@ Default: 1,30,30,30,30,30
 
 <entry id="lcltod_start" type="integer(6)"  category="history"
        group="cam_history_nl" valid_values="" >
-Array containing the starting time of day for local time history averaging. 
-Used in conjuction with lcltod_stop. If lcltod_stop is less than lcltod_start, 
-then the time range wraps around 24 hours. The start time is included in the 
-interval. Time is in seconds and defaults to 39600 (11:00 AM).  The first value 
+Array containing the starting time of day for local time history averaging.
+Used in conjuction with lcltod_stop. If lcltod_stop is less than lcltod_start,
+then the time range wraps around 24 hours. The start time is included in the
+interval. Time is in seconds and defaults to 39600 (11:00 AM).  The first value
 applies to the primary hist. file, the second to the first aux. hist. file, etc.
 Default: none
 </entry>
 
 <entry id="lcltod_stop" type="integer(6)"  category="history"
        group="cam_history_nl" valid_values="" >
-Array containing the stopping time of day for local time history averaging. 
-Used in conjuction with lcltod_start. If lcltod_stop is less than lcltod_start, 
-then the time range wraps around 24 hours. The stop time is not included in the 
-interval. Time is in seconds and defaults to 0 (midnight).  The first value 
+Array containing the stopping time of day for local time history averaging.
+Used in conjuction with lcltod_start. If lcltod_stop is less than lcltod_start,
+then the time range wraps around 24 hours. The stop time is not included in the
+interval. Time is in seconds and defaults to 0 (midnight).  The first value
 applies to the primary hist. file, the second to the first aux. hist. file, etc.
 Default: none
 </entry>
 
 <entry id="ndens" type="integer(6)"  category="history"
-       group="cam_history_nl" valid_values="1,2" > 
+       group="cam_history_nl" valid_values="1,2" >
 
 Array specifying the precision of real data written to each history file
 series. Valid values are 1 or 2. '1' implies output real values are 8-byte
@@ -1748,7 +1748,7 @@ Default: 2,2,2,2,2,2
 
 
 <entry id="nhtfrq" type="integer(6)"  category="history"
-       group="cam_history_nl" valid_values="" > 
+       group="cam_history_nl" valid_values="" >
 
 Array of write frequencies for each history file series.
 If <varname>nhtfrq(1)</varname> = 0, the file will be a monthly average.
@@ -1855,7 +1855,7 @@ Setting this namelist variable happens automatically if you compile with COSP.
 COSP will not run unless this is set to .true. in the namelist!
 Turn on the desired simulators using lXXX_sim namelist vars
 If no specific simulators are specified, all of the simulators
-are run on all columns and all output is saved. (useful for testing). 
+are run on all columns and all output is saved. (useful for testing).
 COSP is available with CAM4 and CAM5 physics.
 This default logical is set in cospsimulator_intr.F90.
 Default: FALSE
@@ -1863,11 +1863,11 @@ Default: FALSE
 
 <entry id="cosp_amwg" type="logical"  category="cosp"
        group="cospsimulator_nl" valid_values="">
-If true, COSP cloud simulators are run to produce 
+If true, COSP cloud simulators are run to produce
 all output required for the COSP plots in the AMWG diagnostics package.
-sets cosp_ncolumns=10 and cosp_nradsteps=3 
+sets cosp_ncolumns=10 and cosp_nradsteps=3
 (appropriate for COSP statistics derived from seasonal averages),
-and runs MISR, ISCCP, MODIS, CloudSat radar and CALIPSO lidar simulators 
+and runs MISR, ISCCP, MODIS, CloudSat radar and CALIPSO lidar simulators
 (cosp_lmisr_sim=.true.,cosp_lisccp_sim=.true.,
 cosp_lmodis_sim=.true.,cosp_lradar_sim=.true.,cosp_llidar_sim=.true.).
 This default logical is set in cospsimulator_intr.F90.
@@ -1876,11 +1876,11 @@ Default: TRUE
 
 <entry id="cosp_lite" type="logical"  category="cosp"
        group="cospsimulator_nl" valid_values="">
-If true, the COSP cloud simulators are run to produce 
+If true, the COSP cloud simulators are run to produce
 select output for the AMWG diagnostics package.
-sets cosp_ncolumns=10 and cosp_nradsteps=3 
+sets cosp_ncolumns=10 and cosp_nradsteps=3
 (appropriate for COSP statistics derived from seasonal averages),
-and runs MISR, ISCCP, MODIS, and CALIPSO lidar simulators 
+and runs MISR, ISCCP, MODIS, and CALIPSO lidar simulators
 (cosp_lmisr_sim=.true.,cosp_lisccp_sim=.true.,
 cosp_lmodis_sim=.true.,cosp_llidar_sim=.true.).
 This default logical is set in cospsimulator_intr.F90.
@@ -1889,11 +1889,11 @@ Default: FALSE
 
 <entry id="cosp_passive" type="logical"  category="cosp"
        group="cospsimulator_nl" valid_values="">
-If true, the passive COSP cloud simulators are run to produce 
+If true, the passive COSP cloud simulators are run to produce
 select output for the AMWG diagnostics package.
-sets cosp_ncolumns=10 and cosp_nradsteps=3 
+sets cosp_ncolumns=10 and cosp_nradsteps=3
 (appropriate for COSP statistics derived from seasonal averages),
-and runs MISR, ISCCP, and MODIS simulators 
+and runs MISR, ISCCP, and MODIS simulators
 (cosp_lmisr_sim=.true.,cosp_lisccp_sim=.true.,cosp_lmodis_sim=.true.).
 This default logical is set in cospsimulator_intr.F90.
 Default: FALSE
@@ -1901,11 +1901,11 @@ Default: FALSE
 
 <entry id="cosp_active" type="logical"  category="cosp"
        group="cospsimulator_nl" valid_values="">
-If true, the active COSP cloud simulators are run to produce 
+If true, the active COSP cloud simulators are run to produce
 select output for the AMWG diagnostics package.
-sets cosp_ncolumns=10 and cosp_nradsteps=3 
+sets cosp_ncolumns=10 and cosp_nradsteps=3
 (appropriate for COSP statistics derived from seasonal averages),
-and runs CloudSat radar and CALIPSO lidar simulators 
+and runs CloudSat radar and CALIPSO lidar simulators
 (cosp_lradar_sim=.true.,cosp_llidar_sim=.true.).
 This default logical is set in cospsimulator_intr.F90.
 Default: FALSE
@@ -1913,9 +1913,9 @@ Default: FALSE
 
 <entry id="cosp_isccp" type="logical"  category="cosp"
        group="cospsimulator_nl" valid_values="">
-If true, the ISCCP cloud simulator is run to produce 
+If true, the ISCCP cloud simulator is run to produce
 select output for the AMWG diagnostics package.
-sets cosp_ncolumns=10 and cosp_nradsteps=3 
+sets cosp_ncolumns=10 and cosp_nradsteps=3
 (appropriate for COSP statistics derived from seasonal averages),
 and runs ISCCP simulator
 (cosp_lmisr_sim=.false.,cosp_lisccp_sim=.true.,
@@ -1935,7 +1935,7 @@ Default: FALSE
 
 <entry id="cosp_lradar_sim" type="logical"  category="cosp"
        group="cospsimulator_nl" valid_values="">
-If true, COSP radar simulator will be run and all non-subcolumn output 
+If true, COSP radar simulator will be run and all non-subcolumn output
 will be saved.
 Default: FALSE
 </entry>
@@ -1975,7 +1975,7 @@ Default: FALSE
 
 <entry id="cosp_cfmip_3hr" type="logical"  category="cosp"
        group="cospsimulator_nl" valid_values="">
-If true, the COSP cloud simulator is run for CFMIP 3-hourly 
+If true, the COSP cloud simulator is run for CFMIP 3-hourly
 experiments.
 This default logical is set in cospsimulator_intr.F90
 Default: FALSE
@@ -1983,7 +1983,7 @@ Default: FALSE
 
 <entry id="cosp_cfmip_da" type="logical"  category="cosp"
        group="cospsimulator_nl" valid_values="">
-If true, the COSP cloud simulator is run for CFMIP daily 
+If true, the COSP cloud simulator is run for CFMIP daily
 experiments.
 This default logical is set in cospsimulator_intr.F90
 Default: FALSE
@@ -1991,7 +1991,7 @@ Default: FALSE
 
 <entry id="cosp_cfmip_off" type="logical"  category="cosp"
        group="cospsimulator_nl" valid_values="">
-If true, the COSP cloud simulator is run for CFMIP off-line  
+If true, the COSP cloud simulator is run for CFMIP off-line
 monthly experiments.
 This default logical is set in cospsimulator_intr.F90
 Default: FALSE
@@ -2026,7 +2026,7 @@ Default: FALSE
 <entry id="cosp_atrainorbitdata" type="char*256"  category="cosp"
        group="cospsimulator_nl" valid_values="">
 Path for the Atrain orbit data file provided by CFMIP.
-There is no default for this, but sample_atrain = .true. will not work 
+There is no default for this, but sample_atrain = .true. will not work
 if this namelist variable is undefined.
 currently /project/cms/jenkay/SCAM/repository/cloudsat_orbit_08921_14250.nc
 Default: no default set now, need to specify in namelist
@@ -2060,7 +2060,7 @@ Default: 2
 
 <entry id="cosp_nradsteps" type="integer"  category="cosp"
        group="cospsimulator_nl" valid_values="">
-This specifies the frequency at which is COSP is called, 
+This specifies the frequency at which is COSP is called,
 every cosp_nradsteps radiation timestep.
 
 This default is set in cospsimulator_intr.F90
@@ -2149,13 +2149,13 @@ Default: FALSE
        group="micro_mg_nl" valid_values="" >
 Liquid droplet concentration (in #/cc) when micro_do_nccons=.true.
 Default: set by build-namelist
-</entry>   
+</entry>
 
 <entry id="micro_nicons" type="real" category="microphys"
        group="micro_mg_nl" valid_values="" >
 Ice crystal concentration (in #/cc) when micro_do_nicons=.true.
 Default: set by build-namelist
-</entry> 
+</entry>
 
 <entry id="micro_mg_version" type="integer" category="microphys"
        group="micro_mg_nl" valid_values="" >
@@ -2259,7 +2259,7 @@ Default: 1350.0_r8
 
 <entry id="prc_exp" type="real" category="microphysics"
 group="phys_ctl_nl" valid_values="" >
-Tunable exponent coefficient for autoconversion 
+Tunable exponent coefficient for autoconversion
 Default: 2.47_r8
 </entry>
 
@@ -2280,7 +2280,7 @@ group="phys_ctl_nl" valid_values="" >
 Temporary variable for a bug fix. Introduced to maintain BFB, must be REMOVED later
 Default: FALSE
 </entry>
- 
+
 <entry id="rrtmg_temp_fix" type="logical" category="microphysics"
 group="phys_ctl_nl" valid_values="" >
 Temporary variable for a bug fix. Introduced to maintain BFB, must be REMOVED later
@@ -2295,7 +2295,7 @@ Default: FALSE
 <entry id="microp_aero_bulk_scale" type="real" category="microphysics"
        group="microp_aero_nl" valid_values="" >
 prescribed aerosol bulk sulfur scale factor
-Default: 2 
+Default: 2
 </entry>
 
 <entry id="microp_aero_wsub_scheme" type="integer" category="microphysics"
@@ -2442,7 +2442,7 @@ Default: 700.e2
 
 <entry id="cldfrc_iceopt" type="integer" category="conv"
        group="cldfrc_nl" valid_values="" >
-Scheme for ice cloud fraction: 1=wang & sassen, 2=schiller (iciwc),  
+Scheme for ice cloud fraction: 1=wang & sassen, 2=schiller (iciwc),
 3=wood & field, 4=Wilson (based on smith), 5=modified slingo (ssat & empyt cloud)
 Default: 5
 </entry>
@@ -2533,7 +2533,7 @@ Default: set by build-namelist
 
 <entry id="cldsed_ice_stokes_fac" type="real" category="cldsed"
        group="cldsed_nl" valid_values="" >
-Factor applied to the ice fall velocity computed from 
+Factor applied to the ice fall velocity computed from
 Stokes terminal velocity.
 Default: set by build-namelist
 </entry>
@@ -2594,16 +2594,16 @@ Default: TRUE
 <entry id="l_st_mac" type="logical" category="physc_test"
        group="phys_ctl_nl" valid_values="" >
 Calculate stratiform cloud macrophysics.
-When the CAM4 Rasch-Kristjansson scheme is in use, 
-l_st_mac = .true. also swiches on the microphysics. 
+When the CAM4 Rasch-Kristjansson scheme is in use,
+l_st_mac = .true. also swiches on the microphysics.
 Default: TRUE
 </entry>
 
 <entry id="l_st_mic" type="logical" category="physc_test"
        group="phys_ctl_nl" valid_values="" >
-Calculate stratiform cloud microphysics. Note that this switch 
-is implemented only for the Morrison-Gettelman scheme. 
-For Rasch-Kristjansson, the mac-only option has not been implemented 
+Calculate stratiform cloud microphysics. Note that this switch
+is implemented only for the Morrison-Gettelman scheme.
+For Rasch-Kristjansson, the mac-only option has not been implemented
 (i.e., depending on what is chosen for l_st_mac,
 macro and microphysics are either both on or both off.)
 Default: TRUE
@@ -2624,7 +2624,7 @@ Default: 1000.0
 
 <entry id="kessler_autoconv_ql_crit" type="real" category="physc_test"
        group="phys_ctl_nl" valid_values="" >
-Critical value of cloud liquid water to trigger the autoconversion 
+Critical value of cloud liquid water to trigger the autoconversion
 in the Kessler simple microphysics scheme
 Default: 5.0E-4
 </entry>
@@ -2647,48 +2647,36 @@ Choice of cloud fraction scheme for simple macrophysics
 Default: 1
 </entry>
 
-<entry id="rkz_partition_num" type="integer" category="physc_test"
-       group="phys_ctl_nl" valid_values="" >
-Number of subgrid reconstruction partitions
-Default: 0
-</entry>
-
-<entry id="rkz_P3_opt" type="integer" category="physc_test"
-       group="phys_ctl_nl" valid_values="" >
-Variant of three-partition reconstruction
-Default: 0
-</entry>
-
 <entry id="rkz_term_A_opt" type="integer" category="physc_test"
        group="phys_ctl_nl" valid_values="" >
-Choice of numerical implementation for term A in the RKZ simple macrophysics scheme 
+Choice of numerical implementation for term A in the RKZ simple macrophysics scheme
 Default: 1
 </entry>
 
 <entry id="rkz_term_B_opt" type="integer" category="physc_test"
        group="phys_ctl_nl" valid_values="" >
-Choice of numerical implementation for term B in the RKZ simple macrophysics scheme 
+Choice of numerical implementation for term B in the RKZ simple macrophysics scheme
 Default: 0
 </entry>
 
 <entry id="rkz_term_C_opt" type="integer" category="physc_test"
        group="phys_ctl_nl" valid_values="" >
-Choice of numerical implementation for term C in the RKZ simple macrophysics scheme 
+Choice of numerical implementation for term C in the RKZ simple macrophysics scheme
 Default: 2
 </entry>
 
 <entry id="rkz_term_C_ql_opt" type="integer" category="physc_test"
        group="phys_ctl_nl" valid_values="" >
-Choice of numerical implementation for in-cloud ql for term C 
-in the RKZ simple macrophysics scheme 
+Choice of numerical implementation for in-cloud ql for term C
+in the RKZ simple macrophysics scheme
 Default: 17
 </entry>
 
 <entry id="rkz_term_C_fmin" type="real" category="physc_test"
        group="phys_ctl_nl" valid_values="" >
-min. cloud fraction as a safeguard used for calculating in-cloud ql for term C 
-in the RKZ simple macrophysics scheme 
-Default: 1E-3 
+min. cloud fraction as a safeguard used for calculating in-cloud ql for term C
+in the RKZ simple macrophysics scheme
+Default: 1E-3
 </entry>
 
 <entry id="rkz_zsmall_opt" type="integer" category="physc_test"
@@ -2735,11 +2723,41 @@ Turn on limiter 5 for condensation
 Default: FALSE
 </entry>
 
+<entry id="rkz_use_sgr" type="logical" category="physc_test"
+       group="phys_ctl_nl" valid_values="" >
+Use the sub-grid reconstruction condensation rate
+Default: FALSE
+</entry>
+
+<entry id="rkz_sgr_extrap_f" type="logical" category="physc_test"
+       group="phys_ctl_nl" valid_values="" >
+Use extrapolation to determine cloud fraction at t+dt
+Default: FALSE
+</entry>
+
+<entry id="rkz_sgr_qv_deg" type="integer" category="physc_test"
+       group="phys_ctl_nl" valid_values="" >
+Polynomial degree of water vapor profile in cloud-free region of grid cell
+Default: -1
+</entry>
+
+<entry id="rkz_sgr_ql_deg" type="integer" category="physc_test"
+       group="phys_ctl_nl" valid_values="" >
+Polynomial degree of cloud liquid profile in cloudy region of grid cell
+Default: -1
+</entry>
+
+<entry id="rkz_sgr_Al_deg" type="integer" category="physc_test"
+       group="phys_ctl_nl" valid_values="" >
+Polynomial degree of cloud liquid tendency in grid cell
+Default: -1
+</entry>
+
 <entry id="reset_init_ql" type="logical"  category="initial_conditions"
        group="cam_inparm" valid_values="" >
 Reset initial ql in inidat.f90 in se dynamical core
 ql =0 at t=0 when this flag is .true.
-used in simple condensation model 
+used in simple condensation model
 Default: FALSE
 </entry>
 
@@ -2874,7 +2892,7 @@ Default: set by build-namelist (depends on <varname>eddy_scheme</varname>).
 
 <entry id="do_tms" type="logical" category="pbl"
        group="phys_ctl_nl" valid_values="" >
-Logical switch to turn on turbulent mountain stress calculation in 
+Logical switch to turn on turbulent mountain stress calculation in
 vertical diffusion routine.
 Default: set by build-namelist
 </entry>
@@ -2908,8 +2926,8 @@ Default: 40.e3 (m)
 
 <entry id="eddy_max_bot_pressure" type="real" category="conv"
        group="vert_diff_nl" valid_values="" >
-Bottom pressure level at which namelist values for eddy_leng_max and 
-eddy_lbulk_max are applied. Default values are used at lower levels (i.e. the 
+Bottom pressure level at which namelist values for eddy_leng_max and
+eddy_lbulk_max are applied. Default values are used at lower levels (i.e. the
 boundary layer).
 Default: 100.e3 (hPa)
 </entry>
@@ -3004,7 +3022,7 @@ Default: set by build-namelist
        group="clubbpbl_diff_nl" valid_values="" >
 Rain evaporation efficiency factor.
 Default: set by build-namelist
-</entry>      
+</entry>
 
 <entry id="clubb_do_adv" type="logical" category="pblrad"
        group="clubbpbl_diff_nl" valid_values="" >
@@ -3453,7 +3471,7 @@ Default: FALSE
 
 <entry id="carma_maxretries" type="integer" category="carma"
        group="carma_nl" valid_values="" >
-Specifies the maximum number of retry attempts to be used when 
+Specifies the maximum number of retry attempts to be used when
 condensational growth requires substepping, but the original estimate
 for the amount of substepping was insufficient.
 Default: 8
@@ -3622,7 +3640,7 @@ Default: 1e-9
 <entry id="carma_neutral_h2so4" type="logical" category="carma_model"
        group="carma_model_nl" valid_values="" >
 Flag indicating that h2so4 vapor pressures should be calculated as if they were
-over sulfates that have been totally neutralized. 
+over sulfates that have been totally neutralized.
 Default: FALSE
 </entry>
 
@@ -3722,7 +3740,7 @@ Default: PAPI_NO_CTR
 
 <entry id="print_step_cost" type="logical"  category="performance"
        group="cam_inparm" valid_values="">
-If TRUE, print CPU timing per model timestep. 
+If TRUE, print CPU timing per model timestep.
 Default: FALSE
 </entry>
 
@@ -3764,7 +3782,7 @@ Default: -1
 
 <entry id="profile_outpe_stride" type="integer"  category="performance"
        group="prof_inparm" valid_values="">
-Separation between process ids for processes that are writing out timing data 
+Separation between process ids for processes that are writing out timing data
 (for this component communicator).
 Default: 1
 </entry>
@@ -3812,10 +3830,10 @@ Default: 128
        group="spmd_utils_nl" valid_values="">
 fc_gather flow control option:
  &lt; 0 : use MPI_Gather
- &gt;= 0: use point-to-point with handshaking messages and preposting 
-       receive requests up to 
-         max(min(1,fc_gather_flow_cntl),max_gather_block_size) 
-       ahead. Default value is defined by private parameter 
+ &gt;= 0: use point-to-point with handshaking messages and preposting
+       receive requests up to
+         max(min(1,fc_gather_flow_cntl),max_gather_block_size)
+       ahead. Default value is defined by private parameter
        max_gather_block_size, which is currently set to 64.
 Default: 64
 </entry>
@@ -3856,8 +3874,8 @@ Default: set by build-namelist
 
 <entry id="waccmx_opt" type="char*16" category="waccm"
        group="phys_ctl_nl" valid_values="ionosphere,neutral,off" >
-Runtime options of upper thermosphere WACCM-X.  'ionosphere' for 
-full ionopshere and neutral thermosphere, 'neutral' for just 
+Runtime options of upper thermosphere WACCM-X.  'ionosphere' for
+full ionopshere and neutral thermosphere, 'neutral' for just
 neutral thermosphere, and off for no WACCM-X.
 Default: 'off'
 </entry>
@@ -3944,7 +3962,7 @@ Switch to use new unified convective transport for aerosols
 Default: .false.
 </entry>
 
-<entry id="convproc_method_activate" type="integer"  category="scavenging" 
+<entry id="convproc_method_activate" type="integer"  category="scavenging"
        group="phys_ctl_nl" valid_values="0,1,2" >
 Switch to choose activation method for unified convective transport of aerosols
 Default: 2
@@ -4018,7 +4036,7 @@ Default: .false.
 
 <entry id="history_eddy" type="logical"  category="diagnostics"
        group="phys_ctl_nl" valid_values="" >
-Switch for diagnostic output of eddy variables 
+Switch for diagnostic output of eddy variables
 Default: .false.
 </entry>
 
@@ -4043,7 +4061,7 @@ Default: .true. if WACCM physics is on, .false. otherwise.
 <entry id="fix_g1_err_ndrop" type="logical"  category="bugfixes"
        group="phys_ctl_nl" valid_values=".true.,.false.,.TRUE.,.FALSE." >
 Switch to fix a bug in ndrop.F90 for "repeated g1 eqn".
-Default: .false. 
+Default: .false.
 
 
 <entry id="history_clubb" type="logical"  category="diagnostics"
@@ -4055,7 +4073,7 @@ Default: .true.
 <!-- Radiation -->
 <entry id="radiation_scheme" type="char*16" category="radiation"
        group="phys_ctl_nl" valid_values="rrtmg,camrt" >
-Type of radiation scheme employed. 
+Type of radiation scheme employed.
 Default: set by build-namelist
 </entry>
 
@@ -4343,21 +4361,21 @@ Default: FALSE
 
 <entry id="scm_relaxation_low" type="real" category="scam"
        group="cam_inparm" valid_values="">
-Lowest layer to apply relaxation.  Keep to default value to apply relaxation 
-at the surface.   
+Lowest layer to apply relaxation.  Keep to default value to apply relaxation
+at the surface.
 Default: 1050.0 (hPa)
 </entry>
 
 <entry id="scm_relaxation_high" type="real" category="scam"
        group="cam_inparm" valid_values="">
-Highest layer to apply relaxation.  Keep to default value to apply relaxation 
-at the model top.   
+Highest layer to apply relaxation.  Keep to default value to apply relaxation
+at the model top.
 Default: 0.e3 (hPa)
 </entry>
 
 <entry id="scm_observed_aero" type="logical" category="scam"
        group="cam_inparm" valid_values="">
-Initialize with observed aerosols from IOP file. 
+Initialize with observed aerosols from IOP file.
 Default: FALSE
 </entry>
 
@@ -4389,7 +4407,7 @@ Default: set by build-namelist
 
 <entry id="solar_data_file" type="char*256" input_pathname="abs" category="solar"
        group="solar_inparm" valid_values="" >
-Full pathname of dataset for file that contains the solar photon enerspectra or TSI data 
+Full pathname of dataset for file that contains the solar photon enerspectra or TSI data
 as a time series
 Default: none
 </entry>
@@ -4404,7 +4422,7 @@ Default: SERIAL
 <entry id="solar_data_ymd" type="integer"  category="solar"
        group="solar_inparm" valid_values="" >
 If <varname>solar_data_type</varname> is "FIXED" then solar_data_ymd
-is the date the solar data is fixed to.  If <varname>solar_data_type</varname> 
+is the date the solar data is fixed to.  If <varname>solar_data_type</varname>
 is "SERIAL" the solar_data_ymd is the start date of the time series
 of solar data.
 Format: YYYYMMDD
@@ -4419,7 +4437,7 @@ Default: current model time of day
 
 <entry id="solar_htng_spctrl_scl" type="logical"  category="solar"
        group="solar_inparm" valid_values="" >
-Use spectral scaling in the radiation heating 
+Use spectral scaling in the radiation heating
 Default: false
 </entry>
 
@@ -4460,7 +4478,7 @@ Default: TRUE
 The length (in seconds) of the coupling interval between the dynamics and
 physics.  Changing this variable directly impacts the physical
 parameterizations in the model and may impact the climate.  Changing
-resolution usually requires a change in <varname>dtime</varname>.  
+resolution usually requires a change in <varname>dtime</varname>.
 Default: is resolution and dycore dependent and is set by build-namelist.
 </entry>
 
@@ -4542,7 +4560,7 @@ Default: set by build-namelist.
 <!-- Flags for implementing code modifications under polar project -->
 <entry id="sscav_tuning" type="logical"  category="cam_chem"
        group="aerosol_nl" valid_values="" >
-Flag for wet scavenging tuning 
+Flag for wet scavenging tuning
 Default: .false.
 </entry>
 
@@ -4560,28 +4578,28 @@ Default: set by build-namelist.
 
 <entry id="clim_soilw_file" type="char*256" input_pathname="abs" category="cam_chem"
        group="chem_inparm" valid_values="" >
-Full pathname of dataset containing soil moisture fraction information used in 'xactive_atm' 
+Full pathname of dataset containing soil moisture fraction information used in 'xactive_atm'
 method of calculating dry deposition of chemical tracers.
 Default: set by build-namelist.
 </entry>
 
 <entry id="depvel_file" type="char*256" input_pathname="abs" category="cam_chem"
        group="chem_inparm" valid_values="" >
-Full pathname of dataset which contains the prescribed deposition velocities used 
+Full pathname of dataset which contains the prescribed deposition velocities used
 in the 'table' method of calculating dry deposition  of chemical tracers.
 Default: set by build-namelist.
 </entry>
 
 <entry id="depvel_lnd_file" type="char*256" input_pathname="abs" category="cam_chem"
        group="chem_inparm" valid_values="" >
-Full pathname of dataset which contains land vegitation information used in 'xactive_atm' 
+Full pathname of dataset which contains land vegitation information used in 'xactive_atm'
 method of calculating dry deposition of chemical tracers.
 Default: set by build-namelist.
 </entry>
 
 <entry id="season_wes_file" type="char*256" input_pathname="abs" category="cam_chem"
        group="chem_inparm" valid_values="" >
-Full pathname of dataset which contains season information used in 'xactive_atm' 
+Full pathname of dataset which contains season information used in 'xactive_atm'
 method of calculating dry deposition of chemical tracers.
 Default: set by build-namelist.
 </entry>
@@ -4601,28 +4619,28 @@ Default: .false.
 
 <entry id="efield_hflux_file" type="char*256" input_pathname="abs" category="waccm_phys"
        group="iondrag_nl" valid_values="" >
-Full pathname of dataset for coefficient data used in WACCM to calculate ion drag 
+Full pathname of dataset for coefficient data used in WACCM to calculate ion drag
 for high solar fluxes from the Scherliess low latitude electric potential model.
 Default: set by build-namelist.
 </entry>
 
 <entry id="efield_lflux_file" type="char*256" input_pathname="abs" category="waccm_phys"
        group="iondrag_nl" valid_values="" >
-Full pathname of dataset for coefficient data used in WACCM to calculate ion drag 
+Full pathname of dataset for coefficient data used in WACCM to calculate ion drag
 for low solar fluxes from the Scherliess low latitude electric potential model.
 Default: set by build-namelist.
 </entry>
 
 <entry id="efield_wei96_file" type="char*256" input_pathname="abs" category="waccm_phys"
        group="iondrag_nl" valid_values="" >
-Full pathname of dataset for coefficient data used in WACCM to calculate ion drag 
+Full pathname of dataset for coefficient data used in WACCM to calculate ion drag
 from the Weimer96 high latitude electric potential model.
 Default: set by build-namelist.
 </entry>
 
 <entry id="electron_file" type="char*256" input_pathname="abs" category="waccm"
        group="chem_inparm" valid_values="" >
-Full pathname of dataset for the neutral species absorption cross sections for EUV 
+Full pathname of dataset for the neutral species absorption cross sections for EUV
 photo reactions producing electrons.
 Default: set by build-namelist.
 </entry>
@@ -4631,7 +4649,7 @@ Default: set by build-namelist.
        group="chem_inparm" valid_values="CYCLICAL,SERIAL,INTERP_MISSING_MONTHS,FIXED" >
 Type of time interpolation of emission datasets specified.
 Can be set to 'CYCLICAL', 'SERIAL', 'INTERP_MISSING_MONTHS', or 'FIXED'.
-by <varname>srf_emis_specifier</varname>. 
+by <varname>srf_emis_specifier</varname>.
 Default: 'CYCLICAL'
 </entry>
 
@@ -4667,7 +4685,7 @@ Default: set by build-namelist.
 
 <entry id="euvacdat_file" type="char*256" input_pathname="abs" category="waccm"
        group="chem_inparm" valid_values="" >
-Full pathname of dataset for variables used to compute the solar flux in the EUV 
+Full pathname of dataset for variables used to compute the solar flux in the EUV
 wavelength regime.  Used to compute EUV photorates and heating from EUV photolysis.
 Default: set by build-namelist.
 </entry>
@@ -4716,8 +4734,8 @@ read in the sources are summed to give a total emission field for the
 corresponding species.  The emission can be read in as time series of data,
 cycle over a given year, or be fixed to a given date.
 
-The vertical coordinate in these emissions files should be 'altitude' (km) so that the 
-vertical redistribution to the model layers is done using a mass conserving method.  
+The vertical coordinate in these emissions files should be 'altitude' (km) so that the
+vertical redistribution to the model layers is done using a mass conserving method.
 If the vertical coordinate is altitude then data needs to be ordered from the
 surface to the top (increasing altitude).
 
@@ -4785,19 +4803,19 @@ Default: set by build-namelist.
 
 <entry id="lght_landmask_file" type="char*256" input_pathname="abs" category="cam_chem"
        group="chem_inparm" valid_values="" >
-Full pathname of dataset for land mask applied to the lighting NOx production  
+Full pathname of dataset for land mask applied to the lighting NOx production
 Default: set by build-namelist.
 </entry>
 
 <entry id="lght_no_prd_factor" type="real" category="cam_chem"
        group="chem_inparm" valid_values="" >
-Multiplication factor  applied to the lighting NOx production  
+Multiplication factor  applied to the lighting NOx production
 Default: 1.0.
 </entry>
 
 <entry id="no_xfac_ubc" type="real" category="waccm"
        group="chem_inparm" valid_values="" >
-Multiplication factor applied to the upper boundary NO mass mixing ratio. 
+Multiplication factor applied to the upper boundary NO mass mixing ratio.
 Default: 1.0
 </entry>
 
@@ -4815,13 +4833,13 @@ Default: set by build-namelist.
 
 <entry id="o2_xsect_file" type="char*256" input_pathname="abs" category="cam_chem"
        group="chem_inparm" valid_values="" >
-Full pathname of dataset of O2 cross sections for fast-tuv photolysis 
+Full pathname of dataset of O2 cross sections for fast-tuv photolysis
 Default: set by build-namelist.
 </entry>
 
 <entry id="exo_coldens_file" type="char*256" input_pathname="abs" category="cam_chem"
        group="chem_inparm" valid_values="" >
-Full pathname of dataset of O2 and 03 column densities above the model for look-up-table photolysis 
+Full pathname of dataset of O2 and 03 column densities above the model for look-up-table photolysis
 Default: set by build-namelist.
 </entry>
 
@@ -4847,7 +4865,7 @@ Default: set by build-namelist.
 <entry id="prescribed_aero_model" type="char*5" category="cam_chem"
        group="camexp" valid_values="bulk,modal" >
 Switch used to indicate which type of aerosols are prescribed -- bulk or modal.
-This is used to set the default <varname>prescribed_aero_specifier</varname> and 
+This is used to set the default <varname>prescribed_aero_specifier</varname> and
 <varname>aerodep_flx_specifier</varname> namelist variables.
 Default: set by build-namelist
 </entry>
@@ -5307,7 +5325,7 @@ Default: 'CYCLICAL'
 
 <entry id="snoe_ubc_file" type="char*256" input_pathname="abs" category="waccm"
        group="chem_inparm" valid_values="" >
-Full pathname of dataset for the coefficients of the NOEM nitric oxide model used 
+Full pathname of dataset for the coefficients of the NOEM nitric oxide model used
 to calculate its upper boundary concentration.
 Default: set by build-namelist.
 </entry>
@@ -5320,7 +5338,7 @@ Default: set by build-namelist.
 
 <entry id="solar_parms_file" type="char*256" input_pathname="abs" category="waccm"
        group="chem_inparm" valid_values="" >
-Full pathname of time-variant boundary dataset for the time-dependent proxies for 
+Full pathname of time-variant boundary dataset for the time-dependent proxies for
 solar and geomagnetic activity( F10.7, F10.7a, Kp, Ap ).
 Default: set by build-namelist.
 </entry>
@@ -5442,7 +5460,7 @@ Default: none.
 
 <entry id="linoz_data_filelist" type="char*256" input_pathname="rel:linoz_data_datapath" category="cam_chem"
        group="chem_inparm" valid_values="" >
-Filename of file that contains a sequence of filenames of the linoz data.  
+Filename of file that contains a sequence of filenames of the linoz data.
 The filenames in this file are relative to the directory specied
 by <varname>linoz_data_datapath</varname>.
 Default: set by build-namelist.
@@ -5500,7 +5518,7 @@ Default: set by build-namelist.
 
 <entry id="tracer_cnst_filelist" type="char*256" input_pathname="rel:tracer_cnst_datapath" category="cam_chem"
        group="chem_inparm" valid_values="" >
-Filename of file that contains a sequence of filenames for the prescribed chemical constituents.  
+Filename of file that contains a sequence of filenames for the prescribed chemical constituents.
 The filenames in this file are relative to the directory specied
 by <varname>tracer_cnst_datapath</varname>.
 Default: set by build-namelist.
@@ -5648,7 +5666,7 @@ Default: set by build-namelist.
 <entry id="drydep_method" type="char*16" category="dry_deposition"
        group="drydep_inparm" valid_values="xactive_atm,xactive_lnd,table" >
 Dry deposition method used.  This specifies the method used to calculate dry
-deposition velocities of gas-phase chemical species.  The available methods 
+deposition velocities of gas-phase chemical species.  The available methods
 are:
  'table'       - prescribed method in CAM
  'xactive_atm' - interactive method in CAM
@@ -5686,7 +5704,7 @@ Default: set by build-namelist.
 <entry id="waccm_forcing_file" type="char*256" input_pathname="rel:waccm_forcing_datapath" category="waccm_ghg"
        group="waccm_forcing_nl" valid_values="" >
 Filename of the prescribed waccm forcing data used with waccm_ghg chemistry.
-This contains prescribed constituents for non-LTE calculations and heating rates 
+This contains prescribed constituents for non-LTE calculations and heating rates
 for wavelengths less than 200 nm.
 Default: set by build-namelist.
 </entry>
@@ -5700,8 +5718,8 @@ Default: set by build-namelist.
 
 <entry id="waccm_forcing_filelist" type="char*256" input_pathname="rel:waccm_forcing_datapath" category="waccm_ghg"
        group="waccm_forcing_nl" valid_values="" >
-A file that contains a sequence of filenames for prescribed waccm forcing data.  
-The filenames in this file are relative to the directory specied 
+A file that contains a sequence of filenames for prescribed waccm forcing data.
+The filenames in this file are relative to the directory specied
 by <varname>waccm_forcing_datapath</varname>.
 Default: set by build-namelist.
 </entry>
@@ -5803,7 +5821,7 @@ Default: Set by build-namelist.
 
 <entry id="spe_remove_file" type="logical" category="waccm"
        group="chem_inparm" valid_values="" >
-TRUE implies the offline solar proton ionization data file will be deleted when 
+TRUE implies the offline solar proton ionization data file will be deleted when
 finished with it.
 Default: FALSE
 </entry>
@@ -5828,7 +5846,7 @@ Default: Set by build-namelist.
        group="ctl_nl" valid_values="" >
 Physics timescale (in seconds) used to compute physics tendencies
 If 0, feature is disabled (use dtime).
-Default: Set by build-namelist. 
+Default: Set by build-namelist.
 </entry>
 
 <entry id="se_limiter_option" type="integer" category="se"
@@ -6078,7 +6096,7 @@ Default: set by build-namelist.
 
 <entry id="focndomain" type="char*256" input_pathname="abs" category="ocn"
        group="camexp" valid_values="" >
-Full pathname of 
+Full pathname of
 Default: set by build-namelist.
 </entry>
 
@@ -6166,7 +6184,7 @@ Default: FALSE
      namelist /modelio/.  These variables in group camexp are treated
      specially in build-namelist, where they are put into the modelio
      namelist group in files with specific names that are read by each
-     component.  --> 
+     component.  -->
 
 <entry id="atm_logfile" type="char*256" category="driver"
        group="camexp" valid_values="">
@@ -6248,7 +6266,7 @@ Default: FALSE
 </entry>
 <entry id="cplflds_custom" type="char*80"  category="driver"
        group="seq_cplflds_userspec" valid_values="" >
-Default: 
+Default:
 </entry>
 
 <!-- Task/Thread layouts -->
@@ -6504,7 +6522,7 @@ default filenames of both the history and restart files (see
 the <varname>hfilename_spec</varname> namelist option).  The "%c" string in
 the <varname>hfilename_spec</varname> templates are expanded using the
 value of <varname>case_name</varname> when history filenames are created.
-Default: set by build-namelist. 
+Default: set by build-namelist.
 </entry>
 
 <entry id="cpl_cdf64" type="logical"  category="driver"
@@ -6711,18 +6729,18 @@ Default: FALSE
 
 <entry id="reprosum_recompute" type="logical"  category="reprosum"
        group="seq_infodata_inparm" valid_values="">
-Flag to indicate whether a distributed sum that violates the difference 
-tolerance specified by reprosum_diffmax should be recomputed using 
+Flag to indicate whether a distributed sum that violates the difference
+tolerance specified by reprosum_diffmax should be recomputed using
 a floating point-based (but nonscalable) reproducible algorithm.
 Default: FALSE
 </entry>
 
 <entry id="reprosum_diffmax" type="real"  category="reprosum"
        group="seq_infodata_inparm" valid_values="">
-Relative difference between repro and nonrepro algorithms that will 
-generate a warning. This will also force a recompute using a nonscalable 
+Relative difference between repro and nonrepro algorithms that will
+generate a warning. This will also force a recompute using a nonscalable
 algorithm if reprosum_recompute is true. If less than zero, then
-the difference will not be evaluated (and the nonrepro algorithm will not 
+the difference will not be evaluated (and the nonrepro algorithm will not
 be computed).
 Default: -1.0
 </entry>
@@ -6739,7 +6757,7 @@ Default: set by build-namelist.
 
 <entry id="atm_cpl_offset" type="integer"  category="time_mgr"
        group="seq_timemgr_inparm" valid_values="" >
-Default: 
+Default:
 </entry>
 
 <entry id="calendar" type="char*80"  category="time_mgr"
@@ -6765,7 +6783,7 @@ Default: set by build-namelist.
 
 <entry id="ice_cpl_offset" type="integer"  category="time_mgr"
        group="seq_timemgr_inparm" valid_values="" >
-Default: 
+Default:
 </entry>
 
 <entry id="lnd_cpl_dt" type="integer"  category="time_mgr"
@@ -6775,7 +6793,7 @@ Default: set by build-namelist.
 
 <entry id="lnd_cpl_offset" type="integer"  category="time_mgr"
        group="seq_timemgr_inparm" valid_values="" >
-Default: 
+Default:
 </entry>
 
 <entry id="ocn_cpl_dt" type="integer"  category="time_mgr"
@@ -6785,7 +6803,7 @@ Default: set by build-namelist.
 
 <entry id="ocn_cpl_offset" type="integer"  category="time_mgr"
        group="seq_timemgr_inparm" valid_values="" >
-Default: 
+Default:
 </entry>
 
 <entry id="rof_cpl_dt" type="integer"  category="time_mgr"
@@ -6795,7 +6813,7 @@ Default: set by build-namelist.
 
 <entry id="rof_cpl_offset" type="integer"  category="time_mgr"
        group="seq_timemgr_inparm" valid_values="" >
-Default: 
+Default:
 </entry>
 
 <entry id="ref_tod" type="integer"  category="time_mgr"
@@ -6967,12 +6985,12 @@ Full pathname of surface data file.
 Default: set by build-namelist.
 </entry>
 
-<entry id="fsnowoptics" type="char*256"  input_pathname="abs" category="clm" 
+<entry id="fsnowoptics" type="char*256"  input_pathname="abs" category="clm"
        group="clm_inparm" valid_values="" >
 SNICAR (SNow, ICe, and Aerosol Radiative model) optical data file name
 </entry>
 
-<entry id="fsnowaging" type="char*256"  input_pathname="abs" category="clm" 
+<entry id="fsnowaging" type="char*256"  input_pathname="abs" category="clm"
        group="clm_inparm" valid_values="" >
 SNICAR (SNow, ICe, and Aerosol Radiative model) snow aging data file name
 </entry>
@@ -7126,7 +7144,7 @@ This varible is only used internally by build-namelist to determine correct
 defaults for datasets such as surface datasets, initial conditions, dynamic
 PFT, aerosol-deposition, Nitrogen deposition rates etc.
 Default: set by build-namelist.
-</entry> 
+</entry>
 
 <entry id="urban_hac" type="char*16" category="clm"
        group="clm_inparm" valid_values="OFF,ON,ON_WASTEHEAT" >
@@ -7202,14 +7220,14 @@ Default: set to shr_const value
 
 <entry id="tms_orocnst" type="real" category="physconst"
        group="physconst_nl" valid_values="" >
-Turbulent mountain stress parameter used when turbulent mountain stress calculation 
+Turbulent mountain stress parameter used when turbulent mountain stress calculation
 is turned on. See <varname>do_tms</varname>.
 Default: 1.0 for CAM, set by build-namelist for WACCM, T31
 </entry>
 
 <entry id="tms_z0fac" type="real" category="physconst"
        group="physconst_nl" valid_values="" >
-Factor determining z_0 from orographic standard deviation [ no unit ] 
+Factor determining z_0 from orographic standard deviation [ no unit ]
 Used when turbulent mountain stress calc is turned on. See <varname>do_tms</varname>.
 set by build-namelist for WACCM, T31
 </entry>

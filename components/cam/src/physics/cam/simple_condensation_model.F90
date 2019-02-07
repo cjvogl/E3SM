@@ -109,8 +109,6 @@ contains
                              dfacdRH,&
                              dtime, ixcldliq, &
                              rkz_cldfrc_opt, &
-                             rkz_partition_num, &
-                             rkz_P3_opt, &
                              rkz_term_A_opt, &
                              rkz_term_B_opt, &
                              rkz_term_C_opt, &
@@ -122,7 +120,12 @@ contains
                              l_rkz_lmt_2, &
                              l_rkz_lmt_3, &
                              l_rkz_lmt_4, &
-                             l_rkz_lmt_5  &
+                             l_rkz_lmt_5, &
+                             rkz_use_sgr, &
+                             rkz_sgr_extrap_f, &
+                             rkz_sgr_qv_deg, &
+                             rkz_sgr_ql_deg, &
+                             rkz_sgr_Al_deg  &
                              )
 
   use shr_kind_mod, only: r8=>shr_kind_r8
@@ -156,8 +159,6 @@ contains
   integer,  intent(in) :: ixcldliq            ! constituent index
 
   integer,  intent(in) :: rkz_cldfrc_opt       ! cloud fraction scheme
-  integer,  intent(in) :: rkz_partition_num
-  integer,  intent(in) :: rkz_P3_opt
   integer,  intent(in) :: rkz_term_A_opt
   integer,  intent(in) :: rkz_term_B_opt
   integer,  intent(in) :: rkz_term_C_opt
@@ -173,6 +174,11 @@ contains
   logical,  intent(in) :: l_rkz_lmt_5
   logical,  intent(in) :: l_rkz_qme_check
 
+  logical,  intent(in) :: rkz_use_sgr
+  logical,  intent(in) :: rkz_sgr_extrap_f
+  integer,  intent(in) :: rkz_sgr_qv_deg
+  integer,  intent(in) :: rkz_sgr_ql_deg
+  integer,  intent(in) :: rkz_sgr_Al_deg
   ! tmp work arrays
 
   real(r8) :: rdtime                 ! 1/dtime
@@ -187,9 +193,12 @@ contains
   real(r8) :: ast_old(pcols,pver)    ! cloud fraction of previous time step before condensation
 
   real(r8) :: qsat(pcols,pver)       ! saturation specific humidity
+  real(r8) :: qsatwat(pcols,pver)       ! saturation specific humidity
   real(r8) :: esl(pcols,pver)        ! saturation vapor pressure (output from subroutine qsat_water, not used)
   real(r8) :: dqsatdT(pcols,pver)    ! dqsat/dT
+  real(r8) :: dqsatdTwat(pcols,pver)    ! dqsat/dT
   real(r8) :: gam(pcols,pver)        ! L/cpair * dqsat/dT
+  real(r8) :: gamwat(pcols,pver)        ! L/cpair * dqsat/dT
 
   real(r8) :: rhu00                  ! threshold grid-box-mean RH used in the diagnostic cldfrc scheme
   real(r8) :: rhgbm(pcols,pver)      ! grid box mean relative humidity
@@ -199,8 +208,6 @@ contains
   real(r8) :: qtend(pcols,pver)      ! Moisture tendency caused by other processes
   real(r8) :: ltend(pcols,pver)      ! liquid condensate tendency caused by other processes
   real(r8) :: ttend(pcols,pver)      ! Temperature tendency caused by other processes
-  real(r8) :: qtends(pcols,pver)     ! qtend for P3
-  real(r8) :: ltends(pcols,pver)     ! ltend for P3
 
   real(r8) :: qme   (pcols,pver)     ! total condensation rate
 
@@ -217,8 +224,8 @@ contains
 
   real(r8) :: ql_incld(pcols,pver)   ! in-cloud liquid concentration
   real(r8) :: dfdt    (pcols,pver)   ! df/dt where f is the cloud fraction
-  real(r8) :: D(pcols,pver), Dstar(pcols,pver)
   real(r8) :: ast_np1(pcols,pver)
+  real(r8) :: ast_n(pcols,pver)
   real(r8) :: zforcing(pcols,pver)
   real(r8) :: zc3     (pcols,pver)
 
@@ -254,19 +261,13 @@ contains
 
   ! Calculate saturation specific humidity (qsat) and its derivative wrt temperature (dqsatdT)
 
-  if (rkz_partition_num == 0) then
-    do k=1,pver
-    do i=1,ncol
-      call qsat_water( state%t(i,k), state%pmid(i,k), esl(i,k), qsat(i,k), gam(i,k), dqsatdT(i,k) )
-    end do
-    end do
-  else
-    do k=1,pver
-    do i=1,ncol
-      call qsat_water(tcwat(i,k), state%pmid(i,k), esl(i,k), qsat(i,k), gam(i,k), dqsatdT(i,k) )
-    end do
-    end do
-  end if
+  do k=1,pver
+  do i=1,ncol
+    call qsat_water(state%t(i,k), state%pmid(i,k), esl(i,k), qsat(i,k), gam(i,k), dqsatdT(i,k))
+    call qsat_water(tcwat(i,k), state%pmid(i,k), esl(i,k), qsatwat(i,k), gamwat(i,k), dqsatdTwat(i,k))
+  end do
+  end do
+
   call outfld('RKZ_qsat',    qsat,    pcols, lchnk)
   call outfld('RKZ_dqsatdT', dqsatdT, pcols, lchnk)
   call outfld('RKZ_gam',     gam,     pcols, lchnk)
@@ -302,7 +303,7 @@ contains
   call outfld('RKZ_Taf',   state%t(:,:), pcols, lchnk)
   call outfld('RKZ_Tbf',   tcwat,        pcols, lchnk)
 
-  call outfld('RKZ_f',     ast,      pcols, lchnk)
+  !call outfld('RKZ_f',     ast,      pcols, lchnk)
   call outfld('RKZ_dfdRH', dastdRH,  pcols, lchnk)
   call outfld('RKZ_dlnfdRH', dlnastdRH,  pcols, lchnk)
 
@@ -323,16 +324,24 @@ contains
      call outfld('RKZ_AT', ttend, pcols, lchnk)
 
 
-    if (rkz_partition_num > 0) then
-      
-      ! compute prediction for f(t+dt)
-      if (nstep == 1) then
-        ast_np1(:ncol,:pver) = astwat(:ncol,:pver)
+    if (rkz_use_sgr) then
+
+      ! determine values for f(t) and f(t+dt)
+      if (rkz_sgr_extrap_f) then
+        ! f(t) = astwat, f(t+dt) = 2*astwat - astwatold
+        ast_n(:ncol,:pver) = astwat(:ncol,:pver)
+        if (nstep == 1) then
+          ast_np1(:ncol,:pver) = astwat(:ncol,:pver)
+        else
+          ast_np1(:ncol,:pver) = 2._r8*astwat(:ncol,:pver) - astwatold(:ncol,:pver)
+        end if
       else
-        ast_np1(:ncol,:pver) = 2._r8*astwat(:ncol,:pver) - astwatold(:ncol,:pver)
+        ! f(t) = astwatold, f(t+dt) = astwat
+        ast_n(:ncol,:pver) = astwatold(:ncol,:pver)
+        ast_np1(:ncol,:pver) = astwat(:ncol,:pver)
       end if
 
-      ! bound f(t+dt) to physical values
+      ! bound f(t_np1) to physical values
       where (ast_np1(:ncol,:pver) > 1._r8)
         ast_np1 = 1._r8
       end where
@@ -343,28 +352,31 @@ contains
       ! add condensation term that maintains water saturation in cloudy
       ! portion of cell at t+dt
       qme(:ncol,:pver) = ast_np1(:ncol, :pver) * &
-                          (qtend(:ncol,:pver) - dqsatdT(:ncol,:pver)*ttend(:ncol,:pver) ) &
-                            /( 1._r8 + gam(:ncol,:pver) )
+                           (qtend(:ncol,:pver) - dqsatdTwat(:ncol,:pver)*ttend(:ncol,:pver) ) &
+                             /( 1._r8 + gamwat(:ncol,:pver) )
+
+      ! add condensation term that maintains no cloud liquid water in cloud-free
+      ! portion of cell
+      qme(:ncol,:pver) = qme(:ncol,:pver) - &
+                          (1.0 - ast_np1(:ncol,:pver))**(1+rkz_sgr_Al_deg)*ltend(:ncol,:pver)
 
       ! where cloud nucleation scenario, add condensation term that ensures
       ! the cloudy region at t+dt that was clear at t (transition region)
       ! becomes saturated
-      where (ast_np1(:ncol,:pver) > astwat(:ncol,:pver))
+      where (ast_np1(:ncol,:pver) > ast_n(:ncol,:pver))
         ! note that because ast_np1 is bounded by 1.0, entering this block means
         ! astwat < 1.0 so that (1.0-astwat) > 0.0
-        qme = qme - rdtime * (1._r8 - (1._r8-ast_np1)/(1._r8-astwat)) * (qsat-qcwat) 
-        ! note that this is a less-susceptible-to-round-off-error version of
-        ! qme = qme - dastdt * (qsat - qcwat)/(1._r8 - astwat)
+        qme = qme - rdtime * &
+                (1._r8 - (1._r8-ast_np1)/(1._r8-ast_n))**(1+rkz_sgr_qv_deg) * (qsatwat-qcwat)
       end where
       ! where cloud annihilation scenario, add condensation term that ensures
       ! the clear region at t+dt that was cloudy at t (transition region)
       ! no longer has cloud liquid
-      where (ast_np1(:ncol,:pver) < astwat(:ncol,:pver))
+      where (ast_np1(:ncol,:pver) < ast_n(:ncol,:pver))
         ! note that because ast_np1 is bounded by 0.0, entering this block means
         ! astwat > 0.0
-        qme = qme - rdtime * (1._r8 - ast_np1/astwat) * (ltend + lcwat)
-        ! note that this is a less-suusceptible-to-round-off-error version of
-        ! qme = qme + dastdt * (ltend + lcwat)/astwat
+        qme = qme - rdtime * &
+                (1._r8 - ast_np1/ast_n)**(1+rkz_sgr_ql_deg) * lcwat
       end where
 
     else
@@ -676,8 +688,8 @@ contains
          dfdt(:ncol,:pver) = dastdRH(:ncol,:pver) *( zforcing(:ncol,:pver) - zc3(:ncol,:pver)*qme(:ncol,:pver) )
 
      case default
-         write(iulog,*) "Unrecognized value of rkz_term_C_opt:",rkz_term_C_opt,". Abort."
-         call endrun
+         dfdt(:ncol,:pver) = -1._r8
+         
      end select
 
      call outfld('RKZ_dfdt', dfdt, pcols, lchnk)

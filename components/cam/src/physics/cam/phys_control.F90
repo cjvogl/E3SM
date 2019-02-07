@@ -36,9 +36,9 @@ integer,           parameter :: unset_int = huge(1)
 ! Namelist variables:
 character(len=16) :: cam_physpkg          = unset_str  ! CAM physics package [cam3 | cam4 | cam5 |
                                                        !   ideal | adiabatic].
-character(len=32) :: cam_chempkg          = unset_str  ! CAM chemistry package [waccm_mozart | 
-                                                       !  waccm_ghg | trop_mozart | trop_ghg | 
-                                                       !  trop_bam | trop_mam3 | trop_mam4 | 
+character(len=32) :: cam_chempkg          = unset_str  ! CAM chemistry package [waccm_mozart |
+                                                       !  waccm_ghg | trop_mozart | trop_ghg |
+                                                       !  trop_bam | trop_mam3 | trop_mam4 |
                                                        !  trop_mam4_resus | trop_mam4_resus_soag |
                                                        !  trop_mam4_mom |
                                                        !  trop_mam4_resus_mom | trop_mam7 |
@@ -46,7 +46,7 @@ character(len=32) :: cam_chempkg          = unset_str  ! CAM chemistry package [
                                                        !  linoz_mam3 | linoz_mam4_resus |
                                                        !  linoz_mam4_resus_mom |
                                                        !  linoz_mam4_resus_mom_soag |
-                                                       !  super_fast_llnl | super_fast_llnl_mam3 | 
+                                                       !  super_fast_llnl | super_fast_llnl_mam3 |
                                                        !  waccm_mozart_mam3 | none
 character(len=16) :: waccmx_opt           = unset_str  ! WACCMX run option [ionosphere | neutral | off
 character(len=16) :: deep_scheme          = unset_str  ! deep convection package
@@ -73,21 +73,21 @@ logical           :: history_budget       = .false.    ! output tendencies and s
                                                        ! temperature, water vapor, cloud ice and cloud
                                                        ! liquid budgets.
 logical           :: ssalt_tuning         = .false.    ! sea salt tuning flag for progseasalts_intr.F90
-logical           :: resus_fix            = .false.    ! to address resuspension bug fix in wetdep.F90 
+logical           :: resus_fix            = .false.    ! to address resuspension bug fix in wetdep.F90
 logical           :: convproc_do_aer      = .false.    ! to apply unified convective transport/removal for aerosols
-logical           :: convproc_do_gas      = .false.    ! to apply unified convective transport/removal for trace gases  
+logical           :: convproc_do_gas      = .false.    ! to apply unified convective transport/removal for trace gases
                                                        ! *** the unified conv. trans/removal currently does not do gases ***
 !  convproc_method_activate - 1=apply abdulrazzak-ghan to entrained aerosols for lowest nlayers
 !                             2=do secondary activation with prescribed supersat
 integer           :: convproc_method_activate = 2      ! controls activation in the unified convective transport/removal
-integer           :: mam_amicphys_optaa   = 0          ! <= 0 -- use old microphysics code (separate calls to gasaerexch, 
-                                                       !                                    newnuc, and coag routines) 
+integer           :: mam_amicphys_optaa   = 0          ! <= 0 -- use old microphysics code (separate calls to gasaerexch,
+                                                       !                                    newnuc, and coag routines)
                                                        !  > 0 -- use new microphysics code (single call to amicphys routine)
 real(r8)          :: n_so4_monolayers_pcage = huge(1.0_r8) ! number of so4(+nh4) monolayers needed to "age" a carbon particle
 real(r8)          :: micro_mg_accre_enhan_fac = huge(1.0_r8) !!Accretion enhancement factor
-logical           :: liqcf_fix            = .false.    ! liq cld fraction fix calc.                     
-logical           :: regen_fix            = .false.    ! aerosol regeneration bug fix for ndrop.F90 
-logical           :: demott_ice_nuc       = .false.    ! use DeMott ice nucleation treatment in microphysics 
+logical           :: liqcf_fix            = .false.    ! liq cld fraction fix calc.
+logical           :: regen_fix            = .false.    ! aerosol regeneration bug fix for ndrop.F90
+logical           :: demott_ice_nuc       = .false.    ! use DeMott ice nucleation treatment in microphysics
 integer           :: history_budget_histfile_num = 1   ! output history file number for budget fields
 logical           :: history_waccm        = .true.     ! output variables of interest for WACCM runs
 logical           :: history_clubb        = .true.     ! output default CLUBB-related variables
@@ -132,14 +132,14 @@ logical, public, protected :: use_gw_convect = .false.
 !
 ! Comment by Hui Wan (PNNL, 2014-12):
 ! This set of switches were implemeted in a very simplistic way
-! for a short-term time-step convergence test performed 
-! with the "standard" CAM5 as of 2014. 
-! The purpose was to identify which moist processes 
-! were responsible for the poor convergence of the full model. 
+! for a short-term time-step convergence test performed
+! with the "standard" CAM5 as of 2014.
+! The purpose was to identify which moist processes
+! were responsible for the poor convergence of the full model.
 ! We did not make any attempt to test details of MAM
-! or the non-standard model configurations/components such as 
+! or the non-standard model configurations/components such as
 ! WACCM, CLUBB, CARMA. It is unlikely that the switches will work
-! for those configurations. 
+! for those configurations.
 
 logical :: l_tracer_aero   = .true.
 logical :: l_vdiff         = .true.
@@ -152,12 +152,10 @@ logical :: l_st_mac        = .true.
 logical :: l_st_mic        = .true.
 logical :: l_rad           = .true.
 
-! Options for configuring a simple macrophysics scheme 
+! Options for configuring a simple macrophysics scheme
 
 integer :: simple_macrop_opt = -1   ! -1 = NOT using simple macrophysics schemes
 integer :: rkz_cldfrc_opt    = 1
-integer :: rkz_partition_num = 0
-integer :: rkz_P3_opt        = -1
 integer :: rkz_term_A_opt    = 1
 integer :: rkz_term_B_opt    = 0
 integer :: rkz_term_C_opt    = -1
@@ -170,15 +168,21 @@ logical :: l_rkz_lmt_2       = .false.
 logical :: l_rkz_lmt_3       = .false.
 logical :: l_rkz_lmt_4       = .true.
 logical :: l_rkz_lmt_5       = .false.
-!!!!!!!Options for configuring a simple microphysics scheme 
-integer :: simple_microp_opt = -1   ! -1 = NOT using simple microphysics schemes 
+logical :: rkz_use_sgr       = .false.
+logical :: rkz_sgr_extrap_f  = .false.
+integer :: rkz_sgr_qv_deg    = -1
+integer :: rkz_sgr_ql_deg    = -1
+integer :: rkz_sgr_Al_deg    = -1
+
+!!!!!!!Options for configuring a simple microphysics scheme
+integer :: simple_microp_opt = -1   ! -1 = NOT using simple microphysics schemes
 real(r8):: kessler_autoconv_tau     = 1000.0  ! autoconversion time scale (seconds) in Kessler scheme
 real(r8):: kessler_autoconv_ql_crit = 5e-4_r8 ! critical in-cloud liquid concentration (kg/kg) for
                                               ! triggering autoconversion in Kessler scheme
 
-!======================================================================= 
+!=======================================================================
 contains
-!======================================================================= 
+!=======================================================================
 
 subroutine phys_ctl_readnl(nlfile)
 
@@ -202,8 +206,8 @@ subroutine phys_ctl_readnl(nlfile)
       use_mass_borrower, do_aerocom_ind3, &
       l_ieflx_fix, &
       ieflx_opt, &
-      use_qqflx_fixer, & 
-      print_fixer_message, & 
+      use_qqflx_fixer, &
+      print_fixer_message, &
       use_hetfrz_classnuc, use_gw_oro, use_gw_front, use_gw_convect, &
       cld_macmic_num_steps, micro_do_icesupersat, &
       fix_g1_err_ndrop, ssalt_tuning, resus_fix, convproc_do_aer, &
@@ -211,10 +215,11 @@ subroutine phys_ctl_readnl(nlfile)
       mam_amicphys_optaa, n_so4_monolayers_pcage,micro_mg_accre_enhan_fac, &
       l_tracer_aero, l_vdiff, l_rayleigh, l_gw_drag, l_ac_energy_chk, &
       l_bc_energy_fix, l_dry_adj, l_st_mac, l_st_mic, l_rad, &
-      simple_macrop_opt, rkz_cldfrc_opt, rkz_partition_num, rkz_P3_opt, rkz_term_A_opt, rkz_term_B_opt, &
+      simple_macrop_opt, rkz_cldfrc_opt, &
       rkz_term_C_opt, &
       rkz_term_C_ql_opt, rkz_term_C_fmin, rkz_zsmall_opt, rkz_lmt5_opt, l_rkz_qme_check, &
       l_rkz_lmt_2, l_rkz_lmt_3, l_rkz_lmt_4, l_rkz_lmt_5, &
+      rkz_use_sgr, rkz_sgr_extrap_f, rkz_sgr_qv_deg, rkz_sgr_ql_deg, rkz_sgr_Al_deg, &
       simple_microp_opt, kessler_autoconv_tau, kessler_autoconv_ql_crit, &
       prc_coef1,prc_exp,prc_exp1,cld_sed,mg_prc_coeff_fix, &
       rrtmg_temp_fix
@@ -299,8 +304,6 @@ subroutine phys_ctl_readnl(nlfile)
 
    call mpibcast(simple_macrop_opt,               1 , mpiint,  0, mpicom)
    call mpibcast(rkz_cldfrc_opt,                  1 , mpiint,  0, mpicom)
-   call mpibcast(rkz_partition_num,               1 , mpiint,  0, mpicom)
-   call mpibcast(rkz_P3_opt,                      1 , mpiint,  0, mpicom)
    call mpibcast(rkz_term_A_opt,                  1 , mpiint,  0, mpicom)
    call mpibcast(rkz_term_B_opt,                  1 , mpiint,  0, mpicom)
    call mpibcast(rkz_term_C_opt,                  1 , mpiint,  0, mpicom)
@@ -313,6 +316,11 @@ subroutine phys_ctl_readnl(nlfile)
    call mpibcast(l_rkz_lmt_3,                     1 , mpilog,  0, mpicom)
    call mpibcast(l_rkz_lmt_4,                     1 , mpilog,  0, mpicom)
    call mpibcast(l_rkz_lmt_5,                     1 , mpilog,  0, mpicom)
+   call mpibcast(rkz_use_sgr,                     1 , mpilog,  0, mpicom)
+   call mpibcast(rkz_sgr_extrap_f,                1 , mpilog,  0, mpicom)
+   call mpibcast(rkz_sgr_qv_deg,                  1 , mpiint,  0, mpicom)
+   call mpibcast(rkz_sgr_ql_deg,                  1 , mpiint,  0, mpicom)
+   call mpibcast(rkz_sgr_Al_deg,                  1 , mpiint,  0, mpicom)
 
    call mpibcast(simple_microp_opt,               1 , mpiint,  0, mpicom)
    call mpibcast(kessler_autoconv_tau,            1 , mpir8,   0, mpicom)
@@ -371,7 +379,7 @@ subroutine phys_ctl_readnl(nlfile)
       write(iulog,*)'UW PBL is not compatible with RK microphysics.  Quiting'
       call endrun('PBL and Microphysics schemes incompatible')
    endif
-   
+
    ! Add a check to make sure CLUBB and MG are used together
    if ( do_clubb_sgs .and. ( microp_scheme .ne. 'MG')) then
       write(iulog,*)'CLUBB is only compatible with MG microphysics.  Quiting'
@@ -422,7 +430,7 @@ logical function cam_physpkg_is(name)
    ! query for the name of the physics package
 
    character(len=*) :: name
-   
+
    cam_physpkg_is = (trim(name) == trim(cam_physpkg))
 end function cam_physpkg_is
 
@@ -433,7 +441,7 @@ logical function cam_chempkg_is(name)
    ! query for the name of the chemics package
 
    character(len=*) :: name
-   
+
    cam_chempkg_is = (trim(name) == trim(cam_chempkg))
 end function cam_chempkg_is
 
@@ -444,7 +452,7 @@ logical function waccmx_is(name)
    ! query for the name of the waccmx run option
 
    character(len=*) :: name
-   
+
    waccmx_is = (trim(name) == trim(waccmx_opt))
 end function waccmx_is
 
@@ -458,22 +466,22 @@ subroutine phys_getopts(deep_scheme_out, shallow_scheme_out, eddy_scheme_out, mi
                         history_clubb_out, ieflx_opt_out, conv_water_in_rad_out, cam_chempkg_out, prog_modal_aero_out, macrop_scheme_out, &
                         do_clubb_sgs_out, do_tms_out, state_debug_checks_out, &
                         do_aerocom_ind3_out,  &
-                        use_mass_borrower_out, & 
-                        l_ieflx_fix_out, & 
-                        use_qqflx_fixer_out, & 
-                        print_fixer_message_out, & 
+                        use_mass_borrower_out, &
+                        l_ieflx_fix_out, &
+                        use_qqflx_fixer_out, &
+                        print_fixer_message_out, &
                         cld_macmic_num_steps_out, micro_do_icesupersat_out, &
                         fix_g1_err_ndrop_out, ssalt_tuning_out,resus_fix_out,convproc_do_aer_out,  &
                         convproc_do_gas_out, convproc_method_activate_out, mam_amicphys_optaa_out, n_so4_monolayers_pcage_out, &
-                        micro_mg_accre_enhan_fac_out, liqcf_fix_out, regen_fix_out,demott_ice_nuc_out      &
-                       ,l_tracer_aero_out, l_vdiff_out, l_rayleigh_out, l_gw_drag_out, l_ac_energy_chk_out  &
-                       ,l_bc_energy_fix_out, l_dry_adj_out, l_st_mac_out, l_st_mic_out, l_rad_out  &
-                       ,simple_macrop_opt_out, rkz_cldfrc_opt_out, rkz_partition_num_out, rkz_P3_opt_out &
-                       , rkz_term_A_opt_out, rkz_term_B_opt_out &
-                       ,rkz_term_C_opt_out, rkz_term_C_ql_opt_out, rkz_term_C_fmin_out, rkz_zsmall_opt_out &
-                       ,rkz_lmt5_opt_out, l_rkz_qme_check_out, l_rkz_lmt_2_out, l_rkz_lmt_3_out, l_rkz_lmt_4_out &
-                       ,l_rkz_lmt_5_out, simple_microp_opt_out, kessler_autoconv_tau_out, kessler_autoconv_ql_crit_out &
-                       ,prc_coef1_out,prc_exp_out,prc_exp1_out, cld_sed_out,mg_prc_coeff_fix_out,rrtmg_temp_fix_out)
+                        micro_mg_accre_enhan_fac_out, liqcf_fix_out, regen_fix_out,demott_ice_nuc_out,      &
+                        l_tracer_aero_out, l_vdiff_out, l_rayleigh_out, l_gw_drag_out, l_ac_energy_chk_out,  &
+                        l_bc_energy_fix_out, l_dry_adj_out, l_st_mac_out, l_st_mic_out, l_rad_out,  &
+                        simple_macrop_opt_out, rkz_cldfrc_opt_out, &
+                        rkz_term_A_opt_out, rkz_term_B_opt_out,rkz_term_C_opt_out, rkz_term_C_ql_opt_out, rkz_term_C_fmin_out, rkz_zsmall_opt_out, &
+                        rkz_lmt5_opt_out, l_rkz_qme_check_out, l_rkz_lmt_2_out, l_rkz_lmt_3_out, l_rkz_lmt_4_out, &
+                        l_rkz_lmt_5_out, rkz_use_sgr_out, rkz_sgr_extrap_f_out, rkz_sgr_qv_deg_out, rkz_sgr_ql_deg_out, rkz_sgr_Al_deg_out, &
+                        simple_microp_opt_out, kessler_autoconv_tau_out, kessler_autoconv_ql_crit_out, &
+                        prc_coef1_out,prc_exp_out,prc_exp1_out, cld_sed_out,mg_prc_coeff_fix_out,rrtmg_temp_fix_out)
 
 !-----------------------------------------------------------------------
 ! Purpose: Return runtime settings
@@ -516,17 +524,17 @@ subroutine phys_getopts(deep_scheme_out, shallow_scheme_out, eddy_scheme_out, mi
    logical,           intent(out), optional :: print_fixer_message_out
    logical,           intent(out), optional :: state_debug_checks_out
    logical,           intent(out), optional :: fix_g1_err_ndrop_out!BSINGH - bugfix for ndrop.F90
-   logical,           intent(out), optional :: ssalt_tuning_out    
-   logical,           intent(out), optional :: resus_fix_out       
-   logical,           intent(out), optional :: convproc_do_aer_out 
-   logical,           intent(out), optional :: convproc_do_gas_out 
-   integer,           intent(out), optional :: convproc_method_activate_out 
+   logical,           intent(out), optional :: ssalt_tuning_out
+   logical,           intent(out), optional :: resus_fix_out
+   logical,           intent(out), optional :: convproc_do_aer_out
+   logical,           intent(out), optional :: convproc_do_gas_out
+   integer,           intent(out), optional :: convproc_method_activate_out
    integer,           intent(out), optional :: mam_amicphys_optaa_out
    real(r8),          intent(out), optional :: n_so4_monolayers_pcage_out
    real(r8),          intent(out), optional :: micro_mg_accre_enhan_fac_out
-   logical,           intent(out), optional :: liqcf_fix_out       
-   logical,           intent(out), optional :: regen_fix_out       
-   logical,           intent(out), optional :: demott_ice_nuc_out  
+   logical,           intent(out), optional :: liqcf_fix_out
+   logical,           intent(out), optional :: regen_fix_out
+   logical,           intent(out), optional :: demott_ice_nuc_out
 
 
    logical,           intent(out), optional :: l_tracer_aero_out
@@ -542,8 +550,6 @@ subroutine phys_getopts(deep_scheme_out, shallow_scheme_out, eddy_scheme_out, mi
 
    integer,           intent(out), optional :: simple_macrop_opt_out
    integer,           intent(out), optional :: rkz_cldfrc_opt_out
-   integer,           intent(out), optional :: rkz_partition_num_out
-   integer,           intent(out), optional :: rkz_P3_opt_out
    integer,           intent(out), optional :: rkz_term_A_opt_out
    integer,           intent(out), optional :: rkz_term_B_opt_out
    integer,           intent(out), optional :: rkz_term_C_opt_out
@@ -556,6 +562,11 @@ subroutine phys_getopts(deep_scheme_out, shallow_scheme_out, eddy_scheme_out, mi
    logical,           intent(out), optional :: l_rkz_lmt_3_out
    logical,           intent(out), optional :: l_rkz_lmt_4_out
    logical,           intent(out), optional :: l_rkz_lmt_5_out
+   logical,           intent(out), optional :: rkz_use_sgr_out
+   logical,           intent(out), optional :: rkz_sgr_extrap_f_out
+   integer,           intent(out), optional :: rkz_sgr_qv_deg_out
+   integer,           intent(out), optional :: rkz_sgr_ql_deg_out
+   integer,           intent(out), optional :: rkz_sgr_Al_deg_out
 
    integer,           intent(out), optional :: simple_microp_opt_out
    real(r8),          intent(out), optional :: kessler_autoconv_tau_out
@@ -592,7 +603,7 @@ subroutine phys_getopts(deep_scheme_out, shallow_scheme_out, eddy_scheme_out, mi
    if ( present(do_aerocom_ind3_out ) ) do_aerocom_ind3_out = do_aerocom_ind3
    if ( present(micro_do_icesupersat_out )) micro_do_icesupersat_out = micro_do_icesupersat
    if ( present(conv_water_in_rad_out   ) ) conv_water_in_rad_out    = conv_water_in_rad
-   if ( present(ieflx_opt_out   ) ) ieflx_opt_out    = ieflx_opt 
+   if ( present(ieflx_opt_out   ) ) ieflx_opt_out    = ieflx_opt
    if ( present(cam_chempkg_out         ) ) cam_chempkg_out          = cam_chempkg
    if ( present(prog_modal_aero_out     ) ) prog_modal_aero_out      = prog_modal_aero
    if ( present(do_tms_out              ) ) do_tms_out               = do_tms
@@ -602,17 +613,17 @@ subroutine phys_getopts(deep_scheme_out, shallow_scheme_out, eddy_scheme_out, mi
    if ( present(print_fixer_message_out ) ) print_fixer_message_out  = print_fixer_message
    if ( present(state_debug_checks_out  ) ) state_debug_checks_out   = state_debug_checks
    if ( present(fix_g1_err_ndrop_out    ) ) fix_g1_err_ndrop_out     = fix_g1_err_ndrop
-   if ( present(ssalt_tuning_out        ) ) ssalt_tuning_out         = ssalt_tuning   
-   if ( present(resus_fix_out           ) ) resus_fix_out            = resus_fix      
+   if ( present(ssalt_tuning_out        ) ) ssalt_tuning_out         = ssalt_tuning
+   if ( present(resus_fix_out           ) ) resus_fix_out            = resus_fix
    if ( present(convproc_do_aer_out     ) ) convproc_do_aer_out      = convproc_do_aer
    if ( present(convproc_do_gas_out     ) ) convproc_do_gas_out      = convproc_do_gas
    if ( present(convproc_method_activate_out ) ) convproc_method_activate_out = convproc_method_activate
    if ( present(mam_amicphys_optaa_out  ) ) mam_amicphys_optaa_out  = mam_amicphys_optaa
    if ( present(n_so4_monolayers_pcage_out  ) ) n_so4_monolayers_pcage_out = n_so4_monolayers_pcage
    if ( present(micro_mg_accre_enhan_fac_out)) micro_mg_accre_enhan_fac_out = micro_mg_accre_enhan_fac
-   if ( present(liqcf_fix_out           ) ) liqcf_fix_out            = liqcf_fix      
-   if ( present(regen_fix_out           ) ) regen_fix_out            = regen_fix      
-   if ( present(demott_ice_nuc_out      ) ) demott_ice_nuc_out       = demott_ice_nuc 
+   if ( present(liqcf_fix_out           ) ) liqcf_fix_out            = liqcf_fix
+   if ( present(regen_fix_out           ) ) regen_fix_out            = regen_fix
+   if ( present(demott_ice_nuc_out      ) ) demott_ice_nuc_out       = demott_ice_nuc
    if ( present(l_tracer_aero_out       ) ) l_tracer_aero_out     = l_tracer_aero
    if ( present(l_vdiff_out             ) ) l_vdiff_out           = l_vdiff
    if ( present(l_rayleigh_out          ) ) l_rayleigh_out        = l_rayleigh
@@ -625,8 +636,6 @@ subroutine phys_getopts(deep_scheme_out, shallow_scheme_out, eddy_scheme_out, mi
    if ( present(l_rad_out               ) ) l_rad_out             = l_rad
    if ( present(simple_macrop_opt_out   ) ) simple_macrop_opt_out = simple_macrop_opt
    if ( present(rkz_cldfrc_opt_out      ) ) rkz_cldfrc_opt_out    = rkz_cldfrc_opt
-   if ( present(rkz_partition_num_out   ) ) rkz_partition_num_out = rkz_partition_num
-   if ( present(rkz_P3_opt_out          ) ) rkz_P3_opt_out        = rkz_P3_opt
    if ( present(rkz_term_A_opt_out      ) ) rkz_term_A_opt_out    = rkz_term_A_opt
    if ( present(rkz_term_B_opt_out      ) ) rkz_term_B_opt_out    = rkz_term_B_opt
    if ( present(rkz_term_C_opt_out      ) ) rkz_term_C_opt_out    = rkz_term_C_opt
@@ -639,6 +648,11 @@ subroutine phys_getopts(deep_scheme_out, shallow_scheme_out, eddy_scheme_out, mi
    if ( present(l_rkz_lmt_3_out         ) ) l_rkz_lmt_3_out       = l_rkz_lmt_3
    if ( present(l_rkz_lmt_4_out         ) ) l_rkz_lmt_4_out       = l_rkz_lmt_4
    if ( present(l_rkz_lmt_5_out         ) ) l_rkz_lmt_5_out       = l_rkz_lmt_5
+   if ( present(rkz_use_sgr_out         ) ) rkz_use_sgr_out       = rkz_use_sgr
+   if ( present(rkz_sgr_extrap_f_out    ) ) rkz_sgr_extrap_f_out  = rkz_sgr_extrap_f
+   if ( present(rkz_sgr_qv_deg_out      ) ) rkz_sgr_qv_deg_out    = rkz_sgr_qv_deg
+   if ( present(rkz_sgr_ql_deg_out      ) ) rkz_sgr_ql_deg_out    = rkz_sgr_ql_deg
+   if ( present(rkz_sgr_Al_deg_out      ) ) rkz_sgr_Al_deg_out    = rkz_sgr_Al_deg
 
    if ( present(simple_microp_opt_out   ) ) simple_microp_opt_out = simple_microp_opt
    if ( present(kessler_autoconv_tau_out) ) kessler_autoconv_tau_out = kessler_autoconv_tau
@@ -647,7 +661,7 @@ subroutine phys_getopts(deep_scheme_out, shallow_scheme_out, eddy_scheme_out, mi
    if ( present(cld_macmic_num_steps_out) ) cld_macmic_num_steps_out = cld_macmic_num_steps
    if ( present(prc_coef1_out           ) ) prc_coef1_out            = prc_coef1
    if ( present(prc_exp_out             ) ) prc_exp_out              = prc_exp
-   if ( present(prc_exp1_out            ) ) prc_exp1_out             = prc_exp1 
+   if ( present(prc_exp1_out            ) ) prc_exp1_out             = prc_exp1
    if ( present(cld_sed_out             ) ) cld_sed_out              = cld_sed
    if ( present(mg_prc_coeff_fix_out    ) ) mg_prc_coeff_fix_out     = mg_prc_coeff_fix
    if ( present(rrtmg_temp_fix_out      ) ) rrtmg_temp_fix_out       = rrtmg_temp_fix
