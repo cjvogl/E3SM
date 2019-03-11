@@ -351,22 +351,22 @@ contains
 
       ! add condensation term that maintains water saturation in cloudy
       ! portion of cell at t+dt
-      qme(:ncol,:pver) = ast_np1(:ncol, :pver) * &
+      term_A(:ncol,:pver) = ast_np1(:ncol, :pver) * &
                            (qtend(:ncol,:pver) - dqsatdTwat(:ncol,:pver)*ttend(:ncol,:pver) ) &
                              /( 1._r8 + gamwat(:ncol,:pver) )
 
       ! add condensation term that maintains no cloud liquid water in cloud-free
       ! portion of cell
-      qme(:ncol,:pver) = qme(:ncol,:pver) - &
-                          (1.0 - ast_np1(:ncol,:pver))**(1+rkz_sgr_Al_deg)*ltend(:ncol,:pver)
+      term_B(:ncol,:pver) = -(1._r8 - ast_np1(:ncol,:pver))**(1+rkz_sgr_Al_deg)*ltend(:ncol,:pver)
 
       ! where cloud nucleation scenario, add condensation term that ensures
       ! the cloudy region at t+dt that was clear at t (transition region)
       ! becomes saturated
+      term_C(:ncol,:pver) = 0._r8
       where (ast_np1(:ncol,:pver) > ast_n(:ncol,:pver))
         ! note that because ast_np1 is bounded by 1.0, entering this block means
         ! astwat < 1.0 so that (1.0-astwat) > 0.0
-        qme = qme - rdtime * &
+        term_C = -rdtime * &
                 (1._r8 - (1._r8-ast_np1)/(1._r8-ast_n))**(1+rkz_sgr_qv_deg) * (qsatwat-qcwat)
       end where
       ! where cloud annihilation scenario, add condensation term that ensures
@@ -375,9 +375,11 @@ contains
       where (ast_np1(:ncol,:pver) < ast_n(:ncol,:pver))
         ! note that because ast_np1 is bounded by 0.0, entering this block means
         ! astwat > 0.0
-        qme = qme - rdtime * &
+        term_C = -rdtime * &
                 (1._r8 - ast_np1/ast_n)**(1+rkz_sgr_ql_deg) * lcwat
       end where
+
+      qme(:ncol,:pver) = term_A(:ncol,:pver) + term_B(:ncol,:pver) + term_C(:ncol,:pver)
 
     else
 
