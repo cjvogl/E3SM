@@ -341,13 +341,29 @@ contains
         ast_np1(:ncol,:pver) = astwat(:ncol,:pver)
       end if
 
-      ! bound f(t_np1) to physical values
-      where (ast_np1(:ncol,:pver) > 1._r8)
-        ast_np1 = 1._r8
-      end where
-      where (ast_np1(:ncol,:pver) < 0._r8)
-        ast_np1 = 0._r8
-      end where
+      ! bound f(t_np1) to physical values while ensuring undershoot in previous
+      ! timestep is accounted for
+      do k=1,pver
+      do i=1,ncol
+        if (ast_np1(i,k) > 1._r8) then
+          ast_np1(i,k) = 1._r8
+          if (ast_n(i,k) == 1._r8) then
+            ast_n(i,k) = astwatold(i,k)
+          end if
+        else if(ast_np1(i,k) < 0._r8) then
+          ast_np1(i,k) = 0._r8
+          if (ast_n(i,k) == 0._r8) then
+            ast_n(i,k) = astwatold(i,k)
+          end if
+        end if
+      end do
+      end do
+      !where (ast_np1(:ncol,:pver) > 1._r8)
+      !  ast_np1 = 1._r8
+      !end where
+      !where (ast_np1(:ncol,:pver) < 0._r8)
+      !  ast_np1 = 0._r8
+      !end where
 
       ! add condensation term that maintains water saturation in cloudy
       ! portion of cell at t+dt
