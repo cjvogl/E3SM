@@ -3,10 +3,11 @@ import matplotlib.pyplot as pyplot
 from mpl_toolkits.basemap import Basemap
 import numpy as np
 
+matplotlib.rcParams.update({'font.size':22})
 
-f1, ax1 = pyplot.subplots(figsize=(10,6))
-f2, ax2 = pyplot.subplots(figsize=(10,6))
-f3, ax3 = pyplot.subplots(figsize=(10,6))
+f1, ax1 = pyplot.subplots(figsize=(10,5))
+f2, ax2 = pyplot.subplots(figsize=(10,5))
+f3, ax3 = pyplot.subplots(figsize=(10,5))
 bmap = Basemap(lon_0=180)
 
 tmp = np.loadtxt('./data/surface_pressure_reference_data.txt')
@@ -33,9 +34,12 @@ tmp = np.loadtxt('./data/surface_pressure_tolerance_rms_data.txt')
 t = tmp[0,:]
 val = tmp[1,:]
 
+ax1.set_title('surface pressure after 15 days', fontsize='x-large')
+ax2.set_title('difference after 15 days', fontsize='x-large')
+
 ax3.plot(t, val, '-o', color='black', linewidth=3)
-ax3.set_xlabel('time (days)', fontsize='xx-large')
-ax3.set_ylabel('RMS tolerance (kPa)', fontsize='xx-large')
+ax3.set_xlabel('time (days)', fontsize='x-large')
+ax3.set_ylabel('tolerance (kPa)', fontsize='x-large')
 ax3.set_xlim(0,15)
 
 f1.tight_layout()

@@ -23,6 +23,7 @@ for l,tstep in enumerate(tsteps):
     errorList = tmp[1,:]
     ax.plot(timeList, errorList, lineStyles[l], color=colors[m],
             linewidth=3, markersize=12)
+ax.set_title('ARS232', fontsize='xx-large')
 ax.set_xlabel('time (h)', fontsize='xx-large')
 ax.set_ylabel('relative conservation error', fontsize='xx-large')
 ax.set_xlim(0,24)
