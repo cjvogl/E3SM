@@ -13,4 +13,6 @@ As a convenience to the reader, the data folder is pre-populated with
 post-processed results.
 
 The scripts in this directory with a "plot" prefix can be used to generate the
-plots in Vogl et al. (2019) from the results in the data directory.
+plots in Vogl et al. "Evaluation of Implicit-Explicit Additive Runge-Kutta
+Integrators for the HOMME-NH Dynamical Core" JAMES (2019) from the results in
+the data directory.

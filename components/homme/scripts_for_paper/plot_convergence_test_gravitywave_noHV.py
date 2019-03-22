@@ -29,6 +29,13 @@ for method in methodList:
   ax.loglog(dtPlot, roundoff*np.ones(np.shape(dtPlot)), '--k', label=None, linewidth=2)
 
 # finalize plots and save without legend but show with legend
+x = np.array([6e-3, 9e-2])
+ax.loglog(x, (3e-10/x[0]**2)*x**2, '-', color='tab:gray', linewidth=3)
+x = np.array([1e-1, 5e-1])
+ax.loglog(x, (3e-10/x[0]**3)*x**3, '--', color='tab:gray', linewidth=3)
+x = np.array([4e-1, 1.5])
+ax.loglog(x, (3e-10/x[0]**4)*x**4, '-.', color='tab:gray', linewidth=3)
+
 ax.set_ylabel('maximum relative error', fontsize='xx-large')
 ax.set_xlabel('dt (s)', fontsize='xx-large')
 ax.set_xlim(6e-4,7e0)
