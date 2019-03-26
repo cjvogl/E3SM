@@ -1,0 +1,14 @@
+reset_init_ql = .true.
+simple_macrop_opt = 2
+rkz_cldfrc_opt    = 1
+rkz_zsmall_opt    = 0
+rkz_lmt5_opt      = 0
+l_rkz_lmt_2       = .false.
+l_rkz_lmt_3       = .false.
+l_rkz_lmt_4       = .true.
+l_rkz_lmt_5       = .false.
+rkz_use_sgr       = .true.
+rkz_sgr_extrap_f  = .true.
+rkz_sgr_qv_deg    = 1
+rkz_sgr_ql_deg    = 1
+rkz_sgr_Al_deg    = 1
