@@ -194,16 +194,22 @@ contains
 
   real(r8) :: qsat(pcols,pver)       ! saturation specific humidity
   real(r8) :: qsatwat(pcols,pver)       ! saturation specific humidity
+  real(r8) :: qsat_tmp(pcols,pver)       ! saturation specific humidity
   real(r8) :: esl(pcols,pver)        ! saturation vapor pressure (output from subroutine qsat_water, not used)
   real(r8) :: dqsatdT(pcols,pver)    ! dqsat/dT
   real(r8) :: dqsatdTwat(pcols,pver)    ! dqsat/dT
+  real(r8) :: dqsatdT_tmp(pcols,pver)    ! dqsat/dT
   real(r8) :: gam(pcols,pver)        ! L/cpair * dqsat/dT
-  real(r8) :: gamwat(pcols,pver)        ! L/cpair * dqsat/dT
+  real(r8) :: gamwat(pcols,pver)     ! L/cpair * dqsat/dT
+  real(r8) :: gam_tmp(pcols,pver)    ! L/cpair * dqsat/dT
 
   real(r8) :: rhu00                  ! threshold grid-box-mean RH used in the diagnostic cldfrc scheme
   real(r8) :: rhgbm(pcols,pver)      ! grid box mean relative humidity
+  real(r8) :: rhgbm_tmp(pcols,pver)      ! grid box mean relative humidity
   real(r8) :: dastdRH(pcols,pver)    ! df/dRH where f is the cloud fraction and RH the relative humidity
+  real(r8) :: dastdRH_tmp(pcols,pver)    ! df/dRH where f is the cloud fraction and RH the relative humidity
   real(r8) :: dlnastdRH(pcols,pver)  ! dlnf/dRH where lnf is the logrithm of the cloud fraction and RH the relative humidity
+  real(r8) :: dlnastdRH_tmp(pcols,pver)  ! dlnf/dRH where lnf is the logrithm of the cloud fraction and RH the relative humidity
 
   real(r8) :: qtend(pcols,pver)      ! Moisture tendency caused by other processes
   real(r8) :: ltend(pcols,pver)      ! liquid condensate tendency caused by other processes
@@ -226,6 +232,7 @@ contains
   real(r8) :: dfdt    (pcols,pver)   ! df/dt where f is the cloud fraction
   real(r8) :: ast_np1(pcols,pver)
   real(r8) :: ast_n(pcols,pver)
+  real(r8) :: ast_tmp(pcols,pver)
   real(r8) :: zforcing(pcols,pver)
   real(r8) :: zc3     (pcols,pver)
 
@@ -341,29 +348,13 @@ contains
         ast_np1(:ncol,:pver) = astwat(:ncol,:pver)
       end if
 
-      ! bound f(t_np1) to physical values while ensuring undershoot in previous
-      ! timestep is accounted for
-      do k=1,pver
-      do i=1,ncol
-        if (ast_np1(i,k) > 1._r8) then
-          ast_np1(i,k) = 1._r8
-          if (ast_n(i,k) == 1._r8) then
-            ast_n(i,k) = astwatold(i,k)
-          end if
-        else if(ast_np1(i,k) < 0._r8) then
-          ast_np1(i,k) = 0._r8
-          if (ast_n(i,k) == 0._r8) then
-            ast_n(i,k) = astwatold(i,k)
-          end if
-        end if
-      end do
-      end do
-      !where (ast_np1(:ncol,:pver) > 1._r8)
-      !  ast_np1 = 1._r8
-      !end where
-      !where (ast_np1(:ncol,:pver) < 0._r8)
-      !  ast_np1 = 0._r8
-      !end where
+      ! bound f(t_np1) to physical values
+      where (ast_np1(:ncol,:pver) > 1._r8)
+        ast_np1 = 1._r8
+      end where
+      where (ast_np1(:ncol,:pver) < 0._r8)
+        ast_np1 = 0._r8
+      end where
 
       ! add condensation term that maintains water saturation in cloudy
       ! portion of cell at t+dt
@@ -396,6 +387,35 @@ contains
       end where
 
       qme(:ncol,:pver) = term_A(:ncol,:pver) + term_B(:ncol,:pver) + term_C(:ncol,:pver)
+
+      ! correct extrapolation "undershoots" by first computing what f(t+dt) will
+      ! be
+      do k=1,pver
+      do i=1,ncol
+        call qsat_water(state%t(i,k) + dtime*latvap/cpair*qme(i,k), state%pmid(i,k), esl(i,k), &
+                        qsat_tmp(i,k), gam_tmp(i,k), dqsatdT_tmp(i,k))
+      end do
+      end do
+      call smpl_frc( state%q(:,:,1) - dtime*qme, state%q(:,:,ixcldliq) + dtime*qme, qsat_tmp, &
+                  ast_tmp, rhu00, rhgbm_tmp, dastdRH_tmp, dlnastdRH_tmp, &
+                  rkz_cldfrc_opt, 0.5_r8, 0.5_r8, pcols, pver, ncol )
+      ! correct condensation rate wherever extrapolation undershoot happened
+      do k=1,pver
+      do i=1,ncol
+        if (ast_tmp(i,k) == 1._r8 .and. ast_np1(i,k) < 1._r8) then
+          term_A(i,k) = (qtend(i,k) - dqsatdTwat(i,k)*ttend(i,k) ) &
+                             /( 1._r8 + gamwat(i,k) )
+          term_B(i,k) = 0._r8
+          term_C(i,k) = -rdtime * (qsatwat(i,k) - qcwat(i,k))
+          qme(i,k) = term_A(i,k) + term_B(i,k) + term_C(i,k)
+        else if (ast_tmp(i,k) == 0._r8 .and. ast_np1(i,k) > 0._r8) then
+          term_A(i,k) = 0._r8
+          term_B(i,k) = -ltend(i,k)
+          term_C(i,k) = -rdtime * lcwat(i,k)
+          qme(i,k) = term_A(i,k) + term_B(i,k) + term_C(i,k)
+        end if
+      end do
+      end do
 
     else
 
