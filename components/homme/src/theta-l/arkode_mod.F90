@@ -18,8 +18,7 @@
 #define IMKG232b_ARK 14
 #define IMKG242a_ARK 15
 #define IMKG242b_ARK 16
-#define IMKG243a_ARK 17
-#define IMKG243b_ARK 18
+#define IMKG243a_ARK 18
 #define IMKG252a_ARK 19
 #define IMKG252b_ARK 20
 #define IMKG253a_ARK 21
@@ -79,7 +78,6 @@ module arkode_mod
     integer :: IMKG242a = IMKG242a_ARK
     integer :: IMKG242b = IMKG242b_ARK
     integer :: IMKG243a = IMKG243a_ARK
-    integer :: IMKG243b = IMKG243b_ARK
     integer :: IMKG252a = IMKG252a_ARK
     integer :: IMKG252b = IMKG252b_ARK
     integer :: IMKG253a = IMKG253a_ARK
@@ -1087,21 +1085,6 @@ contains
         call set_IMKG_Butcher_tables(arkode_parameters, ap%s, a, ahat, dhat, b)
 
       case (IMKG243a_ARK)
-        ap%imex = 2 ! imex
-        ap%s = 5 ! 5 stage
-        ap%q = 2 ! 2nd order
-        ap%p = 0 ! no embedded order
-        ap%be2 = 0.d0 ! no embedded explicit method
-        ! IMEX-KG vectors
-        delta = 0.5d0-sqrt(3.d0)/6.d0
-        a(1:4) = (/ 0.25d0, 1.d0/3.d0, 0.5d0, 1.d0 /)
-        ahat(1:4) = (/ 0.d0, 1.d0/6.d0, sqrt(3.d0)/6.d0, 1.d0 /)
-        dhat(1:3) = (/ delta, delta, delta /)
-        b(1:3) = 0.d0
-        ! set IMEX-KG Butcher table
-        call set_IMKG_Butcher_tables(arkode_parameters, ap%s, a, ahat, dhat, b)
-
-      case (IMKG243b_ARK)
         ap%imex = 2 ! imex
         ap%s = 5 ! 5 stage
         ap%q = 2 ! 2nd order

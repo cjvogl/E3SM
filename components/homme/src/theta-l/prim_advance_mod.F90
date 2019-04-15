@@ -457,11 +457,8 @@ contains
     else if (tstep_type==35) then ! ARKode IMKG 2nd-order, 5 stage, variant b
       call set_Butcher_tables(arkode_parameters, arkode_tables%IMKG242b)
 
-    else if (tstep_type==36) then ! ARKode IMKG 2nd-order, 5 stage, variant a
+    else if (tstep_type==37) then ! ARKode IMKG 2nd-order, 5 stage, variant a
       call set_Butcher_tables(arkode_parameters, arkode_tables%IMKG243a)
-
-    else if (tstep_type==37) then ! ARKode IMKG 2nd-order, 5 stage, variant b
-      call set_Butcher_tables(arkode_parameters, arkode_tables%IMKG243b)
 
     else if (tstep_type==38) then ! ARKode IMKG 2nd-order, 6 stage, variant a
       call set_Butcher_tables(arkode_parameters, arkode_tables%IMKG252a)
