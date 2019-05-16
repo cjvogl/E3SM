@@ -11,7 +11,7 @@ matplotlib.rcParams.update({'font.size': 18})
 config = 'RKZ_SGR_extrapf_qv0_ql0_Al0_lmt4_adjIC*'
 dtList = [8,4,1]
 #timeList = [1800, 3600, 5400, 7200]
-timeList = [7200]
+timeList = [1800]
 
 
 numberList = [0, 1, 10, 20]
