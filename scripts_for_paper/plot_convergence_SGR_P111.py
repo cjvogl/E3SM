@@ -7,12 +7,17 @@ import numpy as np
 matplotlib.rcParams.update({'font.size': 24})
 
 dtList = [1800,450,120,75,30,15,8,4,1]
+measureList = [120,75,30,15,8]
 
 timeList = [10800, 21600, 32400, 43200]
-linespecDict = {10800: '-r^',
-                21600: '-gs',
-                32400: '-bo',
-                43200: '-kp'}
+markerDict = {10800: '^',
+              21600: 's',
+              32400: 'o',
+              43200: 'p'}
+colorDict = {10800: 'red',
+             21600: 'green',
+             32400: 'blue',
+             43200: 'black'}
 
 configuration = 'RKZ_SGR_extrapf_qv1_ql1_Al1_lmt4_adjIC'
 
@@ -61,24 +66,37 @@ for time in timeList:
   
   dtPlot = np.sort(dtDict.keys())
   WRMSPlot = np.empty(len(dtPlot))
+  measurePlot = np.array([measureList[-1], measureList[0]])
   for j,dt in enumerate(dtPlot):
     WRMSPlot[j] = WRMSerror[dtDict[dt]]
 
-  if (len(dtList) > 1):
-    orderWRMS = np.log(WRMSPlot[1:]/WRMSPlot[0:-1])/np.log(dtPlot[1:]/dtPlot[0:-1])
-  else:
-    orderWRMS = (0.0,)
+  N = len(measureList)
+  sxlogy = 0.0
+  slogy = 0.0
+  sx2 = 0.0
+  sx = 0.0
+  for dt in measureList:
+    logdt = np.log10(float(dt))
+    sxlogy += logdt*np.log10(WRMSerror[dt])
+    slogy += np.log10(WRMSerror[dt])
+    sx2 += logdt*logdt
+    sx += logdt
 
-  label = "%0.0f hour run" % (time/3600.0)
-  ax.loglog(dtPlot, WRMSPlot, linespecDict[time], label=label, linewidth=3, markersize=12)
-  print(np.mean(orderWRMS[0:4]), np.sqrt(np.var(orderWRMS[0:4])))
+  order = (N*sxlogy - sx*slogy)/(N*sx2 - sx*sx)
+  coeff = np.power(10.0, (sx2*slogy - sx*sxlogy)/(N*sx2 - sx*sx))
 
-dtPlot = np.array([4, 1800])
+  label = "%0.0f hour run (%0.1f)" % (time/3600.0, order)
+  ax.loglog(dtPlot, WRMSPlot, markerDict[time], color=colorDict[time], linewidth=3, markersize=12)
+  ax.loglog(measurePlot, coeff*np.power(measurePlot,order), '-', color=colorDict[time], label=label, linewidth=3, markersize=12)
+  ax.loglog(dtPlot, coeff*np.power(dtPlot,order), ':', color=colorDict[time], linewidth=3, markersize=12)
+  print(time, order)
+
+dtPlot = np.array([8, 1800])
 ax.loglog(dtPlot, 4e-2/dtPlot[-1]*dtPlot, '--k', linewidth=3)
 #ax.loglog(dtPlot, 2e-1/dtPlot[-1]*dtPlot, '--k', linewidth=3)
 ax.set_ylabel('WRMS temperature error (K)', fontsize='x-large')
 ax.set_xlabel('timestep size (s)', fontsize='x-large')
-ax.legend(loc='best', fontsize='large')
+ax.legend(loc='upper left', fontsize='large')
 ax.axis('equal')
 
 f.tight_layout()

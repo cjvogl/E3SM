@@ -4,20 +4,22 @@ import matplotlib
 from netCDF4 import Dataset
 import numpy as np
 
-matplotlib.rcParams.update({'font.size': 24})
+matplotlib.rcParams.update({'font.size': 20})
 
 dtList = [1800,450,120,75,30,15,8,4,1]
-measureList = [120, 75, 30, 15, 8]
+measureList = [120, 75,30,15,8]
 
-timeList = [3600, 7200, 10800]
-markerDict = {3600: 'o',
-              7200: 's',
-              10800: '^'}
-colorDict = {3600: 'blue',
-             7200: 'green',
-             10800: 'red'}
+timeList = [10800, 21600, 32400, 43200]
+markerDict = {10800: '^',
+              21600: 's',
+              32400: 'o',
+              43200: 'p'}
+colorDict = {10800: 'red',
+             21600: 'green',
+             32400: 'blue',
+             43200: 'black'}
 
-configuration = 'RKZ_SGR_extrapf_qv0_ql0_Al0_lmt4_adjIC'
+configuration = 'RKZ_SGR_extrapf_qv1_ql1_Al4_lmt4_adjIC'
 
 f, ax = pyplot.subplots(figsize=(10,10))
 for time in timeList:
@@ -85,19 +87,19 @@ for time in timeList:
 
   label = "%0.0f hour run (%0.1f)" % (time/3600.0, order)
   ax.loglog(dtPlot, WRMSPlot, markerDict[time], color=colorDict[time], linewidth=3, markersize=12)
+  ax.loglog(measurePlot, coeff*np.power(measurePlot,order), '-', label=label, color=colorDict[time], linewidth=3, markersize=12)
   ax.loglog(dtPlot, coeff*np.power(dtPlot,order), ':', color=colorDict[time], linewidth=3, markersize=12)
-  ax.loglog(measurePlot, coeff*np.power(measurePlot,order), '-', color=colorDict[time], label=label, linewidth=3, markersize=12)
   print(time, order)
 
 dtPlot = np.array([8, 1800])
 ax.loglog(dtPlot, 4e-2/dtPlot[-1]*dtPlot, '--k', linewidth=3)
-ax.set_ylabel('WRMS temperature error (K)', fontsize='x-large')
-ax.set_xlabel('timestep size (s)', fontsize='x-large')
-ax.legend(loc='upper left', fontsize='large')
+#ax.loglog(dtPlot, 2e-1/dtPlot[-1]*dtPlot, '--k', linewidth=3)
+ax.set_ylabel('WRMS temperature error (K)', fontsize='xx-large')
+ax.set_xlabel('timestep size (s)', fontsize='xx-large')
+ax.legend(loc='upper left', fontsize='x-large')
 ax.axis('equal')
 
 f.tight_layout()
-f.savefig('convergence_P000.pdf')  
+f.savefig('convergence_P114.pdf')  
 
-  
 pyplot.show()
