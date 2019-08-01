@@ -41,8 +41,8 @@ tmp = np.loadtxt('./data/surface_pressure_tolerance_rms_data.txt')
 t = tmp[0,:]
 val = tmp[1,:]
 
-ax1.set_title('surface pressure after 15 days', fontsize='x-large')
-ax2.set_title('difference after 15 days', fontsize='x-large')
+ax1.set_title('surface pressure (15d)', fontsize='x-large')
+ax2.set_title('surface pressure difference (15d)', fontsize='x-large')
 
 ax3.plot(t, val, '-o', color='black', linewidth=3)
 ax3.set_xlabel('time (days)', fontsize='x-large')
