@@ -837,7 +837,7 @@ contains
         ap%Ae(3,1:2) = (/ delta, 1.d0-delta /)
         ! Explicit Butcher Table (vectors)
         ap%ce(1:3) = ap%ci(1:3)
-        ap%be(1:3) = ap%bi(1:3)
+        ap%be(1:3) = (/ delta, 1.d0-delta, 0.d0 /)
 
       case (ARS343_ARK)
         ap%imex = 2 ! imex
@@ -1007,7 +1007,7 @@ contains
         ap%q = 3 ! 3rd order
         ap%p = 0 ! no embedded order
         ap%be2 = 0.d0 ! no embedded explicit method
-        beta = sqrt(3.d0)/5.d0 + 0.5d0
+        beta = sqrt(3.d0)/6.d0 + 0.5d0
         gamma = -1.d0/8.d0*(sqrt(3.d0) + 1.d0)
         ! Implicit Butcher Table (matrix)
         ap%Ai(1:3,1:3) = 0.d0
