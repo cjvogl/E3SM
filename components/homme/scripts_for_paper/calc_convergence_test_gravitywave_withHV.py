@@ -36,7 +36,7 @@ for method in methodList:
     words = fileName.split('_')
     dt = words[1].replace('tstep','')
     # check that timestep is small enough to be in the asymptotic regime
-    if (float(dt) < 1.1):
+    if ((method == 'ARS222' and float(dt) < 1.0) or (method != 'ARS222' and float(dt) < 1.1)):
       directory = outpath + '/output_'+fileName.replace('.out','')
       print 'Reading solution in ' + directory
       data = Dataset(directory+'/dcmip2012_test31.nc')
