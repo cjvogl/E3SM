@@ -10,9 +10,8 @@ if (len(sys.argv) < 2):
 outpath = sys.argv[1]
 
 methodList = ['KGU35', 'ARS232', 'DBM453', 'ARS222', 'ARS233', 'ARS343', \
-              'ARS443', 'ARK324', 'ARK436', 'SSP3333b', 'SSP3333c']
-
-methodList = ['ARK437']
+              'ARS443', 'ARK324', 'ARK436', 'SSP3333b', 'SSP3333c',
+              'GSA222', 'SSP2232', 'ARK548', 'ARK437']
 
 # read in reference solution
 fileRef = outpath + '/output_tsteptype5_tstep0.000390625_nmax768000/dcmip2012_test31.nc'

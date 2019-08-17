@@ -14,6 +14,7 @@ methodList = ['ARS232', 'ARS222', 'ARS233', 'ARS343',
               'IMKG252a', 'IMKG252b', 'IMKG253a', 'IMKG253b', 'IMKG254a', 
               'IMKG254b', 'IMKG254c', 'IMKG343a', 'GSA222', 'SSP2232',
               'ARK548', 'ARK437']
+methodList = ['ARK548',]
 
 dtList = [300, 270, 240, 216, 200, 192, 180, 160, 150, 135, 120, 100, 50, 20 ,10]
 
@@ -38,6 +39,9 @@ exceedDict = {}
 for method in methodList:
   print method
   currentList = dtList + [] # make a copy of dtList
+
+  if (method == 'ARK548'):
+    currentList.append(320)
 
   success = False
   dt = np.amax(currentList)

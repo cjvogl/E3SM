@@ -36,6 +36,8 @@ largestDtDict = {}
 for method in methodList:
   print method
   currentList = dtList + [] # make a copy of dtList
+  if (method == 'ARK548'):
+    currentList.append(320)
 
   # Obtain surface pressure error from solution at largest timestep
   success = False

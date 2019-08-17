@@ -6,8 +6,8 @@ import numpy as np
 matplotlib.rcParams.update({'font.size':22})
 
 methodList = ['KGU35', 'ARS232', 'DBM453', 'ARS222', 'ARS233', 'ARS343', \
-              'ARS443', 'ARK324', 'ARK436', 'SSP3333b', 'SSP3333c']
-methodList = ['GSA222', 'SSP2232', 'ARK548']
+              'ARS443', 'ARK324', 'ARK436', 'SSP3333b', 'SSP3333c',
+              'GSA222', 'SSP2232', 'ARK548', 'ARK437']
 
 epsilon_times_1000 = 2.220446049250313e-13
 roundoff = epsilon_times_1000*768.0
