@@ -1,7 +1,7 @@
 &ctl_nl
 theta_hydrostatic_mode = .false.
 dcmip4_moist           = 0
-dcmip4_X               = 1.0
+dcmip4_X               = 100
 NThreads               = 1
 partmethod             = 4
 topology               = "cube"
@@ -10,20 +10,20 @@ u_perturb              = 1
 rotate_grid            = 0
 ne                     = 30
 qsize                  = 0
-nmax                   = 4320
+nmax                   = 25920
 statefreq              = 100
 runtype                = 0
 mesh_file              = "/dev/null"
-tstep                  = 300
+tstep                  = 0.5
 rsplit                 = 1
 qsplit                 = 1
 tstep_type             = 24
 integration            = "explicit"
-nu                     = 1.0e15
-nu_div                 = 1.0e15
-nu_p                   = 1.0e15
-nu_q                   = 1.0e15
-nu_s                   = 1.0e15
+nu                     = 1000000000.0
+nu_div                 = 1000000000.0
+nu_p                   = 1000000000.0
+nu_q                   = 1000000000.0
+nu_s                   = 1000000000.0
 nu_top                 = 0
 se_ftype               = 0
 limiter_option         = 9
@@ -44,12 +44,12 @@ profile_single_file	   = .true.
 &analysis_nl
 interp_gridtype        = 2
 output_timeunits       = 0
-output_frequency       = 288
+output_frequency       = 2592
 output_start_time      = 0
 output_varnames1       = u,v,w,T,geo,ps
 num_io_procs           = 16
 output_type            = netcdf
-output_dir             = "./output_tsteptype24_tstep300/"
+output_dir             = "./output_tsteptype24_tstep0.5_dcmip4_X100/"
 /
 &arkode_nl
 rel_tol                = 1.0e-6

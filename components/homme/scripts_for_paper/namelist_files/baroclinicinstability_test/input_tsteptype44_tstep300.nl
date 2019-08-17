@@ -17,7 +17,7 @@ mesh_file              = "/dev/null"
 tstep                  = 300
 rsplit                 = 1
 qsplit                 = 1
-tstep_type             = 24
+tstep_type             = 44
 integration            = "explicit"
 nu                     = 1.0e15
 nu_div                 = 1.0e15
@@ -49,7 +49,7 @@ output_start_time      = 0
 output_varnames1       = u,v,w,T,geo,ps
 num_io_procs           = 16
 output_type            = netcdf
-output_dir             = "./output_tsteptype24_tstep300/"
+output_dir             = "./output_tsteptype44_tstep300/"
 /
 &arkode_nl
 rel_tol                = 1.0e-6
