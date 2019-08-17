@@ -6,7 +6,9 @@ import numpy as np
 matplotlib.rcParams.update({'font.size':22})
 
 methodList = ['KGU35', 'ARS232', 'DBM453', 'ARS222', 'ARS233', 'ARS343', \
-              'ARS443', 'ARK324', 'ARK436', 'SSP3333b', 'SSP3333c']
+              'ARS443', 'ARK324', 'ARK436', 'SSP3333b', 'SSP3333c',
+              'GSA222', 'SSP2232', 'ARK548', 'ARK437']
+
 epsilon_times_1000 = 2.220446049250313e-13
 roundoff = epsilon_times_1000*768.0
 
@@ -35,6 +37,8 @@ x = np.array([1e-1, 5e-1])
 ax.loglog(x, (3e-10/x[0]**3)*x**3, '--', color='tab:gray', linewidth=3)
 x = np.array([4e-1, 1.5])
 ax.loglog(x, (3e-10/x[0]**4)*x**4, '-.', color='tab:gray', linewidth=3)
+x = np.array([6e-1, 1.5])
+ax.loglog(x, (3e-10/x[0]**5)*x**5, ':', color='tab:gray', linewidth=3)
 
 ax.set_ylabel('maximum relative error', fontsize='xx-large')
 ax.set_xlabel('dt (s)', fontsize='xx-large')

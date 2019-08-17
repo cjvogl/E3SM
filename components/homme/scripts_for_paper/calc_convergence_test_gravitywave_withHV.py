@@ -12,6 +12,8 @@ outpath = sys.argv[1]
 methodList = ['KGU35', 'ARS232', 'DBM453', 'ARS222', 'ARS233', 'ARS343', \
               'ARS443', 'ARK324', 'ARK436', 'SSP3333b', 'SSP3333c']
 
+methodList = ['ARK437']
+
 # read in reference solution
 fileRef = outpath + '/output_tsteptype5_tstep0.000390625_nmax768000/dcmip2012_test31.nc'
 print 'Reading reference solution from ' + fileRef
@@ -36,12 +38,14 @@ for method in methodList:
     words = fileName.split('_')
     dt = words[1].replace('tstep','')
     # check that timestep is small enough to be in the asymptotic regime
-    if ((method == 'ARS222' and float(dt) < 1.0) or (method != 'ARS222' and float(dt) < 1.1)):
+    if (float(dt) < 1.1):
       directory = outpath + '/output_'+fileName.replace('.out','')
       print 'Reading solution in ' + directory
       data = Dataset(directory+'/dcmip2012_test31.nc')
       q = data['T'][:]
       t = data['time'][:]
+      if (len(t) < 11):
+        continue
       solutionDict[dt] = q[10,:,:,:]
 
   # compute maximum relative error from reference solution

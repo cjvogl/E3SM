@@ -9,11 +9,11 @@ if (len(sys.argv) < 2):
 outpath = sys.argv[1]
 
 methodList = ['ARS232', 'ARS222', 'ARS233', 'ARS343',
-              'ARS443', 'ARK324', 'ARK436', 'DBM453', 'SSP3333b',
-              'IMEX-KG232a', 'IMEX-KG232b', 'IMEX-KG242a', 'IMEX-KG242b',
-              'IMEX-KG243b', 'IMEX-KG252a', 'IMEX-KG252b',
-              'IMEX-KG253a', 'IMEX-KG254a', 'IMEX-KG254b',
-              'IMEX-KG343a']
+              'ARS443', 'ARK324', 'ARK436', 'DBM453', 'SSP3333b', 'SSP3333c',
+              'IMKG232a', 'IMKG232b', 'IMKG242a', 'IMKG242b', 'IMKG243a', 
+              'IMKG252a', 'IMKG252b', 'IMKG253a', 'IMKG253b', 'IMKG254a', 
+              'IMKG254b', 'IMKG254c', 'IMKG343a', 'GSA222', 'SSP2232',
+              'ARK548', 'ARK437']
 
 dtList = [300, 270, 240, 216, 200, 192, 180, 160, 150, 135, 120, 100, 50, 20 ,10]
 
@@ -22,8 +22,6 @@ fileRef = outpath + '/output_tsteptype5_tstep10_hydrostatic/dcmip2012_test41.nc'
 print 'Reading reference solution from ' + fileRef
 data = Dataset(fileRef)
 qRef = data['ps'][:]
-tRef = data['time'][:]
-tRef = tRef[15]
 
 # read in acceptable solution
 fileRef = outpath + '/output_tsteptype5_tstep300_hydrostatic/dcmip2012_test41.nc'
@@ -35,7 +33,6 @@ errorTol = np.sqrt( np.sum((q-qRef)**2, axis=(1,2))/numElements )
 
 # Iterate through methods and find acceptable timestep
 largestDtDict = {}
-dtDict = {}
 for method in methodList:
   print method
   currentList = dtList + [] # make a copy of dtList

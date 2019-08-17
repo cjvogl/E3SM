@@ -10,10 +10,10 @@ outpath = sys.argv[1]
 
 methodList = ['ARS232', 'ARS222', 'ARS233', 'ARS343',
               'ARS443', 'ARK324', 'ARK436', 'DBM453', 'SSP3333b', 'SSP3333c',
-              'IMEX-KG232a', 'IMEX-KG232b', 'IMEX-KG242a', 'IMEX-KG242b',
-              'IMEX-KG243a', 'IMEX-KG252a', 'IMEX-KG252b',
-              'IMEX-KG253a', 'IMEX-KG254a', 'IMEX-KG254b',
-              'IMEX-KG343a']
+              'IMKG232a', 'IMKG232b', 'IMKG242a', 'IMKG242b', 'IMKG243a', 
+              'IMKG252a', 'IMKG252b', 'IMKG253a', 'IMKG253b', 'IMKG254a', 
+              'IMKG254b', 'IMKG254c', 'IMKG343a', 'GSA222', 'SSP2232',
+              'ARK548', 'ARK437']
 
 dtList = [300, 270, 240, 216, 200, 192, 180, 160, 150, 135, 120, 100, 50, 20 ,10]
 
