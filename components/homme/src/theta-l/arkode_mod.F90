@@ -28,7 +28,10 @@
 #define IMKG254c_ARK 25
 #define IMKG343a_ARK 26
 #define IMKG343b_ARK 27
-
+#define ARK437_ARK 28
+#define ARK548_ARK 29
+#define SSP2232_ARK 30
+#define GSA222_ARK 31
 
 
 
@@ -87,6 +90,10 @@ module arkode_mod
     integer :: IMKG254c = IMKG254c_ARK
     integer :: IMKG343a = IMKG343a_ARK
     integer :: IMKG343b = IMKG343b_ARK
+    integer :: ARK437 = ARK437_ARK
+    integer :: ARK548 = ARK548_ARK
+    integer :: SSP2232 = SSP2232_ARK
+    integer :: GSA222 = GSA222_ARK
   end type table_list
 
   ! data type for passing ARKode parameters
@@ -1153,7 +1160,7 @@ contains
         ap%be2 = 0.d0 ! no embedded explicit method
         ! IMEX-KG vectors
         delta = 0.5d0+sqrt(3.d0)/6.d0
-        gamma = 0.25d0*sqrt(3.d0)*(1.d0+sqrt(3.d0)/3.d0)*((sqrt(3.d0)/3.d0-1.d0)**2-2.d0)
+        gamma = 0.25d0*sqrt(3.d0)*(1.d0+sqrt(3.d0)/3.d0)*(2.d0-(sqrt(3.d0)/3.d0-1.d0)**2)
         a(1:5) = (/ 0.25d0, 1.d0/6.d0, 3.d0/8.d0, 0.5d0, 1.d0 /)
         ahat(1:5) = (/ 0.d0, 0.d0, gamma, -sqrt(3.d0)/6.d0, 1.d0 /)
         dhat(1:4) = (/ 0.d0, delta, delta, delta /)
@@ -1169,8 +1176,8 @@ contains
         ap%be2 = 0.d0 ! no embedded explicit method
         ! IMEX-KG vectors
         a(1:5) = (/ 0.25d0, 1.d0/6.d0, 3.d0/8.d0, 0.5d0, 1.d0 /)
-        ahat(1:5) = (/ 0.d0, 1.d0/60.d0, 5.d0/12.d0, -1.d0, 1.d0 /)
-        dhat(1:4) = (/ 1.d0/6.d0, 0.5d0, 0.5d0, 1.5d0 /)
+        ahat(1:5) = (/ 0.d0, -0.3d0, 5.d0/6.d0, -1.5d0, 1.d0 /)
+        dhat(1:4) = (/ -0.5d0, 1.d0, 1.d0, 2.d0 /)
         b(1:4) = 0.d0
         ! set IMEX-KG Butcher table
         call set_IMKG_Butcher_tables(arkode_parameters, ap%s, a, ahat, dhat, b)
@@ -1198,7 +1205,7 @@ contains
         ! IMEX-KG vectors
         delta = 1.d0/6.d0
         a(1:5) = (/ 0.25d0, 1.d0/6.d0, 3.d0/8.d0, 0.5d0, 1.d0 /)
-        ahat(1:5) = (/ 0.d0, 1.d0/20.d0, 5.d0/36.d0, -1.d0/3.d0, 1.d0 /)
+        ahat(1:5) = (/ 0.d0, 1.d0/20.d0, 5.d0/36.d0, 1.d0/3.d0, 1.d0 /)
         dhat(1:4) = (/ delta, delta, delta, delta /)
         b(1:4) = 0.d0
         ! set IMEX-KG Butcher table
@@ -1234,6 +1241,191 @@ contains
         b(1:3) = (/ 0.d0, 1.d0/3.d0, 0.25d0 /)
         ! set IMEX-KG Butcher table
         call set_IMKG_Butcher_tables(arkode_parameters, ap%s, a, ahat, dhat, b)
+
+
+      case (ARK437_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 7 ! 7 stage
+        ap%q = 4 ! 4th order
+        ap%p = 3 ! 3rd order embedding
+        ap%be2 = 0.d0 ! embedding not implemented
+        ap%bi2 = 0.d0 ! embedding not implemented
+        gamma = 1235.d0/10000.d0
+        ! Implicit Butcher Table (matrix)
+        ap%Ai(1:7,1:7) = 0.d0
+        ap%Ai(2,1:2) = (/ gamma, gamma /)
+        ap%Ai(3,1:2) = 624185399699.d0/4186980696204.d0
+        ap%Ai(3,3) = gamma
+        ap%Ai(4,1:2) = 1258591069120.d0/10082082980243.d0
+        ap%Ai(4,3) = -322722984531.d0/8455138723562.d0
+        ap%Ai(4,4) = gamma
+        ap%Ai(5,1:2) = -436103496990.d0/5971407786587.d0
+        ap%Ai(5,3) = -2689175662187.d0/11046760208243.d0
+        ap%Ai(5,4) = 4431412449334.d0/12995360898505.d0
+        ap%Ai(5,5) = gamma
+        ap%Ai(6,1:2) = -2207373168298.d0/14430576638973.d0
+        ap%Ai(6,3) = 242511121179.d0/3358618340039.d0
+        ap%Ai(6,4) = 3145666661981.d0/7780404714551.d0
+        ap%Ai(6,5) = 5882073923981.d0/14490790706663.d0
+        ap%Ai(6,6) = gamma
+        ap%Ai(7,3) = 9164257142617.d0/17756377923965.d0
+        ap%Ai(7,4) = -10812980402763.d0/74029279521829.d0
+        ap%Ai(7,5) = 1335994250573.d0/5691609445217.d0
+        ap%Ai(7,6) = 2273837961795.d0/8368240463276.d0
+        ap%Ai(7,7) = gamma
+        ! Implicit Butcher Table (vectors)
+        ap%ci(1:7) = (/ 0.d0, 247.d0/1000.d0, 4276536705230.d0/10142255878289.d0, &
+                        67.d0/200.d0, 3.d0/40.d0, 7.d0/10.d0, 1.d0 /)
+        ap%bi(1:7) = ap%Ai(7,1:7)
+        ! Explicit Butcher Table (matrix)
+        ap%Ae(1:7,1:7) = 0.d0
+        ap%Ae(2,1) = 247.d0/1000.d0
+        ap%Ae(3,1) = 247.d0/4000.d0
+        ap%Ae(3,2) = 2694949928731.d0/7487940209513.d0
+        ap%Ae(4,1) = 464650059369.d0/8764239774964.d0
+        ap%Ae(4,2) = 878889893998.d0/2444806327765.d0
+        ap%Ae(4,3) = -952945855348.d0/12294611323341.d0
+        ap%Ae(5,1) = 476636172619.d0/8159180917465.d0
+        ap%Ae(5,2) = -1271469283451.d0/7793814740893.d0
+        ap%Ae(5,3) = -859560642026.d0/4356155882851.d0
+        ap%Ae(5,4) = 1723805262919.d0/4571918432560.d0
+        ap%Ae(6,1) = 6338158500785.d0/11769362343261.d0
+        ap%Ae(6,2) = -4970555480458.d0/10924838743837.d0
+        ap%Ae(6,3) = 3326578051521.d0/2647936831840.d0
+        ap%Ae(6,4) = -880713585975.d0/1841400956686.d0
+        ap%Ae(6,5) = -1428733748635.d0/8843423958496.d0
+        ap%Ae(7,1:2) = 760814592956.d0/3276306540349.d0
+        ap%Ae(7,3) = -47223648122716.d0/6934462133451.d0
+        ap%Ae(7,4) = 71187472546993.d0/9669769126921.d0
+        ap%Ae(7,5) = -13330509492149.d0/9695768672337.d0
+        ap%Ae(7,6) = 11565764226357.d0/8513123442827.d0
+        ! Explicit Butcher Table (vectors)
+        ap%ce(1:7) = ap%ci(1:7)
+        ap%be(1:7) = ap%bi(1:7)
+
+      case (ARK548_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 8 ! 8 stage
+        ap%q = 5 ! 5th order
+        ap%p = 4 ! 4th order embedding
+        ap%be2 = 0.d0 ! embedding not implemented
+        ap%bi2 = 0.d0 ! embedding not implemented
+        gamma = 2.d0/9.d0
+        ! Implicit Butcher Table (matrix)
+        ap%Ai(1:8,1:8) = 0.d0
+        ap%Ai(2,1:2) = (/ gamma, gamma /)
+        ap%Ai(3,1:2) = 2366667076620.d0/8822750406821.d0;
+        ap%Ai(3,3) = gamma
+        ap%Ai(4,1:2) = -257962897183.d0/4451812247028.d0
+        ap%Ai(4,3) = 128530224461.d0/14379561246022.d0
+        ap%Ai(4,4) = gamma
+        ap%Ai(5,1:2) = -486229321650.d0/11227943450093.d0
+        ap%Ai(5,3) = -225633144460.d0/6633558740617.d0
+        ap%Ai(5,4) = 1741320951451.d0/6824444397158.d0
+        ap%Ai(5,5) = gamma
+        ap%Ai(6,1:2) = 621307788657.d0/4714163060173.d0
+        ap%Ai(6,3) = -125196015625.d0/3866852212004.d0
+        ap%Ai(6,4) = 940440206406.d0/7593089888465.d0
+        ap%Ai(6,5) = 961109811699.d0/6734810228204.d0
+        ap%Ai(6,6) = gamma
+        ap%Ai(7,1:2) = 2036305566805.d0/6583108094622.d0
+        ap%Ai(7,3) = -3039402635899.d0/4450598839912.d0
+        ap%Ai(7,4) = -1829510709469.d0/31102090912115.d0
+        ap%Ai(7,5) = -286320471013.d0/6931253422520.d0
+        ap%Ai(7,6) = 8651533662697.d0/9642993110008.d0
+        ap%Ai(7,7) = gamma
+        ap%Ai(8,3) = 3517720773327.d0/20256071687669.d0
+        ap%Ai(8,4) = 4569610470461.d0/17934693873752.d0
+        ap%Ai(8,5) = 2819471173109.d0/11655438449929.d0
+        ap%Ai(8,6) = 3296210113763.d0/10722700128969.d0
+        ap%Ai(8,7) = -1142099968913.d0/5710983926999.d0
+        ap%Ai(8,8) = gamma
+        ! Implicit Butcher Table (vectors)
+        ap%ci(1:8) = (/ 0.d0, 4.d0/9.d0, 6456083330201.d0/8509243623797.d0, &
+                        1632083962415.d0/14158861528103.d0, &
+                        6365430648612.d0/17842476412687.d0, 18.d0/25.d0, &
+                        191.d0/200.d0, 1.d0 /)
+        ap%bi(1:8) = ap%Ai(8,1:8)
+        ! Explicit Butcher Table (matrix)
+        ap%Ae(1:8,1:8) = 0.d0
+        ap%Ae(2,1) = 4.d0/9.d0
+        ap%Ae(3,1) = 1.d0/9.d0
+        ap%Ae(3,2) = 1183333538310.d0/1827251437969.d0
+        ap%Ae(4,1) = 895379019517.d0/9750411845327.d0
+        ap%Ae(4,2) = 477606656805.d0/13473228687314.d0
+        ap%Ae(4,3) = -112564739183.d0/9373365219272.d0
+        ap%Ae(5,1) = -4458043123994.d0/13015289567637.d0
+        ap%Ae(5,2) = -2500665203865.d0/9342069639922.d0
+        ap%Ae(5,3) = 983347055801.d0/8893519644487.d0
+        ap%Ae(5,4) = 2185051477207.d0/2551468980502.d0
+        ap%Ae(6,1) = -167316361917.d0/17121522574472.d0
+        ap%Ae(6,2) = 1605541814917.d0/7619724128744.d0
+        ap%Ae(6,3) = 991021770328.d0/13052792161721.d0
+        ap%Ae(6,4) = 2342280609577.d0/11279663441611.d0
+        ap%Ae(6,5) = 3012424348531.d0/12792462456678.d0
+        ap%Ae(7,1) = 6680998715867.d0/14310383562358.d0
+        ap%Ae(7,2) = 5029118570809.d0/3897454228471.d0
+        ap%Ae(7,3) = 2415062538259.d0/6382199904604.d0
+        ap%Ae(7,4) = -3924368632305.d0/6964820224454.d0
+        ap%Ae(7,5) = -4331110370267.d0/15021686902756.d0
+        ap%Ae(7,6) = -3944303808049.d0/11994238218192.d0
+        ap%Ae(8,1:2) = 2193717860234.d0/3570523412979.d0
+        ap%Ae(8,3) = 5952760925747.d0/18750164281544.d0
+        ap%Ae(8,4) = -4412967128996.d0/6196664114337.d0
+        ap%Ae(8,5) = 4151782504231.d0/36106512998704.d0
+        ap%Ae(8,6) = 572599549169.d0/6265429158920.d0
+        ap%Ae(8,7) = -457874356192.d0/11306498036315.d0
+        ! Explicit Butcher Table (vectors)
+        ap%ce(1:8) = ap%ci(1:8)
+        ap%be(1:8) = ap%bi(1:8)
+
+      case (SSP2232_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 3 ! 3 stage
+        ap%q = 2 ! 2nd order
+        ap%p = 0 ! no embedding
+        ap%be2 = 0.d0 ! no embedding
+        ap%bi2 = 0.d0 ! no embedding
+        ! Implicit Butcher Table (matrix)
+        ap%Ai(1:3,1:3) = 0.d0
+        ap%Ai(2,1:2) = (/ 0.353842865099275d0, 0.353842865099275d0 /)
+        ap%Ai(3,1:3) = (/ 0.398930808264689d0, 0.345755244189622d0, 0.255313947545689d0 /)
+        ! Implicit Butcher Table (vectors)
+        ap%ci(1:3) = (/ 0.d0, 0.707685730198550d0, 1.d0 /)
+        ap%bi(1:3) = ap%Ai(3,1:3)
+        ! Explicit Butcher Table (matrix)
+        ap%Ae(1:3,1:3) = 0.d0
+        ap%Ae(2,1) = 0.711664700366941d0
+        ap%Ae(3,1:2) = (/ 0.077338168947683d0, 0.917273367886007d0 /)
+        ! Explicit Butcher Table (vectors)
+        ap%ce(1:3) = (/ 0.d0, 0.711664700366941d0, 0.994611536833690d0 /)
+        ap%be(1:3) = ap%bi(1:3)
+
+      case (GSA222_ARK)
+        ap%imex = 2 ! imex
+        ap%s = 3 ! 3 stage
+        ap%q = 2 ! 2rd order
+        ap%p = 0 ! no embedded order
+        ap%be2 = 0.d0 ! no embedding
+        ap%bi2 = 0.d0 ! no embedding
+        gamma = 2.25d0
+        beta = (gamma-0.5d0)/(gamma-1.d0)
+        ! Implicit Butcher Table (matrix)
+        ap%Ai(1:3,1:3) = 0.d0
+        ap%Ai(2,1:2) = (/ 0.d0,      gamma /)
+        ap%Ai(3,1:3) = (/ 0.d0, 1.d0-beta, beta /)
+        ! Implicit Butcher Table (vectors)
+        ap%ci(1:3) = (/ 0.d0, gamma,  1.d0 /)
+        ap%bi(1:3) = ap%Ai(3,1:3)
+        ! Explicit Butcher Table (matrix)
+        ap%Ae(1:3,1:3) = 0.d0
+        ap%Ae(2,1) = gamma
+        ap%Ae(3,1:2) = (/ 1.d0-1.d0/(2.d0*gamma), 1.d0/(2.d0*gamma) /)
+        ! Explicit Butcher Table (vectors)
+        ap%ce(1:3) = ap%ci(1:3)
+        ap%be(1:3) = ap%Ae(3,1:3)
+
+
 
       case default
         call abortmp('Unknown ARKode Butcher table name')

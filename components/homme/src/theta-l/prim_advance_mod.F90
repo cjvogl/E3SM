@@ -487,6 +487,18 @@ contains
     else if (tstep_type==46) then ! ARKode IMKG 3rd-order, 5 stage, variant b
       call set_Butcher_tables(arkode_parameters, arkode_tables%IMKG343b)
 
+    else if (tstep_type==47) then ! ARKode Kennedy 4th-order, 7 stage
+      call set_Butcher_tables(arkode_parameters, arkode_tables%ARK437)
+
+    else if (tstep_type==48) then ! ARKode Kennedy 5th-order, 8 stage
+      call set_Butcher_tables(arkode_parameters, arkode_tables%ARK548)
+
+    else if (tstep_type==49) then ! ARKode Rokhzadi 2nd-order, 3 stage
+      call set_Butcher_tables(arkode_parameters, arkode_tables%SSP2232)
+
+    else if (tstep_type==50) then ! ARKode Boscarino 2nd-order, 3 stage
+      call set_Butcher_tables(arkode_parameters, arkode_tables%GSA222)    
+
 #endif
     else
        call abortmp('ERROR: bad choice of tstep_type')
