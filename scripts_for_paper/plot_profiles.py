@@ -27,13 +27,14 @@ a1 = -2.0*ql/f**2
 a2 = 3.0*ql/f**3
 a4 = 5.0*ql/f**5
 axQl.plot(x, a0*np.ones(np.shape(x)), '-m', label='constant', linewidth=3)
+axQl.plot([f, f], [0, a0], ':m', linewidth=3)
 axQl.plot(x, a1*(x-f), '--r', label='linear', linewidth=3)
 axQl.plot(x, a2*(x-f)**2, '-.g', label='quadratic', linewidth=3)
 axQl.plot(x, a4*(x-f)**4, '-b', label='quartic', linewidth=3)
 axQl.set_ylabel('cloud liquid (kg/kg)', fontsize='x-large')
 
 # qv
-axQv.plot([0, f], [1.0, 1.0], '-k', linewidth=3)
+axQv.plot([0, f], [qsat, qsat], '-k', linewidth=3)
 qv = (1.0-f)/2.0
 x = np.linspace(f, 1, 100)
 a0 = (qv - (1.0-f)*qsat)/(1.0-f)
@@ -41,6 +42,7 @@ a1 = 2.0*(qv - (1.0-f)*qsat)/(1.0-f)**2
 a2 = 3.0*(qv - (1.0-f)*qsat)/(1.0-f)**3
 a4 = 5.0*(qv - (1.0-f)*qsat)/(1.0-f)**5
 axQv.plot(x, qsat + a0*np.ones(np.shape(x)), '-m', label='constant', linewidth=3)
+axQv.plot([f,f], [qsat + a0, qsat], ':m', linewidth=3)
 axQv.plot(x, qsat + a1*(x-f), '--r', label='linear', linewidth=3)
 axQv.plot(x, qsat + a2*(x-f)**2, '-.g', label='quadratic', linewidth=3)
 axQv.plot(x, qsat + a4*(x-f)**4, '-b', label='quartic', linewidth=3)
