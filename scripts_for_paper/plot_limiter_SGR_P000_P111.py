@@ -5,16 +5,14 @@ import os.path
 
 matplotlib.rcParams.update({'font.size': 24})
 
-directoryDict = {'SGR-P[0,0,0]': 'RKZ_SGR_extrapf_qv0_ql0_Al0_lmt4_adjIC_ne30_ne30_FC5AQUAP_intel_quartz/DT0004_01_dycore_mac/',
-                 'SGR-P[1,1,1]': 'RKZ_SGR_extrapf_qv1_ql1_Al1_lmt4_adjIC_ne30_ne30_FC5AQUAP_intel_quartz/DT0004_01_dycore_mac/'}
+fileDict = {'SGR-P[0,0,0]': './data/SGR_P000_RKZ_qlneg_lm4_855579.txt',
+            'SGR-P[1,1,1]': './data/SGR_P111_RKZ_qlneg_lm4_855579.txt'}
 linespecDict = {'SGR-P[0,0,0]': '--g',
                 'SGR-P[1,1,1]': '-b'}
-suffix = '_855579.txt'
 
 fig, ax = pyplot.subplots(figsize=(10,10))
-for sgr in directoryDict.keys():
-  txtFile = directoryDict[sgr] + 'RKZ_qlneg_lm4' + suffix
-  tmp = np.loadtxt(txtFile)
+for sgr in fileDict.keys():
+  tmp = np.loadtxt(fileDict[sgr])
   t = tmp[0,:]
   val = tmp[1,:]
   ax.plot(t[2:], val[2:], linespecDict[sgr], label=sgr, linewidth=3)
