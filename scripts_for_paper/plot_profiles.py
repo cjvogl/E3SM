@@ -27,11 +27,11 @@ a1 = -2.0*ql/f**2
 a2 = 3.0*ql/f**3
 a4 = 5.0*ql/f**5
 axQl.plot(x, a0*np.ones(np.shape(x)), '-m', label='constant', linewidth=3)
-axQl.plot([f, f], [0, a0], ':m', linewidth=3)
+axQl.plot([f, f], [0, a0], ':m', linewidth=7)
 axQl.plot(x, a1*(x-f), '--r', label='linear', linewidth=3)
 axQl.plot(x, a2*(x-f)**2, '-.g', label='quadratic', linewidth=3)
 axQl.plot(x, a4*(x-f)**4, '-b', label='quartic', linewidth=3)
-axQl.set_ylabel('cloud liquid (kg/kg)', fontsize='x-large')
+axQl.set_ylabel('liquid concentration', fontsize='x-large')
 
 # qv
 axQv.plot([0, f], [qsat, qsat], '-k', linewidth=3)
@@ -42,11 +42,11 @@ a1 = 2.0*(qv - (1.0-f)*qsat)/(1.0-f)**2
 a2 = 3.0*(qv - (1.0-f)*qsat)/(1.0-f)**3
 a4 = 5.0*(qv - (1.0-f)*qsat)/(1.0-f)**5
 axQv.plot(x, qsat + a0*np.ones(np.shape(x)), '-m', label='constant', linewidth=3)
-axQv.plot([f,f], [qsat + a0, qsat], ':m', linewidth=3)
+axQv.plot([f,f], [qsat + a0, qsat], ':m', linewidth=7)
 axQv.plot(x, qsat + a1*(x-f), '--r', label='linear', linewidth=3)
 axQv.plot(x, qsat + a2*(x-f)**2, '-.g', label='quadratic', linewidth=3)
 axQv.plot(x, qsat + a4*(x-f)**4, '-b', label='quartic', linewidth=3)
-axQv.set_ylabel('water vapor (kg/kg)', fontsize='x-large')
+axQv.set_ylabel('vapor concentration', fontsize='x-large')
 
 # Al
 Al = 1.0/2.0
@@ -59,7 +59,7 @@ axAl.plot(x, a0*np.ones(np.shape(x)), '-m', label='constant', linewidth=3)
 axAl.plot(x, a1*(x-1.0), '--r', label='linear', linewidth=3)
 axAl.plot(x, a2*(x-1.0)**2, '-.g', label='quadratic', linewidth=3)
 axAl.plot(x, a4*(x-1.0)**4, '-b', label='quartic', linewidth=3)
-axAl.set_ylabel('cloud liquid tendency (kg/kg/s)', fontsize='x-large')
+axAl.set_ylabel('liquid concentration tendency', fontsize='x-large')
 
 
 for ax in axList:

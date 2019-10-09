@@ -180,10 +180,8 @@ set irE = 1   # ensemble member: end   index
 
 # length of simulation in seconds
 set simulationLength = 43200
-#set simulationLength = 7200
 
-set dtimeList = (1 2 4 8 15 30 75 120 450 1800)
-#set dtimeList = (4)
+set dtimeList = (1 4 8 15 30 75 120 450 1800)
 set ndtime = $#dtimeList
 
 #-------------------------------------------------------------------------------

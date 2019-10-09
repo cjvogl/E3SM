@@ -374,7 +374,8 @@ contains
         ! note that because ast_np1 is bounded by 1.0, entering this block means
         ! astwat < 1.0 so that (1.0-astwat) > 0.0
         term_C = -rdtime * &
-                (1._r8 - (1._r8-ast_np1)/(1._r8-ast_n))**(1+rkz_sgr_qv_deg) * (qsatwat-qcwat)
+                (1._r8 - (1._r8-ast_np1)/(1._r8-ast_n))**(1+rkz_sgr_qv_deg) * (qsatwat-qcwat) &
+                  /( 1._r8 + gamwat )
       end where
       ! where cloud annihilation scenario, add condensation term that ensures
       ! the clear region at t+dt that was cloudy at t (transition region)
@@ -406,7 +407,8 @@ contains
           term_A(i,k) = (qtend(i,k) - dqsatdTwat(i,k)*ttend(i,k) ) &
                              /( 1._r8 + gamwat(i,k) )
           term_B(i,k) = 0._r8
-          term_C(i,k) = -rdtime * (qsatwat(i,k) - qcwat(i,k))
+          term_C(i,k) = -rdtime * (qsatwat(i,k) - qcwat(i,k)) &
+                             /( 1._r8 + gamwat(i,k) )
           qme(i,k) = term_A(i,k) + term_B(i,k) + term_C(i,k)
         else if (ast_tmp(i,k) == 0._r8 .and. ast_np1(i,k) > 0._r8) then
           term_A(i,k) = 0._r8
