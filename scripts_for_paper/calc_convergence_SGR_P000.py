@@ -38,12 +38,11 @@ for time in timeList:
     db = b[1:] - b[0:-1]
     dp = np.outer(da,p0*np.ones(np.shape(ps))) + np.outer(db,ps)
     solutionDict[dt] = {'T': T, 'p0': p0, 'ps': ps, 'area': area, 'dp': dp}
-   
+
   dtRef = min(dtList)
   dtDict = {}
   WRMSerror = {}
   qRef = solutionDict[dtRef]['T']
-  psRef = solutionDict[dtRef]['ps']
   dpRef = solutionDict[dtRef]['dp']
   for dt in dtList:
     if (dt is dtRef):
@@ -52,14 +51,13 @@ for time in timeList:
     q = solutionDict[dt]['T']
     area = solutionDict[dt]['area']
     dp = solutionDict[dt]['dp']
-    ps = solutionDict[dt]['ps']
     dpw = 0.5*(dpRef + dp)
-    psw = 0.5*(psRef + ps)
     dz = dpw
     dxdy = np.outer(np.ones(np.shape(dpw)[0]), area)
-    weight = dxdy*dz / np.sum(psw*area)
+    globalVolume = np.sum(dxdy*dz)
+    weight = dxdy*dz / globalVolume
     WRMSerror[dt] = np.sqrt( np.sum((q-qRef)**2*weight) )
-  
+
   dtPlot = np.sort(dtDict.keys())
   WRMSPlot = np.empty(len(dtPlot))
   for j,dt in enumerate(dtPlot):
@@ -67,4 +65,4 @@ for time in timeList:
   output = np.vstack((dtPlot, WRMSPlot))
   fileName = './data/SGR_P000_convergence_data_%d.txt' % time
   print('Writing out ' + fileName)
-  np.savetxt(fileName, output) 
+  np.savetxt(fileName, output)
