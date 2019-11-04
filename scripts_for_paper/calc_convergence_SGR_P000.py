@@ -11,13 +11,13 @@ outpath = sys.argv[1]
 dtList = [1800,450,120,75,30,15,8,4,1]
 timeList = [3600, 7200, 10800]
 
-configuration = 'RKZ_SGR_extrapf_qv0_ql0_Al0_lmt4_adjIC'
+configuration = 'RKZ_A1_B1_C2_ql17_lmt4_sgr000'
 
 for time in timeList:
   solutionDict = {}
 
   for dt in dtList:
-    globstr = outpath + '/' + configuration + '_ne30_ne30_*/DT%04d_01_dycore_mac/*.cam.h0.0001-01-01-%05d.nc' % (dt, time)
+    globstr = outpath + '/' + configuration + '_ne30_ne30_*_DT%04d_01_dycore_mac/*.cam.h0.0001-01-01-%05d.nc' % (dt, time)
     fileList = glob.glob(globstr)
     if (len(fileList) > 1):
       print "more than one solution file found..."
@@ -37,7 +37,7 @@ for time in timeList:
     da = a[1:] - a[0:-1]
     db = b[1:] - b[0:-1]
     dp = np.outer(da,p0*np.ones(np.shape(ps))) + np.outer(db,ps)
-    solutionDict[dt] = {'T': T, 'p0': p0, 'ps': ps, 'area': area, 'dp': dp}
+    solutionDict[dt] = {'T': T, 'p0': p0, 'area': area, 'dp': dp}
 
   dtRef = min(dtList)
   dtDict = {}

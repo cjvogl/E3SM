@@ -1,9 +1,10 @@
 import glob
-import matplotlib.pyplot as pyplot
 import matplotlib
 from netCDF4 import Dataset
 import numpy as np
 
+matplotlib.use('Agg')
+import matplotlib.pyplot as pyplot
 matplotlib.rcParams.update({'font.size': 24})
 
 measureList = [120, 75, 30, 15, 8]

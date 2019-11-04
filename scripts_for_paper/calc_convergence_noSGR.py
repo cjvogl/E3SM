@@ -4,14 +4,14 @@ import numpy as np
 import sys
 
 if (len(sys.argv) < 2):
-  print "Usage: python calc_convergence_SGR_P111.py <base_output_directory>"
+  print "Usage: python calc_convergence_SGR_P000.py <base_output_directory>"
   exit()
 outpath = sys.argv[1]
 
 dtList = [1800,450,120,75,30,15,8,4,1]
-timeList = [10800, 21600, 32400, 43200]
+timeList = [3600, 7200, 10800]
 
-configuration = 'RKZ_A1_B1_C2_ql17_lmt4_sgr111'
+configuration = 'RKZ_A1_B1_C2_ql17_lmt4_nsgr'
 
 for time in timeList:
   solutionDict = {}
@@ -63,6 +63,6 @@ for time in timeList:
   for j,dt in enumerate(dtPlot):
     WRMSPlot[j] = WRMSerror[dtDict[dt]]
   output = np.vstack((dtPlot, WRMSPlot))
-  fileName = './data/SGR_P111_convergence_data_%d.txt' % time
+  fileName = './data/noSGR_convergence_data_%d.txt' % time
   print('Writing out ' + fileName)
   np.savetxt(fileName, output)

@@ -1,27 +1,24 @@
-
 import glob
 import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as pyplot
 from netCDF4 import Dataset
 import numpy as np
 
+matplotlib.use('Agg')
+import matplotlib.pyplot as pyplot
 matplotlib.rcParams.update({'font.size': 24})
 
 measureList = [120, 75, 30, 15, 8]
-timeList = [10800, 21600, 32400, 43200]
-markerDict = {10800: '^',
-              21600: 's',
-              32400: 'o',
-              43200: 'p'}
-colorDict = {10800: 'red',
-             21600: 'green',
-             32400: 'blue',
-             43200: 'black'}
+timeList = [3600, 7200, 10800]
+markerDict = {3600: 'o',
+              7200: 's',
+              10800: '^'}
+colorDict = {3600: 'blue',
+             7200: 'green',
+             10800: 'red'}
 
 f, ax = pyplot.subplots(figsize=(10,10))
 for time in timeList:
-  tmp = np.loadtxt('./data/SGR_P111_convergence_data_%d.txt' % time)
+  tmp = np.loadtxt('./data/noSGR_convergence_data_%d.txt' % time)
   dtPlot = tmp[0,:]
   WRMSPlot = tmp[1,:]
   WRMSerror = {}
@@ -58,7 +55,7 @@ ax.legend(loc='upper left', fontsize='large')
 ax.axis('equal')
 
 f.tight_layout()
-f.savefig('convergence_P111.pdf')  
+f.savefig('convergence_noSGR.pdf')  
 
   
 pyplot.show()
