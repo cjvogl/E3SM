@@ -37,7 +37,7 @@ for time in timeList:
     da = a[1:] - a[0:-1]
     db = b[1:] - b[0:-1]
     dp = np.outer(da,p0*np.ones(np.shape(ps))) + np.outer(db,ps)
-    solutionDict[dt] = {'T': T, 'p0': p0, 'area': area, 'dp': dp}
+    solutionDict[dt] = {'T': T, 'area': area, 'dp': dp}
 
   dtRef = min(dtList)
   dtDict = {}
