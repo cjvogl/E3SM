@@ -356,41 +356,29 @@ contains
         ast_np1 = 0._r8
       end where
 
-      ! add condensation term that maintains water saturation in cloudy
-      ! portion of cell at t+dt
-      term_A(:ncol,:pver) = ast_np1(:ncol, :pver) * &
-                           (qtend(:ncol,:pver) - dqsatdTwat(:ncol,:pver)*ttend(:ncol,:pver) ) &
-                             /( 1._r8 + gamwat(:ncol,:pver) )
-
-      ! add condensation term that maintains no cloud liquid water in cloud-free
-      ! portion of cell
-      term_B(:ncol,:pver) = -(1._r8 - ast_np1(:ncol,:pver))**(1+rkz_sgr_Al_deg)*ltend(:ncol,:pver)
-
-      ! where cloud nucleation scenario, add condensation term that ensures
-      ! the cloudy region at t+dt that was clear at t (transition region)
-      ! becomes saturated
-      term_C(:ncol,:pver) = 0._r8
-      where (ast_np1(:ncol,:pver) > ast_n(:ncol,:pver))
-        ! note that because ast_np1 is bounded by 1.0, entering this block means
-        ! astwat < 1.0 so that (1.0-astwat) > 0.0
-        term_C = -rdtime * &
-                (1._r8 - (1._r8-ast_np1)/(1._r8-ast_n))**(1+rkz_sgr_qv_deg) * (qsatwat-qcwat) &
-                  /( 1._r8 + gamwat )
-      end where
-      ! where cloud annihilation scenario, add condensation term that ensures
-      ! the clear region at t+dt that was cloudy at t (transition region)
-      ! no longer has cloud liquid
+      ! define terms A, B, and C based on whether cloud fraction is increasing/decreasing
       where (ast_np1(:ncol,:pver) < ast_n(:ncol,:pver))
-        ! note that because ast_np1 is bounded by 0.0, entering this block means
-        ! astwat > 0.0
-        term_C = -rdtime * &
-                (1._r8 - ast_np1/ast_n)**(1+rkz_sgr_ql_deg) * lcwat
+        ! keep water saturation in cloudy portion of cell defined by f(t+dt)
+        term_A = ast_np1 * (qtend - dqsatdTwat*ttend) / (1._r8 + gamwat)
+        ! keep zero cloud liquid in clear portion of cell defined by f(t)
+        term_B = -(1._r8 - ast_n) * (1._r8 - ast_np1)**rkz_sgr_Al_deg * ltend
+        ! remove cloud liquid in remaining portion of cell (cloud annihilation)
+        term_C = - (ast_n - ast_np1) * (1._r8 - ast_np1)**rkz_sgr_Al_deg * ltend &
+                 - rdtime * (1._r8 - ast_np1/ast_n)**(1+rkz_sgr_ql_deg) * lcwat
+      elsewhere
+        ! keep water saturation in cloudy portion of cell defined by f(t)
+        term_A = ast_n * (qtend - dqsatdTwat*ttend) / (1._r8 + gamwat)
+        ! keep zero cloud liquid in clear portion of cell defined by f(t+dt)
+        term_B = -(1._r8 - ast_np1)**(1+rkz_sgr_Al_deg) * ltend
+        ! prevent oversaturation in remaining portion of cell (cloud nucleation)
+        term_C = (ast_np1 - ast_n) * (qtend - dqsatdTwat*ttend) / (1._r8 + gamwat) &
+                 - rdtime * (1._r8 - (1._r8 - ast_np1)/(1._r8 - ast_n))**(1+rkz_sgr_qv_deg) &
+                   * (qsatwat - qcwat) / (1._r8 + gamwat)
       end where
 
       qme(:ncol,:pver) = term_A(:ncol,:pver) + term_B(:ncol,:pver) + term_C(:ncol,:pver)
 
-      ! correct extrapolation "undershoots" by first computing what f(t+dt) will
-      ! be
+      ! correct extrapolation "undershoots" by first computing what f(t+dt) will be
       do k=1,pver
       do i=1,ncol
         call qsat_water(state%t(i,k) + dtime*latvap/cpair*qme(i,k), state%pmid(i,k), esl(i,k), &
@@ -404,16 +392,17 @@ contains
       do k=1,pver
       do i=1,ncol
         if (ast_tmp(i,k) == 1._r8 .and. ast_np1(i,k) < 1._r8) then
-          term_A(i,k) = (qtend(i,k) - dqsatdTwat(i,k)*ttend(i,k) ) &
-                             /( 1._r8 + gamwat(i,k) )
+          term_A(i,k) = ast_n(i,k) * (qtend(i,k) - dqsatdTwat(i,k)*ttend(i,k)) &
+                          / (1._r8 + gamwat(i,k))
           term_B(i,k) = 0._r8
-          term_C(i,k) = -rdtime * (qsatwat(i,k) - qcwat(i,k)) &
-                             /( 1._r8 + gamwat(i,k) )
+          term_C(i,k) = (1._r8 - ast_n(i,k)) * (qtend(i,k) - dqsatdTwat(i,k)*ttend(i,k)) &
+                          / (1._r8 + gamwat(i,k)) &
+                        - rdtime * (qsatwat(i,k) - qcwat(i,k)) / (1._r8 + gamwat(i,k))
           qme(i,k) = term_A(i,k) + term_B(i,k) + term_C(i,k)
         else if (ast_tmp(i,k) == 0._r8 .and. ast_np1(i,k) > 0._r8) then
           term_A(i,k) = 0._r8
-          term_B(i,k) = -ltend(i,k)
-          term_C(i,k) = -rdtime * lcwat(i,k)
+          term_B(i,k) = -(1._r8 - ast_n(i,k)) * ltend(i,k)
+          term_C(i,k) = - ast_n(i,k) * ltend(i,k) - rdtime * lcwat(i,k)
           qme(i,k) = term_A(i,k) + term_B(i,k) + term_C(i,k)
         end if
       end do
@@ -729,7 +718,7 @@ contains
 
      case default
          dfdt(:ncol,:pver) = -1._r8
-         
+
      end select
 
      call outfld('RKZ_dfdt', dfdt, pcols, lchnk)
