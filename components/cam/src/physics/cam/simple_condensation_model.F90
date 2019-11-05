@@ -365,7 +365,8 @@ contains
         ! remove cloud liquid in remaining portion of cell (cloud annihilation)
         term_C = - (ast_n - ast_np1) * (1._r8 - ast_np1)**rkz_sgr_Al_deg * ltend &
                  - rdtime * (1._r8 - ast_np1/ast_n)**(1+rkz_sgr_ql_deg) * lcwat
-      elsewhere
+      end where
+      where (ast_np1(:ncol,:pver) > ast_n(:ncol,:pver))
         ! keep water saturation in cloudy portion of cell defined by f(t)
         term_A = ast_n * (qtend - dqsatdTwat*ttend) / (1._r8 + gamwat)
         ! keep zero cloud liquid in clear portion of cell defined by f(t+dt)
@@ -375,6 +376,15 @@ contains
                  - rdtime * (1._r8 - (1._r8 - ast_np1)/(1._r8 - ast_n))**(1+rkz_sgr_qv_deg) &
                    * (qsatwat - qcwat) / (1._r8 + gamwat)
       end where
+      where (ast_np1(:ncol,:pver) == ast_n(:ncol,:pver))
+        ! keep water saturation in cloudy portion of cell defined by f(t)
+        term_A = ast_n * (qtend - dqsatdTwat*ttend) / (1._r8 + gamwat)
+        ! keep zero cloud liquid in clear portion of cell defined by f(t+dt)
+        term_B = -(1._r8 - ast_n)**(1+rkz_sgr_Al_deg) * ltend
+        ! no remainder of cell
+        term_C = 0._r8
+      end where
+
 
       qme(:ncol,:pver) = term_A(:ncol,:pver) + term_B(:ncol,:pver) + term_C(:ncol,:pver)
 
