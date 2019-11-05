@@ -13,7 +13,7 @@ timeList = [0, 1800, 3600, 5400, 7200]
 variableList = ['CLDLIQ','RKZ_fac','RKZ_qme','RKZ_term_A','RKZ_term_B','RKZ_term_C']
 
 dt = 4
-ind = 855579
+ind = 1069852
 
 for var in variableList:
   outFile = './data/SGR_P000_' + var + '_%d.txt' % ind

@@ -13,7 +13,7 @@ configurationDict = {'SGR_P000': 'RKZ_SGR_extrapf_qv0_ql0_Al0_lmt4_adjIC',
 timeList = [0, 1800, 3600, 5400, 7200]
 
 dt = 4
-ind = 855579
+ind = 1069852
 var = 'RKZ_qlneg_lm4'
 
 for configName in configurationDict.keys():

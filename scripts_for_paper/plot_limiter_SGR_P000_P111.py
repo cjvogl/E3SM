@@ -5,8 +5,8 @@ import os.path
 
 matplotlib.rcParams.update({'font.size': 24})
 
-fileDict = {'SGR-P[0,0,0]': './data/SGR_P000_RKZ_qlneg_lm4_855579.txt',
-            'SGR-P[1,1,1]': './data/SGR_P111_RKZ_qlneg_lm4_855579.txt'}
+fileDict = {'SGR-P[0,0,0]': './data/SGR_P000_RKZ_qlneg_lm4_1069852.txt',
+            'SGR-P[1,1,1]': './data/SGR_P111_RKZ_qlneg_lm4_1069852.txt'}
 linespecDict = {'SGR-P[0,0,0]': '--g',
                 'SGR-P[1,1,1]': '-b'}
 
@@ -17,7 +17,7 @@ for sgr in fileDict.keys():
   val = tmp[1,:]
   ax.plot(t[2:], val[2:], linespecDict[sgr], label=sgr, linewidth=3)
 
-ax.set_ylabel('clipped condensation (kg/kg)', fontsize='x-large')
+ax.set_ylabel('clipped concentration (kg/kg)', fontsize='x-large')
 ax.set_xlabel('time (s)', fontsize='x-large')
 ax.legend(loc='best', fontsize='large')
 fig.tight_layout()
