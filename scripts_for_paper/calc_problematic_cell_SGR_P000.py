@@ -10,7 +10,7 @@ outpath = sys.argv[1]
 
 configuration = 'RKZ_SGR_extrapf_qv0_ql0_Al0_lmt4_adjIC'
 timeList = [0, 1800, 3600, 5400, 7200]
-variableList = ['CLDLIQ','RKZ_fac','RKZ_qme','RKZ_term_A','RKZ_term_B','RKZ_term_C']
+variableList = ['CLDLIQ','RKZ_fac','RKZ_qme','RKZ_term_A','RKZ_term_B','RKZ_term_C','RKZ_Al']
 
 dt = 4
 ind = 1069852
