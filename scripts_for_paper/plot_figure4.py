@@ -74,5 +74,5 @@ ax[1].legend(handles, labels, loc='lower right', fontsize='large')
 
 fig.tight_layout()
 
-fig.savefig('problematic_cell_P000.pdf')
+fig.savefig('figure4-problematic-cell.pdf')
 pyplot.show()

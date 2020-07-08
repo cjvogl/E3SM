@@ -4,10 +4,10 @@ import matplotlib
 
 matplotlib.rcParams.update({'font.size': 24})
 
-fQl, axQl = pyplot.subplots(figsize=(10,10))
-fQv, axQv = pyplot.subplots(figsize=(10,10))
-fAl, axAl = pyplot.subplots(figsize=(10,10))
-axList = [axQl, axQv, axAl]
+fig, axList = pyplot.subplots(1,3,figsize=(30,10))
+axQl = axList[0]
+axQv = axList[1]
+axAl = axList[2]
 
 f = 0.3
 qsat = 1.0
@@ -68,11 +68,7 @@ for ax in axList:
   ax.legend(loc='best', fontsize='large')
   ax.set_xlabel('x', fontsize='x-large')
 
-fQl.tight_layout()
-fQl.savefig('ql_profiles.pdf')
-fQv.tight_layout()
-fQv.savefig('qv_profiles.pdf')
-fAl.tight_layout()
-fAl.savefig('Al_profiles.pdf')
+fig.tight_layout()
+fig.savefig('figure1-profiles.pdf')
 
 pyplot.show()

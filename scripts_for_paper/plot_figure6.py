@@ -1,4 +1,3 @@
-
 import glob
 import matplotlib
 matplotlib.use('Agg')
@@ -21,13 +20,13 @@ colorDict = {10800: 'red',
 
 f, ax = pyplot.subplots(figsize=(10,10))
 for time in timeList:
-  tmp = np.loadtxt('./data/SGR_P111_convergence_data_%d.txt' % time)
+  tmp = np.loadtxt('./data/SGR_P114_convergence_data_%d.txt' % time)
   dtPlot = tmp[0,:]
   WRMSPlot = tmp[1,:]
   WRMSerror = {}
-  for j,dt in enumerate(dtPlot):  
+  for j,dt in enumerate(dtPlot):
     WRMSerror[int(dt)] = WRMSPlot[j]
- 
+
   measurePlot = np.array([measureList[-1], measureList[0]])
   N = len(measureList)
   sxlogy = 0.0
@@ -58,7 +57,6 @@ ax.legend(loc='upper left', fontsize='large')
 ax.axis('equal')
 
 f.tight_layout()
-f.savefig('convergence_P111.pdf')  
+f.savefig('figure6-convergence-P114.pdf')  
 
-  
 pyplot.show()
