@@ -61,7 +61,7 @@ labels.append('cloud frac.')
 ax[0].legend(handles, labels, loc='lower right', fontsize='large')
 
 ax[1].plot(t[2:], ql[2:], '-k', label='cloud liquid', linewidth=3)
-ax[1].plot(t[2:], dt*Al[2:], '--m', label='dt*(liq. tend.)', linewidth=3)
+ax[1].plot(t[2:], dt*Al[2:], '--m', label='dt*Al', linewidth=3)
 ax2 = ax[1].twinx()
 ax2.plot(t[2:], f[2:], '-b', linewidth=3)
 ax2.tick_params('y', colors='b')
